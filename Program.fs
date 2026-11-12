@@ -11,7 +11,7 @@ let main args =
     let builder = WebApplication.CreateBuilder(args)
     builder.Services.AddRouting().AddOxpecker() |> ignore
     let app = builder.Build()
-    app.UseStaticFiles() 
+    app.UseStaticFiles() |> ignore
     app.UseRouting()
         .Use(Default.exceptionMiddleware)
         .UseOxpecker(endpoints)
