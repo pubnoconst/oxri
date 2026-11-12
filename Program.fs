@@ -11,10 +11,10 @@ let main args =
     let builder = WebApplication.CreateBuilder(args)
     builder.Services.AddRouting().AddOxpecker() |> ignore
     let app = builder.Build()
-    // app.UseStaticFiles() 
+    app.UseStaticFiles() 
     app.UseRouting()
         .Use(Default.exceptionMiddleware)
         .UseOxpecker(endpoints)
-        .Run(Default.notFoundHandler)
+        .Run Default.notFoundHandler
     app.Run()
     0

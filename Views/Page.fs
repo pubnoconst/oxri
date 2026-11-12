@@ -7,7 +7,7 @@ let frame (content: HtmlElement) : HtmlElement =
         head() {
             meta(charset="utf-8")
             meta(name="viewport", content="width=device-width, initial-scale=1.0")
-            title() { "Hello World" }
+            title() { "RES·IMPERII" }
             // Ready for later — just drop the files into wwwroot/css/
             link(rel="stylesheet", href="/css/bulma.css")
             link(rel="stylesheet", href="/css/overrides.css")
