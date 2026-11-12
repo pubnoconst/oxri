@@ -3,7 +3,7 @@ open Microsoft.Extensions.DependencyInjection
 open Oxpecker
 
 let endpoints = [
-    route "/" <| Views.Home.index
+    route "/" <| Views.Landing.index
 ]
 
 [<EntryPoint>]

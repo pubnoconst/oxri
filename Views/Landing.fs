@@ -1,4 +1,4 @@
-module Views.Home
+module Views.Landing
 
 open Oxpecker
 open Oxpecker.ViewEngine
