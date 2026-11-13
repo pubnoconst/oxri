@@ -31,6 +31,20 @@ Landing page
 - The Book II, Book III, and Journals destinations are currently placeholders;
   add their routes when those pages are implemented.
 
+Publication model
+-----------------
+- Res Imperii is a private blog for the author's articles and journals.
+- A journal stores its content and a link to a third-party renderable version.
+  The author can edit, hide or show, and delete journal entries.
+- Turso is the intended hosted content database. The current application has
+  not yet implemented its connection or journal management flows.
+- `max_content_db_size` is configured in appsettings.json in bytes. The current
+  configured maximum is 1,073,741,824 bytes (1 GiB). If an edition would exceed
+  the maximum, journals must be deleted to free content storage. Enforcement
+  and deletion flows are not implemented in the current scaffold.
+- The repository uses a proprietary license. Keep the owner placeholder in
+  LICENSE until the copyright owner's name is supplied.
+
 Book pages
 ----------
 - Book I is served at /book-i and uses a centered, medium-width reading column
