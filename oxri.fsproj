@@ -8,7 +8,9 @@
 
   <ItemGroup>
     <Compile Include="Views/Page.fs" />
+    <Compile Include="Views/Misc/Back.fs" />
     <Compile Include="Views/Landing.fs" />
+    <Compile Include="Views/BookI.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

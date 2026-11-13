@@ -4,6 +4,7 @@ open Oxpecker
 
 let endpoints = [
     route "/" <| Views.Landing.index
+    route "/book-i" <| Views.BookI.index
 ]
 
 [<EntryPoint>]
