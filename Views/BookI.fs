@@ -7,8 +7,10 @@ open Views.Page
 
 let index : EndpointHandler =
     frame (
+        // Article markup is semantic; prose is based on rawcontent/Book-I.txt.
         main(class'="article-page") {
             article(class'="book-article") {
+                // Reuse the same navigation component before and after the text.
                 Back.view
                 header(class'="article-header") {
                     h1() { "Book I" }

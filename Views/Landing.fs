@@ -6,6 +6,8 @@ open Views.Page
 
 let index : EndpointHandler =
     frame (
+        // Keep the landing page to the title and primary destinations. The
+        // title is intentionally plain text; only navigation items are links.
         main(class'="landing") {
             nav(class'="landing-nav") {
                 h1(class'="landing-title") {

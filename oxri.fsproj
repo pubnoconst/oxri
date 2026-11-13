@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Compile shared views first, then page views, then the application entry point. -->
     <Compile Include="Views/Page.fs" />
     <Compile Include="Views/Misc/Back.fs" />
     <Compile Include="Views/Landing.fs" />
