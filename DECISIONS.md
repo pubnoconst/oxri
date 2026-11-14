@@ -111,6 +111,10 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261115-005 - Non-selectable landing page:
+  - Disable text selection across the landing page so double-clicking near its
+    navigation does not select the nearest text. Keep links interactive and
+    keyboard accessible; this changes selection behavior only.
 - D-20261115-004 - Route-specific stylesheets:
   - Keep theme tokens and components shared by multiple views in
     wwwroot/css/overrides.css. Move route-only layout and presentation rules to
