@@ -15,3 +15,16 @@ the state and point to the commit that contains the work being handed off.
 
 Keep upcoming tasks in `NEXT.md` and durable product or implementation rationale
 in `DECISIONS.md`; avoid copying their full contents into this timeline.
+
+## 2026-11-15 - `3fb2d31` Add commit-linked handoff journal
+
+- Renamed `TODO.md` to `NEXT.md` for the actionable work queue and corrected
+  the misspelled decision-journal filename to `DECISIONS.md`.
+- Added this append-only handoff log and documented the three files in README.
+- Updated the README's editor description to match the current media and tags
+  fields, live preview, and disabled publishing state.
+- The editor remains a Development-only prototype; it does not save drafts.
+- No application code changed; tests were not run for this documentation-only
+  work.
+- Next: design author authentication and the Turso data model before building
+  protected journal management. See `NEXT.md` for the current queue.
