@@ -111,3 +111,12 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - The shared stylesheet is now 128 lines, down from 658. The README describes
   the stylesheet ownership convention.
 - `dotnet build --no-restore` succeeded with no warnings; tests were not run.
+
+## 2026-11-15 - Disable landing text selection
+
+- Decision: `D-20261115-005`, recorded in commit `78ef0fd`.
+- Implementation: commit `d6bb83f` (`Disable landing text selection`).
+- Set the landing canvas to `user-select: none` (including the WebKit
+  property), so double-clicking near the navigation does not select text.
+  Links remain interactive. Bumped the landing stylesheet cache version.
+- Tests were not run.
