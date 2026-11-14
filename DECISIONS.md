@@ -1,5 +1,5 @@
-RES·IMPERII — PROJECT DECISION JOURNAL
-=====================================
+RES IMPERII - PROJECT DECISIONS
+===============================
 
 Purpose
 -------
@@ -7,6 +7,14 @@ This file records user-approved product and implementation decisions so
 future agents can keep changes consistent with the project's direction. It is
 a rationale log, not a replacement for the source code or canonical prose in
 rawcontent/Book-I.txt.
+
+How to use this file
+--------------------
+Record decisions that should guide future work, together with their rationale
+and current implementation status where relevant. Keep the handoff timeline in
+HANDOFF.md and the actionable queue in NEXT.md. When a decision changes, add the
+new direction and explain what it supersedes instead of silently rewriting the
+historical rationale.
 
 Product direction
 -----------------
@@ -105,6 +113,9 @@ Recent decisions
   is an empty state; the editor has a responsive two-card layout, live Markdown
   preview, comma-separated tag chips, and browser-side previews for common media
   links. Publish remains disabled and no draft is saved.
+- Adopted a three-document workflow: NEXT.md holds upcoming work, DECISIONS.md
+  holds durable rationale, and HANDOFF.md records append-only session handoffs
+  tied to Git commits.
 
 When unsure
 -----------

@@ -28,7 +28,8 @@ the intended product design and require implementation before they are active.
 - `/` displays the landing page and links to the planned book and journal areas.
 - `/book-i` displays Book I, whose source text is in `rawcontent/Book-I.txt`.
 - `/journal-editor` is a Development-only, browser-side editor prototype. It
-  has an editable source pane and a rendered preview pane, but does not save drafts.
+  has an editable content pane with media-link and tags fields, plus a live
+  rendered preview. Drafts are not saved, and publishing is disabled.
 - `/journals` is currently a Development-only empty state with an Add New Entry
   link to the editor prototype.
 - Book II, Book III, and Journals are navigation placeholders; their routes
@@ -57,8 +58,11 @@ implemented in this scaffold.
 - `wwwroot/` contains public static assets. Local asset URLs use a `?v=N`
   query version; increment the version when changing an asset to refresh browser
   caches.
-- `project-decicions-journal.txt` records design decisions and their rationale
-  for future contributors.
+- `DECISIONS.md` records product and implementation decisions and their rationale.
+- `NEXT.md` is the short list of upcoming work.
+- `HANDOFF.md` is an append-only session log. Each entry points to the commit
+  containing the work being handed off, so Git remains the source of truth for
+  code changes.
 - `rawcontent/` is excluded from version control by `.gitignore`; preserve the
   author's source material and do not change that policy without direction.
 
