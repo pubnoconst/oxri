@@ -6,12 +6,18 @@ the state and point to the commit that contains the work being handed off.
 
 ## How to add an entry
 
-1. Review and commit the work for the session.
-2. Append a dated entry that names that commit and records outcomes, remaining
-   work, and any issue the next session should know about.
-3. Commit the appended entry and sync both commits with the remote.
-4. Do not edit or remove older entries. Add a new entry to correct or supersede
-   an earlier handoff.
+1. If the work follows a new decision, add its stable ID and rationale to
+   `DECISIONS.md`, then commit that record. Keep the decision commit separate
+   from implementation commits when practical.
+2. Implement the work in a commit whose message references the decision ID.
+   Git creates each commit hash locally, before pushing.
+3. Append a dated handoff entry that links the decision ID to its decision
+   commit and related implementation commit(s), and records outcomes, remaining
+   work, and anything the next session should know.
+4. Commit the appended handoff entry and sync the commits with the remote.
+5. Do not edit or remove older entries. Add a new entry to correct or supersede
+   an earlier handoff. To undo implementation, use `git revert <hash>` so the
+   decision rationale and audit trail remain in history.
 
 Keep upcoming tasks in `NEXT.md` and durable product or implementation rationale
 in `DECISIONS.md`; avoid copying their full contents into this timeline.

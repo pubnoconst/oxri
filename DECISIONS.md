@@ -16,6 +16,10 @@ HANDOFF.md and the actionable queue in NEXT.md. When a decision changes, add the
 new direction and explain what it supersedes instead of silently rewriting the
 historical rationale.
 
+Starting with new records, give each decision a stable ID in the form
+D-YYYYMMDD-NNN and include its rationale, scope, and any decision it supersedes.
+See the commit-traceability decision below for how to link decisions to Git.
+
 Product direction
 -----------------
 - Minimalism is a deliberate constraint. Keep the interface quiet and focused;
@@ -107,6 +111,18 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261115-001 - Commit-linked decision and implementation history:
+  - Record a decision here before implementing work that depends on it, and
+    commit the decision record separately when practical.
+  - Reference the decision ID in the implementation commit. Git creates that
+    commit's hash locally, before any push is needed.
+  - Add the decision ID and the decision and implementation commit hashes to
+    the next HANDOFF.md entry. This gives each decision a direct path to the
+    rationale and the code it affected.
+  - Keep decision and implementation commits separate so the implementation
+    can be reverted without deleting its rationale. Use `git revert <hash>` to
+    undo committed work while preserving the history; add a new decision record
+    when changing direction.
 - Replaced the landing placeholder with the sparse navigation composition.
 - Switched the primary font to EB Garamond using Bulma's family variable and a
   Google Fonts stylesheet link.
