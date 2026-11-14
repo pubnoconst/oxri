@@ -49,3 +49,15 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - No tests were run.
 - Next: design author authentication and the Turso data model before protected
   journal management; see `NEXT.md`.
+
+## 2026-11-15 - Decision traceability workflow
+
+- Decision ID: `D-20261115-001`.
+- Decision record commit: `0b5da2d` (`Document commit-linked decision workflow`).
+- This change documents the workflow; it has no separate application
+  implementation commit.
+- New decisions receive stable IDs. Related implementation commits reference
+  those IDs, and this log records both sets of hashes after the commits exist
+  locally and before they are pushed.
+- Use `git revert <implementation-hash>` to undo implementation while keeping
+  the decision rationale and commit trail.
