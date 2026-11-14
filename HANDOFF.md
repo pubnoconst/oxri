@@ -79,3 +79,22 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   [Cloudflare Access passkeys](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/passkeys/),
   and [Cloudflare Access origin validation](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/).
 - No application code was changed. The architecture remains a planning question.
+
+## 2026-11-15 - Error pages, request timeouts, and safe QR references
+
+- Decision: `D-20261115-003`, recorded in commit `e79bd82`.
+- Implementation: commit `f8b3590` (`Add safe error pages and request timeouts`).
+- Added a minimal shared error template for application-generated 404, 408, 504,
+  and 500 responses. It shows the HTTP status, a generic message, a home link,
+  and the ASP.NET request trace identifier as a reference code.
+- The QR encodes only that reference code. A future reporting URL could be more
+  actionable, but no report endpoint or support contact exists yet.
+- Configured a 30-second timeout for application endpoints. Errors created by
+  a CDN, reverse proxy, host, or HTTP server before they reach the app require
+  matching configuration at that layer; see the open item in `NEXT.md`.
+- Added a plain generic fallback if the styled page or QR rendering fails. The
+  exception handler is used in Development and production; it does not display
+  exception text or stack traces.
+- `dotnet build --no-restore` succeeded with no warnings. Tests were not run.
+- Next: add private logging for error references and verify proxy/host error
+  pages; both are tracked in `NEXT.md`.
