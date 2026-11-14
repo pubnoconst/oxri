@@ -56,6 +56,23 @@ Book pages
   Its circular left chevron is drawn in CSS to avoid an icon-library dependency.
 - The shared Back link lives at Views/Misc/Back.fs so additional pages can use
   the same treatment.
+- The Development-only journal editor prototype uses two panes: editable
+  source and a rendered preview card. The left pane collects Markdown content,
+  a media URL, and comma-separated tags; the right pane previews those fields
+  as the published card would display them, with media centered above the body.
+  It does not write drafts to storage; keep it off production routes until
+  authentication and persistence are implemented.
+- The editor preview renders Markdown with raw HTML disabled and sanitizes the
+  generated markup before inserting it into the page. Tags are inserted as text.
+- Media previews are browser-side and limited to recognizable YouTube and Vimeo
+  links plus direct image, video, and audio files. Provider embeds are built from
+  validated video IDs; arbitrary iframe URLs are not accepted. Unsupported URLs
+  show a fallback message. Previewing remote media asks the visitor's browser
+  to load it from the provider or host.
+- The Publish entry button remains disabled while authentication and persistence
+  are absent. Do not enable it until there is a real, protected save workflow.
+- The Development-only /journals page currently has an empty state and an
+  Add New Entry link to the Development-only editor prototype.
 
 Implementation conventions
 ---------------------------
@@ -63,6 +80,8 @@ Implementation conventions
   stylesheets. Page-specific content belongs in its own Views module.
 - wwwroot/css/overrides.css is layered after Bulma. Document meaningful CSS
   sections and keep project styling there instead of editing minified Bulma.
+  Keep editor card surfaces, focus states, breakpoints, and reduced-motion
+  behavior consistent with the shared warm-neutral theme.
 - Local asset URLs use a ?v=N query parameter as a manual cache buster.
   Increment the relevant URL version when its asset changes so browsers such
   as Edge request the updated file.
@@ -82,6 +101,10 @@ Recent decisions
   surface and text tokens to those properties.
 - Added Book I from the raw content and registered its route.
 - Refined Back into a reusable view module and CSS-drawn circular chevron.
+- Added Development-only /journals and /journal-editor prototypes. The catalog
+  is an empty state; the editor has a responsive two-card layout, live Markdown
+  preview, comma-separated tag chips, and browser-side previews for common media
+  links. Publish remains disabled and no draft is saved.
 
 When unsure
 -----------

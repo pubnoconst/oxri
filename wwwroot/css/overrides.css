@@ -236,3 +236,329 @@ html {
     transition: none;
   }
 }
+
+/* Journal editor: two calm, card-like work surfaces with clear field hierarchy. */
+.journal-editor-page {
+  width: min(90rem, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1rem, 3vw, 2.5rem);
+}
+
+.journal-editor-header {
+  margin-bottom: 2rem;
+}
+
+.editor-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.editor-eyebrow {
+  margin: 0 0 0.3rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  opacity: 0.55;
+}
+
+.journal-editor-header h1 {
+  margin: 0;
+  font-size: clamp(2.2rem, 5vw, 3.3rem);
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.editor-notice {
+  margin: 0 0 0.3rem;
+  font-size: 1rem;
+  opacity: 0.6;
+}
+
+/* Use modestly lifted surfaces while retaining the site's subdued palette. */
+.editor-pane,
+.journal-preview-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 14%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--page) 97%, var(--page-ink));
+  box-shadow: 0 0.6rem 2rem color-mix(in srgb, var(--page-ink) 5%, transparent);
+}
+
+.editor-pane { padding: clamp(1rem, 2vw, 1.6rem); }
+
+.editor-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--page-ink) 12%, transparent);
+}
+
+.editor-field label,
+.editor-section-heading h2 {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+.editor-section-heading h2 { margin: 0; }
+.editor-section-heading span {
+  font-family: system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  opacity: 0.4;
+}
+
+.editor-field { margin-bottom: 1.15rem; }
+.editor-field label { font-size: 1.1rem; }
+
+.editor-field input,
+.editor-pane textarea {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 18%, transparent);
+  border-radius: 0.35rem;
+  background: var(--page);
+  color: var(--page-ink);
+  font: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.editor-field input {
+  min-height: 2.6rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.editor-field input:focus,
+.editor-pane textarea:focus {
+  border-color: color-mix(in srgb, var(--page-ink) 48%, transparent);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--page-ink) 8%, transparent);
+}
+
+.field-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  opacity: 0.55;
+}
+
+/* Keep source and live card together on wide screens; stack for smaller screens. */
+.journal-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: clamp(1rem, 2vw, 1.5rem);
+  align-items: stretch;
+}
+
+.editor-pane textarea {
+  display: block;
+  min-height: 23rem;
+  padding: 0.9rem 1rem;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.editor-content-field { margin-bottom: 0; }
+.editor-preview-pane { padding: 0; background: transparent; box-shadow: none; border: 0; }
+.editor-preview-pane > .editor-section-heading { margin: 0 0 1.5rem; }
+.journal-preview-card { min-height: 28rem; }
+
+.journal-preview-media {
+  display: flex;
+  width: 100%;
+  min-height: 12rem;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--page) 88%, var(--page-ink));
+}
+
+.journal-preview-media.is-empty {
+  color: var(--page-ink);
+  font-size: 1rem;
+  opacity: 0.48;
+}
+
+.journal-preview-media iframe,
+.journal-preview-media video,
+.journal-preview-media img {
+  display: block;
+  width: 100%;
+  max-height: 24rem;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  object-fit: contain;
+}
+
+.journal-preview-media audio { width: min(90%, 34rem); }
+.journal-preview-body { padding: clamp(1.2rem, 3vw, 2rem); }
+.journal-preview-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.9rem; }
+.journal-preview-tags:empty { display: none; }
+.journal-preview-tags .journal-tag-chip {
+  border-color: color-mix(in srgb, var(--page-ink) 16%, transparent);
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+/* Article preview styling mirrors the site's understated long-form typography. */
+.journal-rendered-content {
+  overflow-wrap: anywhere;
+  font-size: 1.15rem;
+  line-height: 1.7;
+}
+
+.journal-rendered-content h1,
+.journal-rendered-content h2,
+.journal-rendered-content h3 {
+  margin: 1.4rem 0 0.65rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.journal-rendered-content h1 { font-size: 2rem; }
+.journal-rendered-content h2 { font-size: 1.6rem; }
+.journal-rendered-content h3 { font-size: 1.3rem; }
+.journal-rendered-content p,
+.journal-rendered-content ul,
+.journal-rendered-content ol,
+.journal-rendered-content blockquote,
+.journal-rendered-content pre { margin: 0 0 1rem; }
+.journal-rendered-content pre {
+  overflow-x: auto;
+  padding: 0.8rem;
+  background: color-mix(in srgb, var(--page) 88%, var(--page-ink));
+}
+.journal-rendered-content a { color: inherit; text-decoration-thickness: 1px; }
+
+.journal-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.publish-note { margin: 0; font-size: 0.95rem; opacity: 0.55; }
+
+.journal-editor-actions button {
+  padding: 0.62rem 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 12%, transparent);
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--page) 90%, var(--page-ink));
+  color: var(--page-ink);
+  font: inherit;
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Empty journals view: a quiet title, empty state, and one author action. */
+.journals-page {
+  width: min(42rem, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 6vw, 4rem) 1.25rem;
+}
+
+.journals-header h1 {
+  margin: 2.5rem 0 3rem;
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 400;
+}
+
+.journals-empty {
+  margin-bottom: 1.5rem;
+  font-size: 1.15rem;
+  opacity: 0.66;
+}
+
+.new-entry-link {
+  color: inherit;
+  font-size: 1.1rem;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--page-ink) 30%, transparent);
+  text-underline-offset: 0.22em;
+  transition: opacity 160ms ease;
+}
+
+.new-entry-link:hover,
+.new-entry-link:focus-visible {
+  opacity: 0.68;
+}
+
+.catalog-test {
+  max-width: 42rem;
+  margin: 2.5rem auto 0;
+}
+
+/* The test card reflects the catalog excerpt, tag chips, status, and fallback art. */
+.journal-card-preview {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 18%, transparent);
+  background: color-mix(in srgb, var(--page) 98%, var(--page-ink));
+}
+
+.journal-card-media {
+  display: grid;
+  min-height: 11rem;
+  place-items: center;
+  background: color-mix(in srgb, var(--page) 86%, var(--page-ink));
+}
+
+.journal-card-placeholder {
+  color: var(--page-ink);
+  font-size: 1.15rem;
+  letter-spacing: 0.12em;
+  opacity: 0.48;
+  text-decoration: none;
+}
+
+.journal-card-copy { padding: 1rem 1.15rem 1.2rem; }
+.journal-card-excerpt { margin: 0 0 0.9rem; font-size: 1.1rem; line-height: 1.5; }
+.journal-card-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.journal-tag-chip {
+  padding: 0.1rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 22%, transparent);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+.journal-card-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  opacity: 0.65;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .journal-editor-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .editor-heading { align-items: start; flex-direction: column; gap: 0.35rem; }
+  .editor-notice { margin: 0; }
+  .editor-pane textarea { min-height: 18rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-field input,
+  .editor-pane textarea { transition: none; }
+}

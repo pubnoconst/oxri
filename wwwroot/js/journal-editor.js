@@ -1,0 +1,134 @@
+/*
+ * Browser-only journal editor prototype. Draft content stays in this page and
+ * no input is submitted or persisted. Keep preview rendering isolated here so
+ * the server view remains a small semantic shell around the editor controls.
+ */
+(() => {
+  // Resolve the view's stable IDs once; if the editor is not on this page, exit
+  // without affecting other routes that share the site's script environment.
+  const contentInput = document.getElementById("journal-content");
+  const mediaInput = document.getElementById("journal-media-link");
+  const tagsInput = document.getElementById("journal-tags");
+  const renderedContent = document.getElementById("journal-rendered-content");
+  const mediaPreview = document.getElementById("journal-preview-media");
+  const tagsPreview = document.getElementById("journal-preview-tags");
+  const preview = document.getElementById("journal-preview");
+
+  if (!contentInput || !mediaInput || !tagsInput || !renderedContent || !mediaPreview || !tagsPreview || !preview) return;
+  if (!window.markdownit || !window.DOMPurify) {
+    preview.textContent = "The live preview libraries did not load. Check your connection and reload.";
+    return;
+  }
+
+  // Raw HTML stays disabled. Sanitization is an additional boundary before the
+  // generated markup is inserted into the preview DOM.
+  const markdown = window.markdownit({ html: false, linkify: false, breaks: false });
+
+  // Accept only web URLs before assigning user-provided media URLs to elements.
+  // Provider embed URLs below are built from validated IDs rather than copied
+  // from an arbitrary iframe URL.
+  function safeUrl(value) {
+    try {
+      const url = new URL(value.trim());
+      return url.protocol === "https:" || url.protocol === "http:" ? url : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function createMedia(url) {
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const path = url.pathname.toLowerCase();
+    // Give provider frames a descriptive title and defer loading until visible.
+    const frame = (src, title) => {
+      const iframe = document.createElement("iframe");
+      iframe.src = src;
+      iframe.title = title;
+      iframe.loading = "lazy";
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      iframe.allowFullscreen = true;
+      return iframe;
+    };
+
+    // Convert common YouTube share/watch/short links to the privacy-enhanced
+    // embed host; only accept a video ID with the provider's expected shape.
+    if (host === "youtu.be" || host === "youtube.com" || host === "m.youtube.com") {
+      const id = host === "youtu.be" ? url.pathname.slice(1) : (url.pathname === "/watch" ? url.searchParams.get("v") : url.pathname.split("/").filter(Boolean).at(-1));
+      if (id && /^[\w-]{6,}$/.test(id)) return frame(`https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`, "YouTube video preview");
+    }
+    // Vimeo's player expects a numeric video ID in its path.
+    if (host === "vimeo.com" || host === "player.vimeo.com") {
+      const id = url.pathname.split("/").filter(Boolean).at(-1);
+      if (id && /^\d+$/.test(id)) return frame(`https://player.vimeo.com/video/${id}`, "Vimeo video preview");
+    }
+    // Direct files use native browser controls. Metadata preload avoids
+    // downloading the full media file just to build the preview.
+    if (/\.(mp4|webm|ogg|mov)(?:$)/i.test(path)) {
+      const video = document.createElement("video");
+      video.src = url.href;
+      video.controls = true;
+      video.preload = "metadata";
+      return video;
+    }
+    if (/\.(mp3|wav|m4a|aac|flac)(?:$)/i.test(path)) {
+      const audio = document.createElement("audio");
+      audio.src = url.href;
+      audio.controls = true;
+      audio.preload = "metadata";
+      return audio;
+    }
+    if (/\.(avif|gif|jpe?g|png|webp|svg)(?:$)/i.test(path)) {
+      const image = document.createElement("img");
+      image.src = url.href;
+      image.alt = "Linked media preview";
+      image.loading = "lazy";
+      return image;
+    }
+    return null;
+  }
+
+  // Rebuild the media region on each edit so replacing or clearing a URL also
+  // removes the previous embedded element and its ongoing network request.
+  function updateMedia() {
+    mediaPreview.replaceChildren();
+    const url = safeUrl(mediaInput.value);
+    if (!mediaInput.value.trim()) {
+      mediaPreview.textContent = "Your media will appear here";
+      mediaPreview.classList.add("is-empty");
+      return;
+    }
+
+    const media = url && createMedia(url);
+    if (media) {
+      mediaPreview.classList.remove("is-empty");
+      mediaPreview.append(media);
+      return;
+    }
+    mediaPreview.classList.add("is-empty");
+    mediaPreview.textContent = url ? "This link type can’t be previewed here." : "Enter a valid http or https link.";
+  }
+
+  // Tags are plain text nodes, never HTML, and comma-separated input keeps the
+  // prototype field simple while still previewing individual chips.
+  function updateTags() {
+    const chips = tagsInput.value.split(",").map((tag) => tag.trim()).filter(Boolean);
+    tagsPreview.replaceChildren(...chips.map((tag) => {
+      const chip = document.createElement("span");
+      chip.className = "journal-tag-chip";
+      chip.textContent = tag;
+      return chip;
+    }));
+  }
+
+  // Markdown rendering is live; sanitize the output at the DOM insertion point.
+  function updateContent() {
+    renderedContent.innerHTML = window.DOMPurify.sanitize(markdown.render(contentInput.value));
+  }
+
+  contentInput.addEventListener("input", updateContent);
+  mediaInput.addEventListener("input", updateMedia);
+  tagsInput.addEventListener("input", updateTags);
+  updateContent();
+  updateMedia();
+  updateTags();
+})();

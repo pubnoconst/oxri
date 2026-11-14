@@ -12,6 +12,8 @@
     <Compile Include="Views/Misc/Back.fs" />
     <Compile Include="Views/Landing.fs" />
     <Compile Include="Views/BookI.fs" />
+    <Compile Include="Views/JournalEditor.fs" />
+    <Compile Include="Views/Journals.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
