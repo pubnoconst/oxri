@@ -1,6 +1,7 @@
 /*
  * Shared visual foundation: EB Garamond is Bulma's primary typeface, and the
- * page colors follow the visitor's operating-system light/dark preference.
+ * page colors follow the visitor's operating-system light/dark preference
+ * unless a landing-page background double-click sets a session override.
  */
 :root {
   --bulma-family-primary: "EB Garamond", serif;
@@ -16,6 +17,19 @@
   }
 }
 
+/* A user-selected theme takes precedence over the system preference this tab. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page: #f5f4f0;
+  --page-ink: #34332f;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0f1113;
+  --page-ink: #d6d6d3;
+}
+
 /* Keep the canvas and text colors consistent across the document. */
 html,
 body {
@@ -26,6 +40,19 @@ body {
 
 body {
   min-height: 100vh;
+}
+
+/* Keep the theme gesture gentle, while honoring reduced-motion preferences. */
+html,
+body {
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body {
+    transition: none;
+  }
 }
 
 html {

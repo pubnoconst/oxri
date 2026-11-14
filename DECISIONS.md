@@ -28,6 +28,11 @@ Product direction
   mode uses very subtle off-white (#f5f4f0) and muted dark text (#34332f). Dark
   mode uses near-black (#0f1113), faintly warm, with soft light text (#d6d6d3).
   Orange should remain extremely subtle, in the spirit of Ayu Dark.
+- On the landing page, double-clicking the empty background toggles an explicit
+  light/dark override for the current browser tab. Use session storage so the
+  choice survives navigation and reloads in that tab, then expires with the
+  tab session. The operating-system preference remains the default until the
+  visitor chooses a theme; clicks on navigation or page content do not toggle it.
 - Respect reduced-motion preferences for animated interactions.
 
 Landing page
@@ -113,6 +118,9 @@ Recent decisions
   is an empty state; the editor has a responsive two-card layout, live Markdown
   preview, comma-separated tag chips, and browser-side previews for common media
   links. Publish remains disabled and no draft is saved.
+- Added a landing-background double-click gesture for a tab-scoped theme choice;
+  the system theme remains the default and the session override applies across
+  pages.
 - Adopted a three-document workflow: NEXT.md holds upcoming work, DECISIONS.md
   holds durable rationale, and HANDOFF.md records append-only session handoffs
   tied to Git commits.

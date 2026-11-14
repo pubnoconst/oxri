@@ -26,6 +26,8 @@ the intended product design and require implementation before they are active.
 ## Current pages
 
 - `/` displays the landing page and links to the planned book and journal areas.
+  Double-clicking its empty background toggles light/dark mode for the current
+  browser tab; the operating-system preference remains the default.
 - `/book-i` displays Book I, whose source text is in `rawcontent/Book-I.txt`.
 - `/journal-editor` is a Development-only, browser-side editor prototype. It
   has an editable content pane with media-link and tags fields, plus a live
@@ -53,6 +55,8 @@ implemented in this scaffold.
 ## Project notes
 
 - `Views/Page.fs` defines the shared document frame, typography, and stylesheets.
+- `wwwroot/js/theme-toggle.js` restores the tab's theme choice on each page and
+  handles the landing-page background gesture.
 - `Views/Landing.fs` and `Views/BookI.fs` define the current page views.
 - `Views/Misc/Back.fs` contains the reusable Back link.
 - `wwwroot/` contains public static assets. Local asset URLs use a `?v=N`
