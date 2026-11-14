@@ -576,6 +576,73 @@ html {
   white-space: nowrap;
 }
 
+/* Minimal shared error page for missing pages, timeouts, and server failures. */
+.error-page {
+  display: grid;
+  min-height: 100vh;
+  padding: 1.5rem;
+  place-items: center;
+}
+
+.error-card {
+  width: min(100%, 28rem);
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  text-align: center;
+}
+
+.error-wordmark,
+.error-reference-label,
+.error-qr p {
+  font-family: system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.13em;
+  opacity: 0.55;
+  text-transform: uppercase;
+}
+
+.error-wordmark { margin-bottom: 2.5rem; }
+.error-code {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  font-size: clamp(4rem, 16vw, 6rem);
+  font-weight: 300;
+  letter-spacing: -0.08em;
+  line-height: 1;
+}
+
+.error-title {
+  margin: 1rem 0 2rem;
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+.error-reference-label { margin: 0 0 0.35rem; }
+.error-reference {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+  opacity: 0.7;
+}
+
+.error-qr { margin: 1.25rem 0; }
+.error-qr img {
+  display: block;
+  width: 7rem;
+  height: 7rem;
+  margin: 0 auto;
+  padding: 0.45rem;
+  background: #fff;
+}
+
+.error-qr p { margin: 0.55rem 0 0; font-size: 0.62rem; }
+.error-home-link {
+  display: inline-block;
+  margin-top: 1rem;
+  color: inherit;
+  text-underline-offset: 0.22em;
+}
+
 @media (max-width: 760px) {
   .journal-editor-grid {
     grid-template-columns: minmax(0, 1fr);

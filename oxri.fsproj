@@ -9,6 +9,7 @@
   <ItemGroup>
     <!-- Compile shared views first, then page views, then the application entry point. -->
     <Compile Include="Views/Page.fs" />
+    <Compile Include="Views/Error.fs" />
     <Compile Include="Views/Misc/Back.fs" />
     <Compile Include="Views/Landing.fs" />
     <Compile Include="Views/BookI.fs" />
@@ -19,6 +20,7 @@
 
   <ItemGroup>
     <PackageReference Include="Oxpecker" Version="2.1.1" />
+    <PackageReference Include="QRCoder" Version="1.8.1" />
   </ItemGroup>
 
 </Project>

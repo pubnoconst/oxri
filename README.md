@@ -34,6 +34,9 @@ the intended product design and require implementation before they are active.
   rendered preview. Drafts are not saved, and publishing is disabled.
 - `/journals` is currently a Development-only empty state with an Add New Entry
   link to the editor prototype.
+- Error responses use a minimal page with the HTTP status and an opaque request
+  reference. Its QR code contains only that reference; exceptions never appear
+  in the response.
 - Book II, Book III, and Journals are navigation placeholders; their routes
   have not been implemented yet.
 
@@ -55,6 +58,7 @@ implemented in this scaffold.
 ## Project notes
 
 - `Views/Page.fs` defines the shared document frame, typography, and stylesheets.
+- `Views/Error.fs` defines the shared 4xx/5xx error page.
 - `wwwroot/js/theme-toggle.js` restores the tab's theme choice on each page and
   handles the landing-page background gesture.
 - `Views/Landing.fs` and `Views/BookI.fs` define the current page views.

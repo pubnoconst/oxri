@@ -2,10 +2,10 @@
 
 Upcoming work:
 
-- Implement central exception handling before authentication or journal actions:
-  every environment must return a friendly error page without exception details
-  or stack traces. Add private server-side error logging later, and verify that
-  responses never expose trace information.
+- Add private server-side logging for error reference codes and failures, then
+  verify that error responses never expose exception details or stack traces.
+- Configure hosting and reverse-proxy error pages and timeouts to match the
+  app's safe responses; verify provider-generated failures contain no traces.
 - Plan single-admin passkey authentication: compare a temporary whole-site
   access gate with native app authentication; define first-passkey enrollment,
   recovery, session lifetime, and adding/removing multiple credentials.

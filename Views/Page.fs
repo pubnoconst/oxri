@@ -19,7 +19,7 @@ let frame (content: HtmlElement) : HtmlElement =
             // Bulma supplies the component baseline; overrides.css contains our tokens and layouts.
             link(rel="stylesheet", href="/css/bulma.min.css")
             // Project styles are layered after Bulma; increment v when CSS changes.
-            link(rel="stylesheet", href="/css/overrides.css?v=14")
+            link(rel="stylesheet", href="/css/overrides.css?v=15")
         }
         body() {
             content
