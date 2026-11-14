@@ -28,3 +28,18 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   work.
 - Next: design author authentication and the Turso data model before building
   protected journal management. See `NEXT.md` for the current queue.
+
+## 2026-11-15 - `1330ccd` Add session theme toggle on landing page
+
+- Added a double-click gesture on the landing page's empty background to switch
+  between light and dark themes. Interactions with navigation and content do not
+  trigger the toggle.
+- The choice is stored in `sessionStorage`, restored across site navigation,
+  and expires with the browser tab session. The system preference remains the
+  default when no explicit choice has been made.
+- Updated shared theme tokens and color-scheme handling, including reduced-motion
+  support for the transition, and documented the behavior in README and
+  `DECISIONS.md`.
+- No tests were run.
+- Next: design author authentication and the Turso data model before protected
+  journal management; see `NEXT.md`.
