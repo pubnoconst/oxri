@@ -61,3 +61,21 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   locally and before they are pushed.
 - Use `git revert <implementation-hash>` to undo implementation while keeping
   the decision rationale and commit trail.
+
+## 2026-11-15 - `d3dbe60` Plan exception handling and passkey authentication
+
+- Added the no-stack-trace error-page requirement and deferred private server
+  logging to `NEXT.md`.
+- Added a planning task for one-admin passkey authentication, bootstrap,
+  recovery, session policy, and credential management. No authentication
+  provider or implementation approach has been selected yet.
+- Research points to Cloudflare Access passkeys as a possible free temporary
+  whole-site gate (free tier currently covers teams under 50 users), and to
+  ASP.NET Core Identity as a native passkey option on the project's framework.
+  An Access passkey is tied to that relying party and should not be assumed
+  transferable to app-native authentication.
+- Further study used official sources: [WebAuthn](https://www.w3.org/TR/webauthn-3/),
+  [ASP.NET Core passkeys](https://learn.microsoft.com/aspnet/core/security/authentication/passkeys/?view=aspnetcore-10.0),
+  [Cloudflare Access passkeys](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/passkeys/),
+  and [Cloudflare Access origin validation](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/).
+- No application code was changed. The architecture remains a planning question.
