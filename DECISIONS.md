@@ -111,6 +111,18 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261115-003 - Minimal error page and QR payload:
+  - Use one quiet error-page layout for application-generated 404, 408, 504,
+    and 500 responses. Keep the HTTP status visible and the message generic.
+  - Show the request's opaque TraceIdentifier as a reference code. The QR code
+    encodes only this same reference; it contains no URL, query string, or
+    exception detail. This keeps the QR self-contained until a report endpoint
+    exists and allows later private logs to use the reference for lookup.
+  - Bound application endpoint requests to 30 seconds and render a 504 page when
+    that limit expires. Hosting-provider or reverse-proxy errors generated
+    before the request reaches the app need matching configuration there.
+  - Use the standard HTTP status in the response and never expose exception
+    text or stack traces, including in Development.
 - D-20261115-001 - Commit-linked decision and implementation history:
   - Record a decision here before implementing work that depends on it, and
     commit the decision record separately when practical.
