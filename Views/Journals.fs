@@ -6,7 +6,7 @@ open Views.Misc
 open Views.Page
 
 let index : EndpointHandler =
-    frame (
+    frame "/css/pages/journals.css?v=1" (
         // Development-only catalog placeholder. The route is intentionally an
         // empty state until authentication and journal storage are designed.
         main(class'="journals-page") {

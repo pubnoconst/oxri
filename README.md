@@ -59,6 +59,8 @@ implemented in this scaffold.
 
 - `Views/Page.fs` defines the shared document frame, typography, and stylesheets.
 - `Views/Error.fs` defines the shared 4xx/5xx error page.
+- `wwwroot/css/overrides.css` contains shared theme and component styles;
+  `wwwroot/css/pages/` contains stylesheets for individual routes.
 - `wwwroot/js/theme-toggle.js` restores the tab's theme choice on each page and
   handles the landing-page background gesture.
 - `Views/Landing.fs` and `Views/BookI.fs` define the current page views.

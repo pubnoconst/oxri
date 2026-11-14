@@ -6,7 +6,7 @@ open Views.Misc
 open Views.Page
 
 let index : EndpointHandler =
-    frame (
+    frame "/css/pages/book-i.css?v=1" (
         // Article markup is semantic; prose is based on rawcontent/Book-I.txt.
         main(class'="article-page") {
             article(class'="book-article") {

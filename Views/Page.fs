@@ -2,7 +2,8 @@ module Views.Page
 
 open Oxpecker.ViewEngine
 
-let frame (content: HtmlElement) : HtmlElement =
+// Render the shared document shell and link the stylesheet owned by this route.
+let frame (pageCssPath: string) (content: HtmlElement) : HtmlElement =
     html() {
         head() {
             meta(charset="utf-8")
@@ -19,7 +20,9 @@ let frame (content: HtmlElement) : HtmlElement =
             // Bulma supplies the component baseline; overrides.css contains our tokens and layouts.
             link(rel="stylesheet", href="/css/bulma.min.css")
             // Project styles are layered after Bulma; increment v when CSS changes.
-            link(rel="stylesheet", href="/css/overrides.css?v=15")
+            link(rel="stylesheet", href="/css/overrides.css?v=16")
+            // Each route owns its page-level rules in a separate stylesheet.
+            link(rel="stylesheet", href=pageCssPath)
         }
         body() {
             content

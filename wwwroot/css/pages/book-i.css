@@ -1,0 +1,68 @@
+﻿/* Center the reading column and keep its measure comfortable for long prose. */
+.article-page {
+  min-height: 100vh;
+  padding: clamp(1.5rem, 5vw, 4rem) 1.25rem;
+}
+
+.book-article {
+  width: min(100%, 42rem);
+  margin: 0 auto;
+  font-size: 1.2rem;
+  line-height: 1.7;
+}
+.article-header {
+  margin: 2.5rem 0 3rem;
+  text-align: center;
+}
+
+.article-header h1 {
+  margin: 0;
+  font-size: clamp(2.25rem, 6vw, 3.25rem);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.article-deck {
+  margin-top: 0.5rem;
+  font-size: 1.3rem;
+  font-style: italic;
+  opacity: 0.72;
+}
+
+.book-article section {
+  margin-top: 2.4rem;
+}
+
+.book-article section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.55rem;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.book-article section h3 {
+  margin: 1.5rem 0 0.45rem;
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.book-article p {
+  margin: 0 0 1rem;
+}
+
+.book-article ul {
+  margin: 0 0 1rem 1.5rem;
+}
+
+.article-ending {
+  margin-top: 3rem !important;
+  text-align: center;
+}
+
+.article-ending h2 {
+  letter-spacing: 0.12em;
+}
+
+.book-article > .back-link:last-child {
+  margin-top: 1.5rem;
+}

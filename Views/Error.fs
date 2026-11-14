@@ -29,7 +29,7 @@ let private qrDataUri (referenceCode: string) =
 let page (statusCode: int) (referenceCode: string) : HtmlElement =
     let qr = qrDataUri referenceCode
 
-    frame (
+    frame "/css/pages/error.css?v=1" (
         main(class'="error-page") {
             section(class'="error-card") {
                 p(class'="error-wordmark") { "RES IMPERII" }

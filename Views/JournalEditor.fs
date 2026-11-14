@@ -6,7 +6,7 @@ open Views.Misc
 open Views.Page
 
 let index : EndpointHandler =
-    frame (
+    frame "/css/pages/journal-editor.css?v=1" (
         // This page is registered only in Development; treat it as a visual
         // prototype until an authenticated persistence flow exists.
         main(class'="journal-editor-page") {
