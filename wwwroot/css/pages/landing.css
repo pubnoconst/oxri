@@ -2,6 +2,9 @@
 .landing {
   min-height: 100vh;
   padding: 0 2rem;
+  /* Keep double-clicks from selecting nearby navigation text. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /*
