@@ -98,3 +98,16 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - `dotnet build --no-restore` succeeded with no warnings. Tests were not run.
 - Next: add private logging for error references and verify proxy/host error
   pages; both are tracked in `NEXT.md`.
+
+## 2026-11-15 - Route-specific stylesheet ownership
+
+- Decision: `D-20261115-004`, recorded in commit `c27367d`.
+- Implementation: commit `cf4941d` (`Split route stylesheets`).
+- `Views.Page.frame` now takes a page stylesheet path and adds it after the
+  shared stylesheet. Each page view passes its own versioned CSS URL.
+- Split page-only rules into `wwwroot/css/pages/landing.css`, `book-i.css`,
+  `journal-editor.css`, `journals.css`, and `error.css`. Shared theme, back-link,
+  tag-chip, and visually-hidden rules remain in `wwwroot/css/overrides.css`.
+- The shared stylesheet is now 128 lines, down from 658. The README describes
+  the stylesheet ownership convention.
+- `dotnet build --no-restore` succeeded with no warnings; tests were not run.
