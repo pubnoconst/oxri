@@ -111,6 +111,13 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261115-004 - Route-specific stylesheets:
+  - Keep theme tokens and components shared by multiple views in
+    wwwroot/css/overrides.css. Move route-only layout and presentation rules to
+    wwwroot/css/pages/<route>.css so changes remain local to their page.
+  - Make Views.Page.frame take the route stylesheet path, link it after the
+    shared stylesheet, and pass that path from each page view. Keep the manual
+    cache-busting version in the path argument.
 - D-20261115-003 - Minimal error page and QR payload:
   - Use one quiet error-page layout for application-generated 404, 408, 504,
     and 500 responses. Keep the HTTP status visible and the message generic.
