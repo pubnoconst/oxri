@@ -111,6 +111,14 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261115-006 - Pending navigation feedback:
+  - Use the browser's cross-document view transition for a brief fade between
+    same-origin pages where supported; normal navigation remains the fallback.
+    Disable the transition animation for reduced-motion preferences.
+  - Keep the current page visible and readable while a destination is pending.
+    If same-origin link navigation has not completed after a brief delay, apply a
+    subtle breathing dim until the destination loads. Use a steady subtle dim
+    under reduced-motion preferences, and clear the state if navigation stalls.
 - D-20261115-005 - Non-selectable landing page:
   - Disable text selection across the landing page so double-clicking near its
     navigation does not select the nearest text. Keep links interactive and
