@@ -120,3 +120,16 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   property), so double-clicking near the navigation does not select text.
   Links remain interactive. Bumped the landing stylesheet cache version.
 - Tests were not run.
+
+## 2026-11-15 - Pending navigation feedback
+
+- Decision: `D-20261115-006`, recorded in commit `6c77808`.
+- Implementation: commit `371b2eb` (`Add pending navigation feedback`).
+- Added a subtle cross-document fade where browser view transitions are
+  supported, plus delayed breathing dim feedback for same-origin link clicks.
+  Modified clicks, new tabs, downloads, and external links do not trigger it.
+- Reduced-motion preferences disable the page transition and use a steady slight
+  dim for pending navigation. The pending state clears on page restore or after
+  35 seconds if the navigation does not complete.
+- Bumped the shared stylesheet cache version. `git diff --check` passed; tests
+  were not run.
