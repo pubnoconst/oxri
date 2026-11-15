@@ -111,6 +111,13 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261115-007 - Theme-aware pending navigation feedback:
+  - Keep pending-navigation dimming confined to dark mode, including the
+    reduced-motion fallback. Light-mode readers should not receive a darkening
+    flash while waiting for a destination.
+  - Set the cross-document view-transition layer to the active page canvas
+    color, so fading page snapshots do not expose a black backdrop in light
+    mode. This refines the feedback introduced by D-20261115-006.
 - D-20261115-006 - Pending navigation feedback:
   - Use the browser's cross-document view transition for a brief fade between
     same-origin pages where supported; normal navigation remains the fallback.
