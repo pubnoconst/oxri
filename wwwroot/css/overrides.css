@@ -53,6 +53,11 @@ body {
   navigation: auto;
 }
 
+/* Keep the transition layer on the page canvas when a snapshot fades out. */
+::view-transition {
+  background-color: var(--page);
+}
+
 @keyframes page-fade-out {
   to {
     opacity: 0;
@@ -85,7 +90,14 @@ body {
   }
 }
 
-html.navigation-pending body {
+/* Keep light-mode pages at full brightness; dim only when the active theme is dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]).navigation-pending body {
+    animation: navigation-pending-breathe 1.8s ease-in-out infinite;
+  }
+}
+
+:root[data-theme="dark"].navigation-pending body {
   animation: navigation-pending-breathe 1.8s ease-in-out infinite;
 }
 
@@ -101,7 +113,14 @@ html.navigation-pending body {
     animation: none;
   }
 
-  html.navigation-pending body {
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]).navigation-pending body {
+      animation: none;
+      opacity: 0.94;
+    }
+  }
+
+  :root[data-theme="dark"].navigation-pending body {
     animation: none;
     opacity: 0.94;
   }

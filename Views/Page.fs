@@ -20,7 +20,7 @@ let frame (pageCssPath: string) (content: HtmlElement) : HtmlElement =
             // Bulma supplies the component baseline; overrides.css contains our tokens and layouts.
             link(rel="stylesheet", href="/css/bulma.min.css")
             // Project styles are layered after Bulma; increment v when CSS changes.
-            link(rel="stylesheet", href="/css/overrides.css?v=18")
+            link(rel="stylesheet", href="/css/overrides.css?v=20")
             // Each route owns its page-level rules in a separate stylesheet.
             link(rel="stylesheet", href=pageCssPath)
         }
