@@ -20,7 +20,7 @@ let frame (pageCssPath: string) (content: HtmlElement) : HtmlElement =
             // Bulma supplies the component baseline; overrides.css contains our tokens and layouts.
             link(rel="stylesheet", href="/css/bulma.min.css")
             // Project styles are layered after Bulma; increment v when CSS changes.
-            link(rel="stylesheet", href="/css/overrides.css?v=16")
+            link(rel="stylesheet", href="/css/overrides.css?v=18")
             // Each route owns its page-level rules in a separate stylesheet.
             link(rel="stylesheet", href=pageCssPath)
         }
@@ -29,5 +29,6 @@ let frame (pageCssPath: string) (content: HtmlElement) : HtmlElement =
             // The stored session override applies site-wide; the gesture itself
             // is enabled only when the current page has the landing canvas.
             script(src="/js/theme-toggle.js?v=1") { }
+            script(src="/js/navigation-feedback.js?v=1") { }
         }
     }

@@ -48,10 +48,62 @@ body {
   transition: background-color 180ms ease, color 180ms ease;
 }
 
+/* Use cross-document view transitions for ordinary same-origin navigation. */
+@view-transition {
+  navigation: auto;
+}
+
+@keyframes page-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+::view-transition-old(root) {
+  animation: 120ms ease-out both page-fade-out;
+}
+
+::view-transition-new(root) {
+  animation: 180ms ease-in both page-fade-in;
+}
+
+/* A very light breathing dim acknowledges a pending same-site navigation. */
+@keyframes navigation-pending-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.92;
+  }
+}
+
+html.navigation-pending body {
+  animation: navigation-pending-breathe 1.8s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html,
   body {
     transition: none;
+  }
+
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+
+  html.navigation-pending body {
+    animation: none;
+    opacity: 0.94;
   }
 }
 
