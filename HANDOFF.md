@@ -22,6 +22,18 @@ the state and point to the commit that contains the work being handed off.
 Keep upcoming tasks in `NEXT.md` and durable product or implementation rationale
 in `DECISIONS.md`; avoid copying their full contents into this timeline.
 
+## 2026-11-15 - Theme-aware navigation feedback
+
+- Decision ID: `D-20261115-007`.
+- Decision record commit: `97d38dc` (`Decide theme-aware navigation feedback`).
+- Implementation commit: `321691f` (`Keep navigation feedback theme-aware`).
+- Limited pending-navigation dimming to dark mode, including its reduced-motion
+  fallback. The cross-document view-transition layer now uses the active page
+  canvas color, preventing the fade from exposing a black backdrop in light mode.
+- Documented the behavior in README and added CSS comments explaining both
+  theme-aware dimming and the transition backdrop.
+- `git diff --check` passed. Browser visual verification remains outstanding.
+
 ## 2026-11-15 - `3fb2d31` Add commit-linked handoff journal
 
 - Renamed `TODO.md` to `NEXT.md` for the actionable work queue and corrected

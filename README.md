@@ -28,6 +28,9 @@ the intended product design and require implementation before they are active.
 - `/` displays the landing page and links to the planned book and journal areas.
   Double-clicking its empty background toggles light/dark mode for the current
   browser tab; the operating-system preference remains the default.
+  Same-origin page changes use a brief fade where supported; pending-navigation
+  dimming is limited to dark mode, and the transition backdrop follows the
+  active page color.
 - `/book-i` displays Book I, whose source text is in `rawcontent/Book-I.txt`.
 - `/journal-editor` is a Development-only, browser-side editor prototype. It
   has an editable content pane with media-link and tags fields, plus a live
