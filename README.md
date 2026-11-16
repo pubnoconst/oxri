@@ -63,11 +63,12 @@ SQLx dependency has no database driver or TLS backend enabled yet; choose those
 alongside the database before implementing persistence.
 
 The branch pins the Rust channel to stable for the current Windows ARM64 target.
-Run it with `cargo run` once the Rust toolchain and Visual Studio C++ Build
-Tools are installed. The Rust linker requires the MSVC linker (`link.exe`), even
-though this initial feature set does not require Clang or a C compiler. Adding
-SQLx SQLite or a rustls `ring` backend may introduce additional native build
-requirements and should be evaluated separately.
+Run it with `cargo run` from the Visual Studio 2022 ARM64 developer command
+environment (`VsDevCmd.bat -arch=arm64 -host_arch=arm64`). The Rust linker
+requires the MSVC linker (`link.exe`), even though this initial feature set does
+not require Clang or a C compiler. Adding SQLx SQLite or a rustls `ring` backend
+may introduce additional native build requirements and should be evaluated
+separately.
 
 ASP.NET Core loads `appsettings.json` and, when running in Development, also
 loads `appsettings.Development.json`. Keep credentials out of committed

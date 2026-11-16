@@ -179,3 +179,15 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - SQLx has no database driver or TLS backend enabled. Add these when selecting
   and implementing the database connection. The .NET app on `main` remains the
   canonical version.
+
+## 2026-11-16 - Install Windows ARM64 C++ build tools
+
+- Follow-up to decision `D-20261116-002` and implementation commit `29360142528442452c5487c32b602c8968ef8951`.
+- Installed Microsoft Visual Studio Build Tools 2022 (17.14.45) with the C++
+  workload, ARM64 tools, and recommended SDK components. `link.exe` is available
+  through the ARM64 developer environment initialized by `VsDevCmd.bat`.
+- `cargo check` and `cargo build` both succeeded for `aarch64-pc-windows-msvc`
+  from that environment. Both report one expected warning: SQLx is included as
+  part of the MASH stack but remains unused until persistence is implemented.
+- README now notes the developer environment needed to run Cargo commands.
+  Clang is not needed for the current feature set; no Rust tests were run.
