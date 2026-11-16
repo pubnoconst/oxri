@@ -67,6 +67,23 @@
   font-size: 1.1rem;
 }
 
+/* Subtle login/logout button aligned with the minimal navigation hierarchy. */
+.landing-auth-wrapper {
+  margin-top: 0.65rem;
+}
+
+.landing-auth {
+  font-size: 0.95rem;
+  opacity: 0.55;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.landing-auth:hover,
+.landing-auth:focus-visible {
+  opacity: 1;
+  transform: scale(1.04);
+}
+
 /* On narrow screens, use the available width and start the menu a little lower. */
 @media (max-width: 600px) {
   .landing-nav {

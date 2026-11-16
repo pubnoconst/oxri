@@ -104,7 +104,7 @@ func (s *Service) CreatePendingLogin(redirectURL string) (string, error) {
 	s.cleanupExpiredLocked()
 
 	if redirectURL == "" {
-		redirectURL = "/journals"
+		redirectURL = "/"
 	}
 
 	// Generate a 6-digit challenge code

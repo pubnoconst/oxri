@@ -40,7 +40,8 @@ func NewServer(assetsDir string, authSvc *auth.Service) http.Handler {
 	// Landing Page
 	r.Get("/", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = landing.Page().Render(req.Context(), w)
+		isAuth := auth.IsAuthenticated(req.Context())
+		_ = landing.Page(isAuth).Render(req.Context(), w)
 	})
 	r.Get("/page-css/landing.css", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")
@@ -82,18 +83,14 @@ func NewServer(assetsDir string, authSvc *auth.Service) http.Handler {
 
 	// Login & Auth Routes
 	r.Get("/login", func(w http.ResponseWriter, req *http.Request) {
-		if auth.IsAuthenticated(req.Context()) {
-			next := req.URL.Query().Get("next")
-			if next == "" {
-				next = "/journals"
-			}
-			http.Redirect(w, req, next, http.StatusSeeOther)
-			return
-		}
-
 		next := req.URL.Query().Get("next")
 		if next == "" {
-			next = "/journals"
+			next = "/"
+		}
+
+		if auth.IsAuthenticated(req.Context()) {
+			http.Redirect(w, req, next, http.StatusSeeOther)
+			return
 		}
 
 		if authSvc == nil {
@@ -141,6 +138,9 @@ func NewServer(assetsDir string, authSvc *auth.Service) http.Handler {
 		// Check if approved and consume
 		sessionID, redirectURL, ok := authSvc.ConsumeApprovedLogin(token)
 		if ok {
+			if redirectURL == "" {
+				redirectURL = "/"
+			}
 			http.SetCookie(w, &http.Cookie{
 				Name:     auth.SessionCookieName,
 				Value:    sessionID,

@@ -11,7 +11,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import "github.com/oxri/oxri-go/internal/pages/shared"
 
-func Page() templ.Component {
+func Page(isAuth bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -40,13 +40,28 @@ func Page() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"landing\"><nav class=\"landing-nav\"><h1 class=\"landing-title\">RES·IMPERII</h1><ul class=\"landing-books\"><li><a href=\"/book-i\">Book I</a></li><li><a href=\"/book-ii\">Book II</a></li><li><a href=\"/book-iii\">Book III</a></li></ul><hr class=\"landing-rule\"><a class=\"landing-journals\" href=\"/journals\">Journals</a></nav></main>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"landing\"><nav class=\"landing-nav\"><h1 class=\"landing-title\">RES·IMPERII</h1><ul class=\"landing-books\"><li><a href=\"/book-i\">Book I</a></li><li><a href=\"/book-ii\">Book II</a></li><li><a href=\"/book-iii\">Book III</a></li></ul><hr class=\"landing-rule\"><a class=\"landing-journals\" href=\"/journals\">Journals</a><div class=\"landing-auth-wrapper\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if isAuth {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<a class=\"landing-auth\" href=\"/logout\">Log out</a>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<a class=\"landing-auth\" href=\"/login\">Log in</a>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div></nav></main>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = shared.Layout("RES IMPERII", "/page-css/landing.css?v=1").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = shared.Layout("RES IMPERII", "/page-css/landing.css?v=2").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

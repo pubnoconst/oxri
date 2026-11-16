@@ -44,10 +44,11 @@ func newTestServer(t *testing.T) http.Handler {
 }
 
 func TestLandingPage(t *testing.T) {
-	server := newTestServer(t)
+	server, svc := newTestServerWithAuth(t)
+
+	// 1. Unauthenticated landing page
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
-
 	server.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -63,11 +64,29 @@ func TestLandingPage(t *testing.T) {
 	if !strings.Contains(body, "Book I") || !strings.Contains(body, "Journals") {
 		t.Errorf("missing book or journal links")
 	}
+	if !strings.Contains(body, "Log in") {
+		t.Errorf("unauthenticated landing page should contain 'Log in' link")
+	}
 	if !strings.Contains(body, "alpinejs") {
 		t.Errorf("missing Alpine.js in layout")
 	}
 	if !strings.Contains(body, "htmx.org") {
 		t.Errorf("missing HTMX in layout")
+	}
+
+	// 2. Authenticated landing page shows "Log out"
+	token, _ := svc.CreatePendingLogin("/")
+	svc.ApprovePendingLogin(token, "test")
+	sessID, _, _ := svc.ConsumeApprovedLogin(token)
+
+	authReq := httptest.NewRequest(http.MethodGet, "/", nil)
+	authReq.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: sessID})
+	authRec := httptest.NewRecorder()
+	server.ServeHTTP(authRec, authReq)
+
+	authBody := authRec.Body.String()
+	if !strings.Contains(authBody, "Log out") {
+		t.Errorf("authenticated landing page should contain 'Log out' link")
 	}
 }
 
@@ -134,8 +153,8 @@ func TestJournalEditorPage(t *testing.T) {
 func TestLoginPageAndAuthPolling(t *testing.T) {
 	server, svc := newTestServerWithAuth(t)
 
-	// 1. Visit /login
-	req := httptest.NewRequest(http.MethodGet, "/login?next=/journals", nil)
+	// 1. Visit /login without query param (should default to landing page "/")
+	req := httptest.NewRequest(http.MethodGet, "/login", nil)
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 
@@ -151,6 +170,9 @@ func TestLoginPageAndAuthPolling(t *testing.T) {
 	}
 	if !strings.Contains(body, "auth-poller") {
 		t.Errorf("missing auth poller element in login page")
+	}
+	if !strings.Contains(body, "Copy Command") {
+		t.Errorf("missing copy button in login page")
 	}
 
 	// Extract the 6-digit challenge token from the page
@@ -175,7 +197,7 @@ func TestLoginPageAndAuthPolling(t *testing.T) {
 		t.Fatalf("failed to approve pending challenge")
 	}
 
-	// 4. Poll /auth/status after approval
+	// 4. Poll /auth/status after approval -> must land back on "/"
 	pollReq2 := httptest.NewRequest(http.MethodGet, "/auth/status?token="+token, nil)
 	pollRec2 := httptest.NewRecorder()
 	server.ServeHTTP(pollRec2, pollReq2)
@@ -183,8 +205,8 @@ func TestLoginPageAndAuthPolling(t *testing.T) {
 	if pollRec2.Code != http.StatusOK {
 		t.Fatalf("expected 200 on approved poll, got %d", pollRec2.Code)
 	}
-	if pollRec2.Header().Get("HX-Redirect") != "/journals" {
-		t.Errorf("expected HX-Redirect: /journals, got %q", pollRec2.Header().Get("HX-Redirect"))
+	if pollRec2.Header().Get("HX-Redirect") != "/" {
+		t.Errorf("expected HX-Redirect: /, got %q", pollRec2.Header().Get("HX-Redirect"))
 	}
 
 	// Ensure cookie was issued
@@ -200,27 +222,27 @@ func TestLoginPageAndAuthPolling(t *testing.T) {
 		t.Fatalf("missing or empty session cookie after auth approval")
 	}
 
-	// 5. Authenticated request to /journals
-	authReq := httptest.NewRequest(http.MethodGet, "/journals", nil)
-	authReq.AddCookie(sessionCookie)
-	authRec := httptest.NewRecorder()
-	server.ServeHTTP(authRec, authReq)
+	// 5. Authenticated request to /
+	homeReq := httptest.NewRequest(http.MethodGet, "/", nil)
+	homeReq.AddCookie(sessionCookie)
+	homeRec := httptest.NewRecorder()
+	server.ServeHTTP(homeRec, homeReq)
 
-	if authRec.Code != http.StatusOK {
-		t.Fatalf("expected 200 on authenticated /journals, got %d", authRec.Code)
+	if homeRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on authenticated /, got %d", homeRec.Code)
 	}
-	if !strings.Contains(authRec.Body.String(), "Sign out") {
-		t.Errorf("authenticated journals view should display 'Sign out' link")
+	if !strings.Contains(homeRec.Body.String(), "Log out") {
+		t.Errorf("authenticated landing view should display 'Log out' link")
 	}
 
-	// 6. Visiting /login while authenticated should redirect to /journals
+	// 6. Visiting /login while authenticated should redirect to /
 	loginReq := httptest.NewRequest(http.MethodGet, "/login", nil)
 	loginReq.AddCookie(sessionCookie)
 	loginRec := httptest.NewRecorder()
 	server.ServeHTTP(loginRec, loginReq)
 
-	if loginRec.Code != http.StatusSeeOther || loginRec.Header().Get("Location") != "/journals" {
-		t.Errorf("expected redirect to /journals, got status=%d loc=%s", loginRec.Code, loginRec.Header().Get("Location"))
+	if loginRec.Code != http.StatusSeeOther || loginRec.Header().Get("Location") != "/" {
+		t.Errorf("expected redirect to /, got status=%d loc=%s", loginRec.Code, loginRec.Header().Get("Location"))
 	}
 
 	// 7. Logout revokes the session and clears cookie

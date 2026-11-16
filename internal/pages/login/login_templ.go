@@ -47,18 +47,18 @@ func Page(token, sshCommand, nextURL, keyComment, sshPort string) templ.Componen
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = shared.BackLink("/", "Back").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = shared.BackLink("/", "Home").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<h1>AUTHENTICATION</h1><p class=\"auth-subtitle\">Loopback SSH Verification</p></header><section class=\"auth-card\"><p class=\"auth-prompt\">Run the following command in your terminal. Your SSH key (OpenSSH or Proton Pass agent) will sign the challenge:</p><div class=\"auth-command-box\" x-data=\"{ copied: false }\"><code class=\"auth-command\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<h1>AUTHENTICATION</h1><p class=\"auth-subtitle\">Loopback SSH verification for Res Imperii</p></header><section class=\"auth-card\"><ol class=\"auth-steps\"><li><span class=\"step-num\">1</span><div class=\"step-content\"><p class=\"step-title\">Open your terminal</p><p class=\"step-desc\">Use PowerShell, Windows Terminal, or your preferred shell where your SSH key or Proton Pass agent is accessible.</p></div></li><li><span class=\"step-num\">2</span><div class=\"step-content\"><p class=\"step-title\">Run the authentication command</p><div class=\"auth-command-box\" x-data=\"{ copied: false }\"><code class=\"auth-command\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(sshCommand)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/pages/login/login.templ`, Line: 21, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/pages/login/login.templ`, Line: 30, Col: 47}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -71,58 +71,71 @@ func Page(token, sshCommand, nextURL, keyComment, sshPort string) templ.Componen
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.NewAttributeExpression(fmt.Sprintf("navigator.clipboard.writeText('%s'); copied = true; setTimeout(() => copied = false, 2000)", sshCommand)).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/pages/login/login.templ`, Line: 25, Col: 132}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/pages/login/login.templ`, Line: 34, Col: 135}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><span x-show=\"!copied\">Copy</span> <span x-show=\"copied\" style=\"display:none;\">Copied</span></button></div><div class=\"auth-status-bar\"><span class=\"auth-pulse-dot\"></span> <span class=\"auth-status-text\">Waiting for SSH signature...</span></div><div class=\"auth-meta\"><p>Authorized key: <code>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><span x-show=\"!copied\">Copy Command</span> <span x-show=\"copied\" style=\"display:none;\">Copied!</span></button></div></div></li><li><span class=\"step-num\">3</span><div class=\"step-content\"><p class=\"step-title\">Identity verification</p><p class=\"step-desc\">Your private key signs the loopback challenge. Upon verification, this page automatically unlocks and returns you to the home page.</p></div></li></ol><div class=\"auth-status-bar\"><span class=\"auth-pulse-dot\"></span> <span class=\"auth-status-text\">Listening on port ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(keyComment)
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(sshPort)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/pages/login/login.templ`, Line: 36, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/pages/login/login.templ`, Line: 52, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</code></p><p>Direct alternative: <code>ssh -p ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, " · Waiting for SSH signature...</span></div><div class=\"auth-meta\"><p>Authorized key: <code>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var6 string
-			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(sshPort)
+			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(keyComment)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/pages/login/login.templ`, Line: 37, Col: 50}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/pages/login/login.templ`, Line: 55, Col: 42}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, " admin@localhost</code></p></div></section><div id=\"auth-poller\" hx-get=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</code></p><p>Alternative quick command: <code>ssh -p ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var7 string
-			templ_7745c5c3_Var7, templ_7745c5c3_Err = templruntime.NewAttributeExpression(fmt.Sprintf("/auth/status?token=%s&next=%s", token, nextURL)).Resolve(ctx)
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(sshPort)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/pages/login/login.templ`, Line: 42, Col: 73}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/pages/login/login.templ`, Line: 56, Col: 57}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" hx-trigger=\"every 1s\" hx-swap=\"none\"></div></main>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, " admin@localhost</code></p></div></section><div id=\"auth-poller\" hx-get=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var8 string
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templruntime.NewAttributeExpression(fmt.Sprintf("/auth/status?token=%s&next=%s", token, nextURL)).Resolve(ctx)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/pages/login/login.templ`, Line: 61, Col: 73}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" hx-trigger=\"every 1s\" hx-swap=\"none\"></div></main>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = shared.Layout("Authentication - RES IMPERII", "/page-css/login.css?v=1").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = shared.Layout("Authentication - RES IMPERII", "/page-css/login.css?v=2").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
