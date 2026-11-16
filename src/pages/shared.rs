@@ -20,6 +20,7 @@ pub fn frame(title: &str, stylesheet: &str, content: Markup) -> Markup {
             body {
                 (content)
                 script src="https://unpkg.com/htmx.org@2.0.4" {}
+                script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" {}
                 script src="/assets/js/theme-toggle.js?v=1" {}
                 script src="/assets/js/navigation-feedback.js?v=1" {}
             }

@@ -75,6 +75,8 @@ mod tests {
         assert!(body_str.contains("Book I"));
         assert!(body_str.contains("Book II"));
         assert!(body_str.contains("Journals"));
+        assert!(body_str.contains("htmx.org"));
+        assert!(body_str.contains("alpinejs"));
     }
 
     #[tokio::test]
