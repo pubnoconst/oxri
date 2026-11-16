@@ -14,7 +14,7 @@ pub fn frame(title: &str, stylesheet: &str, content: Markup) -> Markup {
                 link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous";
                 link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap";
                 link rel="stylesheet" href="/assets/css/bulma.min.css";
-                link rel="stylesheet" href="/assets/css/overrides.css?v=21";
+                link rel="stylesheet" href="/assets/css/overrides.css?v=22";
                 link rel="stylesheet" href=(stylesheet);
             }
             body {

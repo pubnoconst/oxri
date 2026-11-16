@@ -189,6 +189,20 @@ html {
   font-size: 0.9rem;
   opacity: 0.8;
 }
+
+/* Calm measure and centered column for long-form book articles. */
+.article-page {
+  min-height: 100vh;
+  padding: clamp(1.5rem, 5vw, 4rem) 1.25rem;
+}
+
+.book-article {
+  width: min(100%, 42rem);
+  margin: 0 auto;
+  font-size: 1.2rem;
+  line-height: 1.75;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

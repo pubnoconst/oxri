@@ -8,7 +8,7 @@ pub async fn index() -> impl IntoResponse {
         "RES IMPERII",
         "/page-css/landing.css?v=1",
         html! {
-            main class="landing" hx-boost="true" {
+            main class="landing" {
                 nav class="landing-nav" {
                     h1 class="landing-title" { "RES·IMPERII" }
                     ul class="landing-books" {
