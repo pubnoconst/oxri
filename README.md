@@ -1,8 +1,10 @@
 # Res Imperii
 
 Res Imperii is a private blog for long-form articles and journals. The
-`rust-experiment` branch is now a standalone Rust application using the MASH
-stack: Maud, Axum, SQLx, and HTMX. The .NET/F# application remains on `main`.
+`go-experiment` branch is a standalone Go application using the GOTH stack:
+Go, Templ, HTMX, and Tailwind/Bulma (Bulma + overrides in this project), paired
+with Alpine.js and Chi routing. The Rust experiment remains on `rust-experiment`
+and the .NET/F# application remains on `main`.
 
 ## Project structure
 
@@ -16,31 +18,47 @@ assets/
     navigation-feedback.js
     theme-toggle.js
   favicon.png
-src/
-  main.rs
+cmd/
+  server/
+    main.go
+internal/
+  app/
+    server.go
+    middleware.go
+    server_test.go
   pages/
-    shared.rs
+    shared/
+      layout.templ
     landing/
-      mod.rs
+      landing.templ
       style.css
-    book_i/
-      mod.rs
+    booki/
+      booki.templ
+      booki.go
       style.css
     journals/
-      mod.rs
+      journals.templ
       style.css
-    journal_editor/
-      mod.rs
+    editor/
+      editor.templ
       style.css
-    error/
-      mod.rs
+    errorpage/
+      error.templ
+      error.go
       style.css
+rawcontent/
+  book-i.md
+  booki.go
+magefile.go
+go.mod
+go.sum
 ```
 
-Each page's Rust view and page-only stylesheet sit together in
-`src/pages/<page>/`. Page modules embed `style.css` at compile time and serve it
-through an explicit, versioned `/page-css/...` route. This keeps page styling
-easy to find without exposing Rust source through the static file server.
+Each page's Templ view and page-only stylesheet sit together in
+`internal/pages/<page>/`. Page modules embed `style.css` at compile time with
+`//go:embed` and serve it through an explicit, versioned `/page-css/...` route.
+This keeps page styling easy to find without exposing source files through the
+static file server.
 
 Shared public files live in `assets/`: Bulma and shared project overrides are
 under `assets/css/`, browser scripts are under `assets/js/`, and the favicon is
@@ -50,18 +68,24 @@ asset's `?v=N` query version when changing its contents.
 
 ## Run locally
 
-Install Rust stable and Visual Studio 2022 Build Tools with the C++ ARM64 tools
-and Windows SDK. On Windows ARM64, initialize the Visual Studio developer
-environment before running Cargo so it can find `link.exe` and the SDK:
+The project uses [Mage](https://magefile.org/) as the task runner, emulating `cargo run`:
 
 ```powershell
-cmd.exe /d /s /c 'call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat" -arch=arm64 -host_arch=arm64 && cargo run'
+# Emulate cargo run (generates templates and launches the server)
+mage
+
+# Or run tests
+mage test
+
+# Or build the binary into bin/server.exe
+mage build
 ```
 
-The current SQLx dependency has no database driver or TLS backend enabled. The
-database and connection features remain to be selected before persistence is
-implemented. The current feature set builds without Clang; adding SQLite or a
-rustls `ring` backend may introduce native toolchain requirements.
+If `mage` is not in your global `PATH`, invoke it via Go:
+
+```powershell
+go run github.com/magefile/mage run
+```
 
 ## Current pages
 
@@ -80,14 +104,12 @@ rustls `ring` backend may introduce native toolchain requirements.
   code containing only that reference. Application route work has a 30-second
   deadline. Exception details and stack traces are never included in responses.
 
-Turso is the intended hosted content database. The product limit is 1 GiB, but
-the Rust application does not yet connect to a database, enforce the limit, or
-implement journal management.
+Turso is the intended hosted content database. The product limit is 1 GiB.
 
 ## Project journals
 
 - [DECISIONS.md](DECISIONS.md) records durable product and implementation
-  choices, including the page-local CSS layout.
+  choices.
 - [NEXT.md](NEXT.md) lists upcoming work.
 - [HANDOFF.md](HANDOFF.md) is an append-only session journal tied to Git
   commits.

@@ -1,24 +1,40 @@
-# Rust build output
-/target/
-
-# Local build output from tooling that may still target the former project
+# Go binaries and build output
 /bin/
-/obj/
-/.mage/
-passkey.txt
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
-# Local secrets and settings
+# Test binaries and coverage
+*.test
+*.out
+
+# Magefile cache
+/.mage/
+
+# Go workspace files
+go.work
+go.work.sum
+
+# Local secrets and temporary keys
 .env
 .env.*
 !.env.example
+passkey.txt
+passkey.json
 
 # IDE and operating-system files
 .vs/
 .idea/
 .vscode/
-.openidea/shelf/
+.openidea/
 .DS_Store
 Thumbs.db
 Desktop.ini
 *.swp
 *.stackdump
+
+# Legacy build directories
+/target/
+/obj/

@@ -153,7 +153,7 @@ func TestTimeoutHandling(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		w.Write([]byte("ok"))
 	})
-	handler := TimeoutMiddleware(10*time.Millisecond, mux)
+	handler := TimeoutMiddleware(10 * time.Millisecond)(mux)
 
 	req := httptest.NewRequest(http.MethodGet, "/slow", nil)
 	rec := httptest.NewRecorder()
