@@ -363,14 +363,6 @@ func (s *Service) handleSessionChannel(channel ssh.Channel, requests <-chan *ssh
 }
 
 func (s *Service) processSSHAuthAction(w io.Writer, user, cmd, comment string) {
-	banner := `
-========================================
- RES IMPERII - AUTHENTICATION GATEWAY
-========================================
-`
-	_, _ = io.WriteString(w, banner)
-	_, _ = fmt.Fprintf(w, "[✓] Public key verified: %s\n", comment)
-
 	// Determine token:
 	// 1. From exec command argument
 	// 2. From username (if 6-digit or non-admin)
@@ -382,23 +374,20 @@ func (s *Service) processSSHAuthAction(w io.Writer, user, cmd, comment string) {
 
 	if targetToken != "" {
 		if s.ApprovePendingLogin(targetToken, comment) {
-			_, _ = fmt.Fprintf(w, "[✓] Session %s approved.\n", targetToken)
-			_, _ = io.WriteString(w, "[✓] Browser tab unlocked! You may now close this terminal.\n\n")
+			_, _ = fmt.Fprintf(w, "Authenticated. Session %s approved.\r\n", targetToken)
 			return
 		}
-		_, _ = fmt.Fprintf(w, "[!] Challenge token '%s' not found or expired.\n\n", targetToken)
+		_, _ = fmt.Fprintf(w, "Challenge token %s not found or expired.\r\n", targetToken)
 		return
 	}
 
 	// Try approving latest pending
 	if token, ok := s.ApproveLatestPendingLogin(comment); ok {
-		_, _ = fmt.Fprintf(w, "[✓] Approved pending session: %s\n", token)
-		_, _ = io.WriteString(w, "[✓] Browser tab unlocked! You may now close this terminal.\n\n")
+		_, _ = fmt.Fprintf(w, "Authenticated. Session %s approved.\r\n", token)
 		return
 	}
 
-	_, _ = io.WriteString(w, "[!] No pending login sessions found.\n")
-	_, _ = io.WriteString(w, "    Please open the login page in your browser first.\n\n")
+	_, _ = io.WriteString(w, "No pending login session found. Open /login first.\r\n")
 }
 
 func sendExitStatus(channel ssh.Channel, status uint32) {
