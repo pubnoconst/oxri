@@ -341,4 +341,6 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   Also shows the direct alternative command `ssh -p 2222 admin@localhost`.
 - Updated unit and integration tests in `internal/app/server_test.go` verifying the
   landing page login link, authenticated logout state, and root redirect flow.
+- Refined SSH terminal response (commit `74a33cf`): removed noisy ASCII banners and
+  ensured standard `\r\n` line endings to prevent raw PTY staircase formatting.
 - Ran `mage test` - all 12 tests pass cleanly across `internal/app` and `internal/auth`.
