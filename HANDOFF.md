@@ -258,3 +258,19 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Added Alpine.js 3.14.8 (`defer`) to `src/pages/shared.rs` after HTMX.
 - Updated `src/main.rs` tests to verify Alpine and HTMX availability in the shell.
 - `cargo fmt` and `cargo test` succeeded for Windows ARM64 (7 passed, 0 failed).
+
+## 2026-11-17 - Scaffold Go GOTH experiment with Magefile
+
+- Decision: `D-20261117-003`, recorded in commit `91c65ca28329b8994b539a9b6ac014441a9b3966`.
+- Implementation: commit `f625a237429bd68a72522eccac5bca9358be3ab9` (`Scaffold Go GOTH stack with Magefile D-20261117-003`).
+- Branched to `go-experiment` and translated the full web application to Go using
+  the GOTH stack (Go 1.27, Templ, HTMX, Alpine.js, and Bulma).
+- Implemented standard Go project layout hygiene: `cmd/server/main.go`, `internal/app/`
+  for routing and middleware, `internal/pages/shared/` for layout, and colocated
+  `.templ` views with compile-time embedded `style.css` in `internal/pages/<page>/`.
+- Embedded `rawcontent/book-i.md` and parsed with Goldmark (safely omitting raw HTML).
+- Created `magefile.go` providing `mage run` (emulates `cargo run`), `mage build`,
+  `mage test`, `mage generate`, and `mage clean`.
+- Added unit and integration tests in `internal/app/server_test.go` covering all
+  routes, stylesheet delivery, 404/500/504 error handling, panic recovery, and
+  30-second timeouts. All tests pass (`ok github.com/oxri/oxri-go/internal/app 0.124s`).
