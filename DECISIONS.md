@@ -117,6 +117,13 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-007 - Landing page login entry and root landing redirect:
+  - Add a quiet, theme-consistent `Log in` (or `Log out` when authenticated) link
+    to the landing page navigation stack below Journals.
+  - Set the default post-authentication redirect destination to `/` so completing
+    SSH loopback verification immediately lands the admin back on the home page.
+  - Present explicit step-by-step CLI instructions on `/login` (command syntax,
+    port flag `-p 2222`, token argument, and automatic tab unlocking).
 - D-20261117-006 - SSH loopback authentication for single admin:
   - Implement single-admin authentication using an embedded loopback SSH server
     (`golang.org/x/crypto/ssh`) listening on a local port (default `:2222`,
