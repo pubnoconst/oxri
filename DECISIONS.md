@@ -117,6 +117,11 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-005 - Promote Go GOTH stack to main and preserve F# as fsharp-legacy:
+  - Promote the Go GOTH application (Go 1.27, Chi, Templ, HTMX, Alpine, Bulma)
+    to `main`.
+  - Archive the original .NET 9 / F# implementation on `fsharp-legacy`.
+  - Update `README.md` to reflect `main` as the canonical Go application.
 - D-20261117-004 - Adopt Chi router and clean standalone Go repository:
   - Adopt `github.com/go-chi/chi/v5` for routing and middleware composition.
   - Remove legacy Rust artifacts (`Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`,
