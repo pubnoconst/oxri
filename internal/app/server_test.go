@@ -174,6 +174,9 @@ func TestLoginPageAndAuthPolling(t *testing.T) {
 	if !strings.Contains(body, "Copy Command") {
 		t.Errorf("missing copy button in login page")
 	}
+	if strings.Contains(body, "outlook.com") || strings.Contains(body, "git.dev.noconst") {
+		t.Errorf("login page must not leak author email address")
+	}
 
 	// Extract the 6-digit challenge token from the page
 	re := regexp.MustCompile(`token=([0-9]{6})`)

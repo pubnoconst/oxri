@@ -21,7 +21,7 @@ import (
 
 const (
 	// DefaultAuthorizedKey is the author's public key (overridable via ADMIN_SSH_PUBKEY).
-	DefaultAuthorizedKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILGeK+yBmZxTOmOW/qnIO9ErziQ7i3KyeBpnt3Ns0sc8 git.dev.noconst@outlook.com"
+	DefaultAuthorizedKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILGeK+yBmZxTOmOW/qnIO9ErziQ7i3KyeBpnt3Ns0sc8"
 
 	// SessionCookieName is the HTTP cookie holding the authenticated session token.
 	SessionCookieName = "res_imperii_session"
@@ -236,7 +236,7 @@ func (s *Service) RevokeSession(sessionID string) {
 
 // AuthorizedKeyComment returns the comment or fingerprint of the authorized key.
 func (s *Service) AuthorizedKeyComment() string {
-	if s.authorizedKeyComment != "" {
+	if s.authorizedKeyComment != "" && !strings.Contains(s.authorizedKeyComment, "@") {
 		return s.authorizedKeyComment
 	}
 	return ssh.FingerprintSHA256(s.authorizedKey)

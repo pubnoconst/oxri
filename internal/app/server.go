@@ -112,10 +112,8 @@ func NewServer(assetsDir string, authSvc *auth.Service) http.Handler {
 		}
 
 		sshCommand := fmt.Sprintf("ssh -p %s %s@localhost", sshPort, token)
-		keyComment := authSvc.AuthorizedKeyComment()
-
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = login.Page(token, sshCommand, next, keyComment, sshPort).Render(req.Context(), w)
+		_ = login.Page(token, sshCommand, next, sshPort).Render(req.Context(), w)
 	})
 	r.Get("/page-css/login.css", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")

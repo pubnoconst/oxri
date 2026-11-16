@@ -5,7 +5,7 @@ import (
 	"github.com/oxri/oxri-go/internal/pages/shared"
 )
 
-templ Page(token, sshCommand, nextURL, keyComment, sshPort string) {
+templ Page(token, sshCommand, nextURL, sshPort string) {
 	@shared.Layout("Authentication - RES IMPERII", "/page-css/login.css?v=2") {
 		<main class="auth-page">
 			<header class="auth-header">
@@ -52,7 +52,6 @@ templ Page(token, sshCommand, nextURL, keyComment, sshPort string) {
 					<span class="auth-status-text">Listening on port { sshPort } · Waiting for SSH signature...</span>
 				</div>
 				<div class="auth-meta">
-					<p>Authorized key: <code>{ keyComment }</code></p>
 					<p>Alternative quick command: <code>ssh -p { sshPort } admin@localhost</code></p>
 				</div>
 			</section>
