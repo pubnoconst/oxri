@@ -117,6 +117,17 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-003 - Parallel Go GOTH experiment:
+  - Explore the GOTH stack (Go, Templ, HTMX, Alpine.js, and Bulma) on the
+    `go-experiment` branch.
+  - Structure the Go application following standard project layout hygiene:
+    `cmd/server/main.go` for the entrypoint, `internal/app/` for server and
+    middleware, and `internal/pages/<page>/` for colocated `.templ` views and
+    `style.css` stylesheets embedded via `//go:embed`.
+  - Provide a `magefile.go` task runner to emulate `cargo run` (`mage run`),
+    `cargo build` (`mage build`), `cargo test` (`mage test`), and `templ generate`.
+  - Port all existing routes, Markdown rendering (via Goldmark), branded error
+    pages with QR codes and reference IDs, and request timeout/panic middleware.
 - D-20261117-002 - Adopt Alpine.js for client-side state alongside HTMX:
   - Permit Alpine.js for client-side manipulation (e.g. reactive UI, local
     state, and dynamic controls) provided it interoperates cleanly with HTMX.
