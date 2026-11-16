@@ -2,8 +2,8 @@ package editor
 
 import "github.com/oxri/oxri-go/internal/pages/shared"
 
-templ Page() {
-	@shared.Layout("New Journal Entry - RES IMPERII", "/page-css/journal-editor.css?v=1") {
+templ Page(isAuth bool) {
+	@shared.Layout("New Journal Entry - RES IMPERII", "/page-css/journal-editor.css?v=2") {
 		<main class="journal-editor-page">
 			<header class="journal-editor-header">
 				@shared.BackLink("/journals", "Journals")
@@ -12,7 +12,11 @@ templ Page() {
 						<p class="editor-eyebrow">JOURNALS / NEW ENTRY</p>
 						<h1>A new entry</h1>
 					</div>
-					<p class="editor-notice">Draft preview - not saved</p>
+					if isAuth {
+						<p class="editor-notice">Author authenticated · Draft preview</p>
+					} else {
+						<p class="editor-notice">Draft preview · <a href="/login?next=/journal-editor" style="color: inherit; text-decoration: underline;">Sign in</a></p>
+					}
 				</div>
 			</header>
 			<div class="journal-editor-grid">
@@ -45,7 +49,11 @@ templ Page() {
 				</section>
 			</div>
 			<div class="journal-editor-actions">
-				<p class="publish-note">Publishing will be available soon.</p>
+				if isAuth {
+					<p class="publish-note">Publishing will be enabled once database persistence is connected.</p>
+				} else {
+					<p class="publish-note">Publishing requires author authentication.</p>
+				}
 				<button type="button" disabled>Publish entry</button>
 			</div>
 		</main>

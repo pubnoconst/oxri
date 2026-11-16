@@ -47,6 +47,25 @@
   background: color-mix(in srgb, var(--page) 92%, var(--page-ink));
 }
 
+.journals-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.auth-action-link {
+  font-size: 0.95rem;
+  color: inherit;
+  opacity: 0.55;
+  text-decoration: none;
+  transition: opacity 160ms ease;
+}
+
+.auth-action-link:hover,
+.auth-action-link:focus-visible {
+  opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .new-entry-link { transition: none; }
 }

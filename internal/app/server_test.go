@@ -1,20 +1,50 @@
 package app
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/oxri/oxri-go/internal/auth"
+	"golang.org/x/crypto/ssh"
 )
 
-func newTestServer() http.Handler {
-	return NewServer("../../assets")
+func newTestServerWithAuth(t *testing.T) (http.Handler, *auth.Service) {
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("GenerateKey: %v", err)
+	}
+	sshPub, err := ssh.NewPublicKey(pub)
+	if err != nil {
+		t.Fatalf("NewPublicKey: %v", err)
+	}
+	authKeyStr := string(ssh.MarshalAuthorizedKey(sshPub))
+
+	tmpDir := t.TempDir()
+	hostKeyPath := filepath.Join(tmpDir, "host_key")
+
+	svc, err := auth.NewService(authKeyStr, hostKeyPath, "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("NewService: %v", err)
+	}
+
+	return NewServer("../../assets", svc), svc
+}
+
+func newTestServer(t *testing.T) http.Handler {
+	server, _ := newTestServerWithAuth(t)
+	return server
 }
 
 func TestLandingPage(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 
@@ -42,7 +72,7 @@ func TestLandingPage(t *testing.T) {
 }
 
 func TestBookIPage(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/book-i", nil)
 	rec := httptest.NewRecorder()
 
@@ -61,7 +91,7 @@ func TestBookIPage(t *testing.T) {
 }
 
 func TestJournalsPage(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/journals", nil)
 	rec := httptest.NewRecorder()
 
@@ -77,10 +107,13 @@ func TestJournalsPage(t *testing.T) {
 	if !strings.Contains(body, "/page-css/journals.css") {
 		t.Errorf("missing journals stylesheet link")
 	}
+	if !strings.Contains(body, "Author sign in") {
+		t.Errorf("unauthenticated journals view should offer sign in link")
+	}
 }
 
 func TestJournalEditorPage(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/journal-editor", nil)
 	rec := httptest.NewRecorder()
 
@@ -98,8 +131,114 @@ func TestJournalEditorPage(t *testing.T) {
 	}
 }
 
+func TestLoginPageAndAuthPolling(t *testing.T) {
+	server, svc := newTestServerWithAuth(t)
+
+	// 1. Visit /login
+	req := httptest.NewRequest(http.MethodGet, "/login?next=/journals", nil)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /login, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "AUTHENTICATION") {
+		t.Errorf("missing AUTHENTICATION title on login page")
+	}
+	if !strings.Contains(body, "ssh -p") {
+		t.Errorf("missing ssh command in login page body")
+	}
+	if !strings.Contains(body, "auth-poller") {
+		t.Errorf("missing auth poller element in login page")
+	}
+
+	// Extract the 6-digit challenge token from the page
+	re := regexp.MustCompile(`token=([0-9]{6})`)
+	matches := re.FindStringSubmatch(body)
+	if len(matches) < 2 {
+		t.Fatalf("could not extract challenge token from login body: %s", body)
+	}
+	token := matches[1]
+
+	// 2. Poll /auth/status before approval
+	pollReq := httptest.NewRequest(http.MethodGet, "/auth/status?token="+token, nil)
+	pollRec := httptest.NewRecorder()
+	server.ServeHTTP(pollRec, pollReq)
+
+	if pollRec.Code != http.StatusOK || pollRec.Body.String() != "waiting" {
+		t.Fatalf("expected waiting status, got code=%d body=%s", pollRec.Code, pollRec.Body.String())
+	}
+
+	// 3. Approve the challenge (simulating SSH client)
+	if !svc.ApprovePendingLogin(token, "test-user") {
+		t.Fatalf("failed to approve pending challenge")
+	}
+
+	// 4. Poll /auth/status after approval
+	pollReq2 := httptest.NewRequest(http.MethodGet, "/auth/status?token="+token, nil)
+	pollRec2 := httptest.NewRecorder()
+	server.ServeHTTP(pollRec2, pollReq2)
+
+	if pollRec2.Code != http.StatusOK {
+		t.Fatalf("expected 200 on approved poll, got %d", pollRec2.Code)
+	}
+	if pollRec2.Header().Get("HX-Redirect") != "/journals" {
+		t.Errorf("expected HX-Redirect: /journals, got %q", pollRec2.Header().Get("HX-Redirect"))
+	}
+
+	// Ensure cookie was issued
+	cookies := pollRec2.Result().Cookies()
+	var sessionCookie *http.Cookie
+	for _, c := range cookies {
+		if c.Name == auth.SessionCookieName {
+			sessionCookie = c
+			break
+		}
+	}
+	if sessionCookie == nil || sessionCookie.Value == "" {
+		t.Fatalf("missing or empty session cookie after auth approval")
+	}
+
+	// 5. Authenticated request to /journals
+	authReq := httptest.NewRequest(http.MethodGet, "/journals", nil)
+	authReq.AddCookie(sessionCookie)
+	authRec := httptest.NewRecorder()
+	server.ServeHTTP(authRec, authReq)
+
+	if authRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on authenticated /journals, got %d", authRec.Code)
+	}
+	if !strings.Contains(authRec.Body.String(), "Sign out") {
+		t.Errorf("authenticated journals view should display 'Sign out' link")
+	}
+
+	// 6. Visiting /login while authenticated should redirect to /journals
+	loginReq := httptest.NewRequest(http.MethodGet, "/login", nil)
+	loginReq.AddCookie(sessionCookie)
+	loginRec := httptest.NewRecorder()
+	server.ServeHTTP(loginRec, loginReq)
+
+	if loginRec.Code != http.StatusSeeOther || loginRec.Header().Get("Location") != "/journals" {
+		t.Errorf("expected redirect to /journals, got status=%d loc=%s", loginRec.Code, loginRec.Header().Get("Location"))
+	}
+
+	// 7. Logout revokes the session and clears cookie
+	logoutReq := httptest.NewRequest(http.MethodGet, "/logout", nil)
+	logoutReq.AddCookie(sessionCookie)
+	logoutRec := httptest.NewRecorder()
+	server.ServeHTTP(logoutRec, logoutReq)
+
+	if logoutRec.Code != http.StatusSeeOther || logoutRec.Header().Get("Location") != "/" {
+		t.Errorf("expected redirect to /, got status=%d loc=%s", logoutRec.Code, logoutRec.Header().Get("Location"))
+	}
+	if svc.ValidateSession(sessionCookie.Value) {
+		t.Errorf("session %s should be revoked after logout", sessionCookie.Value)
+	}
+}
+
 func TestBookIINotFound(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/book-ii", nil)
 	rec := httptest.NewRecorder()
 
@@ -173,12 +312,13 @@ func TestTimeoutHandling(t *testing.T) {
 }
 
 func TestPageStylesheets(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(t)
 	cssRoutes := []string{
 		"/page-css/landing.css",
 		"/page-css/book-i.css",
 		"/page-css/journals.css",
 		"/page-css/journal-editor.css",
+		"/page-css/login.css",
 		"/page-css/error.css",
 	}
 

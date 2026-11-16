@@ -6,10 +6,7 @@ Upcoming work:
   verify that error responses never expose exception details or stack traces.
 - Configure hosting and reverse-proxy error pages and timeouts to match the
   app's safe responses; verify provider-generated failures contain no traces.
-- Plan single-admin passkey authentication: compare a temporary whole-site
-  access gate with native app authentication; define first-passkey enrollment,
-  recovery, session lifetime, and adding/removing multiple credentials.
-- Design author authentication before implementing protected journal actions.
+- Implement WebAuthn passkey authentication and credentials via `.env` once a domain and HTTPS are available.
 - Design the Turso data model, search index, storage limit behavior, and
   migrations before connecting persistence.
 - Implement the journal catalog and protected management flows after those

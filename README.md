@@ -26,6 +26,10 @@ internal/
     server.go
     middleware.go
     server_test.go
+  auth/
+    auth.go
+    auth_test.go
+    middleware.go
   pages/
     shared/
       layout.templ
@@ -41,6 +45,10 @@ internal/
       style.css
     editor/
       editor.templ
+      style.css
+    login/
+      login.templ
+      login.go
       style.css
     errorpage/
       error.templ
@@ -95,14 +103,37 @@ go run github.com/magefile/mage run
 - `/book-i` renders the Markdown in `rawcontent/book-i.md`, the canonical Book I
   source tracked in this private repository. Raw HTML in the source is excluded
   from rendered output.
-- `/journals` is an empty state with a link to the editor.
+- `/journals` is an empty state with a link to the editor, showing "Author sign in"
+  when unauthenticated or "Sign out" when authenticated.
 - `/journal-editor` is a browser-only prototype with editable Markdown, tags,
   and a live media/content preview. Drafts are not saved and Publish remains
-  disabled.
+  disabled until persistence is implemented.
+- `/login` is the loopback SSH authentication gateway. Running the copyable
+  `ssh -p 2222 <token>@localhost` or `ssh -p 2222 admin@localhost` command
+  authenticates via your local Ed25519 key (OpenSSH or Proton Pass agent) and
+  unlocks the browser tab via HTMX polling.
+- `/logout` clears the authenticated session cookie and redirects to `/`.
 - Unknown routes, forbidden responses, timeouts, and caught panics use a shared
   formatted error page with the HTTP status, an opaque reference code, and a QR
   code containing only that reference. Application route work has a 30-second
   deadline. Exception details and stack traces are never included in responses.
+
+## Authentication (SSH loopback)
+
+Res Imperii uses loopback SSH public-key authentication for single-admin operations:
+
+1. Navigating to `/login` creates an ephemeral 6-digit challenge token (valid 5 minutes).
+2. The page displays `ssh -p 2222 <token>@localhost` (with a copy button) and polls `/auth/status` via HTMX.
+3. The server runs an embedded loopback SSH server (`golang.org/x/crypto/ssh`).
+4. Running the SSH command verifies the client's Ed25519 public key against the configured authorized key.
+5. Upon verification, the server marks the session approved and exits the SSH connection.
+6. The browser automatically receives an HTTP-only session cookie (`res_imperii_session`) and redirects to `/journals`.
+
+Environment variables (see `.env.example`):
+- `SSH_PORT`: SSH listening port (default `2222`).
+- `SSH_ADDR`: SSH listening address (default `127.0.0.1:2222`).
+- `ADMIN_SSH_PUBKEY`: Authorized SSH public key (defaults to author's Ed25519 key).
+- `HOST_KEY_PATH`: Path to persist auto-generated host key (defaults to `.ssh_host_key`).
 
 Turso is the intended hosted content database. The product limit is 1 GiB.
 
