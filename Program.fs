@@ -13,6 +13,8 @@ open System.Threading.Tasks
 let endpoints = [
     route "/" <| Views.Landing.index
     route "/book-i" <| Views.BookI.index
+    route "/journals" <| Views.Journals.index
+    route "/journal-editor" <| Views.JournalEditor.index
 ]
 
 let private writeErrorPage (context: HttpContext) (statusCode: int) : Task =
@@ -47,15 +49,6 @@ let main args =
                 writeErrorPage context StatusCodes.Status504GatewayTimeout))
     builder.Services.AddRequestTimeouts(fun options -> options.DefaultPolicy <- timeoutPolicy) |> ignore
     builder.Services.AddRouting().AddOxpecker() |> ignore
-    // The unsaved editor is a local design tool, not a production authoring route.
-    let configuredEndpoints =
-        if builder.Environment.IsDevelopment() then
-            endpoints @ [
-                route "/journals" <| Views.Journals.index
-                route "/journal-editor" <| Views.JournalEditor.index
-            ]
-        else
-            endpoints
     let app = builder.Build()
 
     // Use the same generic HTML page in every environment. In particular, never
@@ -78,7 +71,7 @@ let main args =
     app.UseStaticFiles() |> ignore
     app.UseRouting()
         .UseRequestTimeouts()
-        .UseOxpecker(configuredEndpoints)
+        .UseOxpecker(endpoints)
         .Run(fun context ->
             context.Response.StatusCode <- StatusCodes.Status404NotFound
             Task.CompletedTask)

@@ -32,11 +32,12 @@ the intended product design and require implementation before they are active.
   dimming is limited to dark mode, and the transition backdrop follows the
   active page color.
 - `/book-i` displays Book I, whose source text is in `rawcontent/Book-I.txt`.
-- `/journal-editor` is a Development-only, browser-side editor prototype. It
-  has an editable content pane with media-link and tags fields, plus a live
-  rendered preview. Drafts are not saved, and publishing is disabled.
-- `/journals` is currently a Development-only empty state with an Add New Entry
-  link to the editor prototype.
+- `/journal-editor` is a browser-side editor prototype available in all
+  environments. It has an editable content pane with media-link and tags
+  fields, plus a live rendered preview. Drafts are not saved, and publishing is
+  disabled.
+- `/journals` is an empty state with an Add New Entry link to the editor
+  prototype, available in all environments.
 - Error responses use a minimal page with the HTTP status and an opaque request
   reference. Its QR code contains only that reference; exceptions never appear
   in the response.
