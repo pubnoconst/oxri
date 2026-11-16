@@ -117,6 +117,13 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-004 - Adopt Chi router and clean standalone Go repository:
+  - Adopt `github.com/go-chi/chi/v5` for routing and middleware composition.
+  - Remove legacy Rust artifacts (`Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`,
+    `src/`, `target/`), making `go-experiment` a clean, standalone Go project.
+  - Refresh `.gitignore` for Go binaries (`/bin/`, `*.exe`), test artifacts,
+    Mage cache (`/.mage/`), and IDE/OS ignore patterns.
+  - Update `README.md` to document the Go application structure and Mage targets.
 - D-20261117-003 - Parallel Go GOTH experiment:
   - Explore the GOTH stack (Go, Templ, HTMX, Alpine.js, and Bulma) on the
     `go-experiment` branch.
