@@ -286,3 +286,13 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Refreshed `.gitignore` for Go binaries, test artifacts, `.mage/` cache, and
   IDE/OS patterns. Updated `README.md` to document the Go GOTH stack and Mage targets.
 - Ran `mage test` and verified all 8 unit and integration tests pass cleanly.
+
+## 2026-11-17 - Promote Go stack to main and preserve F# as fsharp-legacy
+
+- Decision: `D-20261117-005`, recorded in commit `2c5b740f013ee3c390e15f077dcebe982d7a9dfb`.
+- Implementation: commit `0e7e81d40fcf935f1ecf9dd90f133c9d22e16da5` (`Update README reflecting Go stack on main D-20261117-005`).
+- Promoted the Go GOTH application from `go-experiment` to `main`.
+- Archived the original .NET 9 / F# implementation on `fsharp-legacy` (both locally
+  and on `origin/fsharp-legacy`).
+- Cleaned up obsolete remote `go-experiment` branch on origin.
+- Updated `README.md` and project decisions. All 8 tests pass via `mage test`.
