@@ -66,9 +66,10 @@ Book pages
 ----------
 - Book I is served at /book-i and uses a centered, medium-width reading column
   with article-like typography and generous section spacing.
-- rawcontent/Book-I.txt is the canonical source text. Preserve its wording
-  unless the user explicitly asks for editorial changes; the view may add
-  semantic structure such as headings, paragraphs, and lists.
+- `rawcontent/book-i.md` is the canonical Book I source. It is tracked because
+  the author has chosen to ship it from the private repository. Preserve its
+  wording unless explicitly asked for editorial changes; the view may render
+  its Markdown structure as semantic HTML.
 - Provide a reusable Back link at both the beginning and end of the article.
   Its circular left chevron is drawn in CSS to avoid an icon-library dependency.
 - The Rust page frame provides a shared Back link helper in
@@ -116,6 +117,18 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261116-004 - Ship Book I source and restore shared page behavior:
+  - Track `rawcontent/book-i.md` in the private repository and render Book I
+    from this source. Keep the source wording canonical.
+  - Every application error response uses the branded error page with its HTTP
+    status, an opaque reference code, and a QR code encoding only that code.
+    This includes 403, 404, 408, 504, and 500 responses. Never include an
+    exception message or stack trace; use a plain safe fallback if rendering
+    the styled page fails.
+  - Bound application request work to 30 seconds and return the same safe page
+    with status 504 when the deadline expires.
+  - Render Back links through the shared helper with its CSS chevron and label.
+    Keep Book I and Journals markup aligned with their page-local stylesheets.
 - D-20261116-003 - Rust page and asset layout:
   - Organize each Rust page as `src/pages/<page>/mod.rs` with its page-only
     `style.css` beside it. Embed page CSS in the binary and serve it through
