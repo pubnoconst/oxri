@@ -117,6 +117,14 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-008 - Production passkey bootstrap and author profile dashboard:
+  - Plan the post-deployment WebAuthn lifecycle for production (under HTTPS):
+    1. Bootstrap administrative access on the live domain using an initial
+       primordial passkey.
+    2. Build an author profile dashboard to manage credentials, register durable
+       passkeys (e.g. in Proton Pass or security keys), and inspect active sessions.
+    3. Once durable production credentials are enrolled and verified, remove the
+       primordial bootstrap passkey to finalize credential hardening.
 - D-20261117-007 - Landing page login entry and root landing redirect:
   - Add a quiet, theme-consistent `Log in` (or `Log out` when authenticated) link
     to the landing page navigation stack below Journals.
