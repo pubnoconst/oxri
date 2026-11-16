@@ -71,8 +71,8 @@ Book pages
   semantic structure such as headings, paragraphs, and lists.
 - Provide a reusable Back link at both the beginning and end of the article.
   Its circular left chevron is drawn in CSS to avoid an icon-library dependency.
-- The shared Back link lives at Views/Misc/Back.fs so additional pages can use
-  the same treatment.
+- The Rust page frame provides a shared Back link helper in
+  `src/pages/shared.rs` so article and journal pages can use the same treatment.
 - The browser-side journal editor prototype uses two panes: editable
   source and a rendered preview card. The left pane collects Markdown content,
   a media URL, and comma-separated tags; the right pane previews those fields

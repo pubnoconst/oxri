@@ -1,100 +1,95 @@
 # Res Imperii
 
-Res Imperii is a private blog where the author publishes articles and
-journals. Articles are long-form works presented on the site. A journal entry
-contains the entry's content and a link to a third-party renderable version of
-that content. The author can edit a journal, hide or show it, and delete it.
+Res Imperii is a private blog for long-form articles and journals. The
+`rust-experiment` branch is now a standalone Rust application using the MASH
+stack: Maud, Axum, SQLx, and HTMX. The .NET/F# application remains on `main`.
 
-The project is built with ASP.NET Core, F#, and Oxpecker. Bulma provides the
-CSS foundation, with project styles in `wwwroot/css/overrides.css`.
+## Project structure
 
-## Content storage
+```text
+assets/
+  css/
+    bulma.min.css
+    overrides.css
+  js/
+    journal-editor.js
+    navigation-feedback.js
+    theme-toggle.js
+  favicon.png
+src/
+  main.rs
+  pages/
+    shared.rs
+    landing/
+      mod.rs
+      style.css
+    book_i/
+      mod.rs
+      style.css
+    journals/
+      mod.rs
+      style.css
+    journal_editor/
+      mod.rs
+      style.css
+    error/
+      mod.rs
+      style.css
+```
 
-The planned content database is hosted by [Turso](https://turso.tech/). The
-author controls the published journals, including whether each one is visible
-and whether it should be deleted.
+Each page's Rust view and page-only stylesheet sit together in
+`src/pages/<page>/`. Page modules embed `style.css` at compile time and serve it
+through an explicit, versioned `/page-css/...` route. This keeps page styling
+easy to find without exposing Rust source through the static file server.
 
-The configured maximum content database size is `max_content_db_size` in
-`appsettings.json`. Its value is expressed in bytes and is currently
-`1073741824` bytes (1 GiB). If storing an edition would exceed this limit, the
-author must delete journals to make room.
-
-The current application scaffold does not yet connect to Turso, implement
-journal management, or enforce the configured size limit. Those behaviors are
-the intended product design and require implementation before they are active.
-
-## Current pages
-
-- `/` displays the landing page and links to the planned book and journal areas.
-  Double-clicking its empty background toggles light/dark mode for the current
-  browser tab; the operating-system preference remains the default.
-  Same-origin page changes use a brief fade where supported; pending-navigation
-  dimming is limited to dark mode, and the transition backdrop follows the
-  active page color.
-- `/book-i` displays Book I, whose source text is in `rawcontent/Book-I.txt`.
-- `/journal-editor` is a browser-side editor prototype available in all
-  environments. It has an editable content pane with media-link and tags
-  fields, plus a live rendered preview. Drafts are not saved, and publishing is
-  disabled.
-- `/journals` is an empty state with an Add New Entry link to the editor
-  prototype, available in all environments.
-- Error responses use a minimal page with the HTTP status and an opaque request
-  reference. Its QR code contains only that reference; exceptions never appear
-  in the response.
-- Book II, Book III, and Journals are navigation placeholders; their routes
-  have not been implemented yet.
+Shared public files live in `assets/`: Bulma and shared project overrides are
+under `assets/css/`, browser scripts are under `assets/js/`, and the favicon is
+at `assets/favicon.png`. The `/assets` route serves only this directory. Keep
+shared styling in `overrides.css`; leave minified Bulma untouched. Bump a local
+asset's `?v=N` query version when changing its contents.
 
 ## Run locally
 
-Install the .NET SDK that supports the target framework in `oxri.fsproj`, then
-run:
+Install Rust stable and Visual Studio 2022 Build Tools with the C++ ARM64 tools
+and Windows SDK. On Windows ARM64, initialize the Visual Studio developer
+environment before running Cargo so it can find `link.exe` and the SDK:
 
 ```powershell
-dotnet restore
-dotnet run
+cmd.exe /d /s /c 'call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat" -arch=arm64 -host_arch=arm64 && cargo run'
 ```
 
-## Rust MASH experiment
+The current SQLx dependency has no database driver or TLS backend enabled. The
+database and connection features remain to be selected before persistence is
+implemented. The current feature set builds without Clang; adding SQLite or a
+rustls `ring` backend may introduce native toolchain requirements.
 
-The `rust-experiment` branch contains a parallel prototype using Maud, Axum,
-SQLx, and HTMX. It preserves the current page routes and visual assets while
-leaving the .NET application on `main` as the canonical implementation. The
-SQLx dependency has no database driver or TLS backend enabled yet; choose those
-alongside the database before implementing persistence.
+## Current pages
 
-The branch pins the Rust channel to stable for the current Windows ARM64 target.
-Run it with `cargo run` from the Visual Studio 2022 ARM64 developer command
-environment (`VsDevCmd.bat -arch=arm64 -host_arch=arm64`). The Rust linker
-requires the MSVC linker (`link.exe`), even though this initial feature set does
-not require Clang or a C compiler. Adding SQLx SQLite or a rustls `ring` backend
-may introduce additional native build requirements and should be evaluated
-separately.
+- `/` is the landing page. Double-clicking its empty background toggles light
+  or dark mode for the current browser tab. The operating-system preference is
+  the default. Same-origin page changes use navigation feedback where supported.
+- `/book-i` renders the initial Rust Book I page. The canonical prose remains
+  author-owned source material and is not stored in Git.
+- `/journals` is an empty state with a link to the editor.
+- `/journal-editor` is a browser-only prototype with editable Markdown, tags,
+  and a live media/content preview. Drafts are not saved and Publish remains
+  disabled.
+- Unknown routes and caught panics use a generic error page. Exception details
+  and stack traces are never included in the response.
 
-ASP.NET Core loads `appsettings.json` and, when running in Development, also
-loads `appsettings.Development.json`. Keep credentials out of committed
-configuration files; no Turso credentials or connection settings are currently
-implemented in this scaffold.
+Turso is the intended hosted content database. The product limit is 1 GiB, but
+the Rust application does not yet connect to a database, enforce the limit, or
+implement journal management.
 
-## Project notes
+## Project journals
 
-- `Views/Page.fs` defines the shared document frame, typography, and stylesheets.
-- `Views/Error.fs` defines the shared 4xx/5xx error page.
-- `wwwroot/css/overrides.css` contains shared theme and component styles;
-  `wwwroot/css/pages/` contains stylesheets for individual routes.
-- `wwwroot/js/theme-toggle.js` restores the tab's theme choice on each page and
-  handles the landing-page background gesture.
-- `Views/Landing.fs` and `Views/BookI.fs` define the current page views.
-- `Views/Misc/Back.fs` contains the reusable Back link.
-- `wwwroot/` contains public static assets. Local asset URLs use a `?v=N`
-  query version; increment the version when changing an asset to refresh browser
-  caches.
-- `DECISIONS.md` records product and implementation decisions and their rationale.
-- `NEXT.md` is the short list of upcoming work.
-- `HANDOFF.md` is an append-only session log. Each entry points to the commit
-  containing the work being handed off, so Git remains the source of truth for
-  code changes.
-- `rawcontent/` is excluded from version control by `.gitignore`; preserve the
-  author's source material and do not change that policy without direction.
+- [DECISIONS.md](DECISIONS.md) records durable product and implementation
+  choices, including the page-local CSS layout.
+- [NEXT.md](NEXT.md) lists upcoming work.
+- [HANDOFF.md](HANDOFF.md) is an append-only session journal tied to Git
+  commits.
+- `rawcontent/` is excluded by `.gitignore`; preserve the author's source
+  material.
 
 ## License
 
