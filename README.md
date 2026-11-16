@@ -68,14 +68,17 @@ rustls `ring` backend may introduce native toolchain requirements.
 - `/` is the landing page. Double-clicking its empty background toggles light
   or dark mode for the current browser tab. The operating-system preference is
   the default. Same-origin page changes use navigation feedback where supported.
-- `/book-i` renders the initial Rust Book I page. The canonical prose remains
-  author-owned source material and is not stored in Git.
+- `/book-i` renders the Markdown in `rawcontent/book-i.md`, the canonical Book I
+  source tracked in this private repository. Raw HTML in the source is excluded
+  from rendered output.
 - `/journals` is an empty state with a link to the editor.
 - `/journal-editor` is a browser-only prototype with editable Markdown, tags,
   and a live media/content preview. Drafts are not saved and Publish remains
   disabled.
-- Unknown routes and caught panics use a generic error page. Exception details
-  and stack traces are never included in the response.
+- Unknown routes, forbidden responses, timeouts, and caught panics use a shared
+  formatted error page with the HTTP status, an opaque reference code, and a QR
+  code containing only that reference. Application route work has a 30-second
+  deadline. Exception details and stack traces are never included in responses.
 
 Turso is the intended hosted content database. The product limit is 1 GiB, but
 the Rust application does not yet connect to a database, enforce the limit, or
@@ -88,8 +91,8 @@ implement journal management.
 - [NEXT.md](NEXT.md) lists upcoming work.
 - [HANDOFF.md](HANDOFF.md) is an append-only session journal tied to Git
   commits.
-- `rawcontent/` is excluded by `.gitignore`; preserve the author's source
-  material.
+- `rawcontent/book-i.md` is tracked as the canonical Book I source; keep its
+  wording aligned with the author's intent.
 
 ## License
 

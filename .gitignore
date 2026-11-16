@@ -10,9 +10,6 @@
 .env.*
 !.env.example
 
-# Author-owned source material, kept outside version control
-/rawcontent/
-
 # IDE and operating-system files
 .vs/
 .idea/

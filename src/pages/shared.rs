@@ -30,6 +30,9 @@ pub fn frame(title: &str, stylesheet: &str, content: Markup) -> Markup {
 /// Render the shared circular-chevron navigation link used by article pages.
 pub fn back_link(href: &str, label: &str) -> Markup {
     html! {
-        a class="back-link" href=(href) { (label) }
+        a class="back-link" href=(href) {
+            span class="back-icon" aria-hidden="true" {}
+            span class="back-label" { (label) }
+        }
     }
 }

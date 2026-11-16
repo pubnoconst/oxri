@@ -6,7 +6,7 @@ Purpose
 This file records user-approved product and implementation decisions so
 future agents can keep changes consistent with the project's direction. It is
 a rationale log, not a replacement for the source code or canonical prose in
-rawcontent/Book-I.txt.
+rawcontent/book-i.md.
 
 How to use this file
 --------------------

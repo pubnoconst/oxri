@@ -1,12 +1,6 @@
 mod pages;
 
-use axum::{
-    Router,
-    body::Body,
-    http::{StatusCode, header},
-    response::Response,
-    routing::get,
-};
+use axum::{Router, http::StatusCode, middleware, response::IntoResponse, routing::get};
 use std::{error::Error, net::SocketAddr};
 use tower_http::{catch_panic::CatchPanicLayer, services::ServeDir};
 
@@ -31,14 +25,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .fallback(pages::error::not_found)
         .layer(CatchPanicLayer::custom(|_| {
-            Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
-                .body(Body::from(
-                    pages::error::render(StatusCode::INTERNAL_SERVER_ERROR).into_string(),
-                ))
-                .expect("the static generic error response is valid")
-        }));
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }))
+        .layer(middleware::from_fn(pages::error::request_timeout))
+        .layer(middleware::from_fn(pages::error::status_pages));
 
     let address: SocketAddr = std::env::var("ADDR")
         .unwrap_or_else(|_| "127.0.0.1:8080".to_string())

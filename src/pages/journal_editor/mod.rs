@@ -10,7 +10,7 @@ pub async fn index() -> impl IntoResponse {
         html! {
             main class="journal-editor-page" {
                 header class="journal-editor-header" {
-                    (shared::back_link("/journals", "← Journals"))
+                    (shared::back_link("/journals", "Journals"))
                     div class="editor-heading" {
                         div {
                             p class="editor-eyebrow" { "JOURNALS / NEW ENTRY" }

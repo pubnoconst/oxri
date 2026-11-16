@@ -10,7 +10,7 @@ pub async fn index() -> impl IntoResponse {
         html! {
             main class="journals-page" {
                 header class="journals-header" {
-                    (shared::back_link("/", "← Back"))
+                    (shared::back_link("/", "Back"))
                     h1 { "Journals" }
                 }
                 p class="journals-empty" { "No entries yet." }
