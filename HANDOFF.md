@@ -247,3 +247,14 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   `/book-i` article styling and stylesheet links, `/journals` rendering and stylesheet
   links, `/book-ii` 404 error page rendering, panic handling, and request timeouts.
 - `cargo fmt` and `cargo test` succeeded for Windows ARM64 (7 passed, 0 failed).
+
+## 2026-11-17 - Adopt Alpine.js for client-side manipulation with HTMX
+
+- Decision: `D-20261117-002`, recorded in commit `a28733ac69508b0eefe3301f18cecf25a5afca0a`.
+- Implementation: commit `c835df24580609eb85989572517ca417ca6bcf8e` (`Add Alpine.js to shared page shell D-20261117-002`).
+- Permitted Alpine.js for lightweight client-side state and UI reactivity alongside
+  HTMX. Alpine 3.x uses MutationObserver internally, enabling clean automatic
+  initialization of dynamic components across HTMX swaps.
+- Added Alpine.js 3.14.8 (`defer`) to `src/pages/shared.rs` after HTMX.
+- Updated `src/main.rs` tests to verify Alpine and HTMX availability in the shell.
+- `cargo fmt` and `cargo test` succeeded for Windows ARM64 (7 passed, 0 failed).
