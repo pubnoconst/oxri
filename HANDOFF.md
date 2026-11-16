@@ -296,3 +296,31 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   and on `origin/fsharp-legacy`).
 - Cleaned up obsolete remote `go-experiment` branch on origin.
 - Updated `README.md` and project decisions. All 8 tests pass via `mage test`.
+
+## 2026-11-17 - SSH loopback authentication for single admin
+
+- Decision: `D-20261117-006`, recorded in commit `ca2bb26` (`Decide SSH loopback authentication D-20261117-006`).
+- Implementation: commit `668cf00` (`Implement SSH loopback authentication and session management D-20261117-006`).
+- Implemented single-admin authentication using an embedded loopback SSH server
+  (`golang.org/x/crypto/ssh`) listening by default on `127.0.0.1:2222` (configurable
+  via `SSH_PORT` or `SSH_ADDR`).
+- Authorizes client connections against the embedded author public key
+  (`ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILGeK+yBmZxTOmOW/qnIO9ErziQ7i3KyeBpnt3Ns0sc8 git.dev.noconst@outlook.com`),
+  overridable via `ADMIN_SSH_PUBKEY` in the environment.
+- Persisted private host key to `.ssh_host_key` (auto-generated, gitignored) to
+  preserve stable host identity across server restarts.
+- Built `internal/auth/` containing `auth.go` (session management, challenge pairing,
+  and SSH server lifecycle), `middleware.go` (`SessionMiddleware`, `RequireAuth`,
+  and `IsAuthenticated`), and `auth_test.go` (unit and integration tests verifying
+  challenge lifecycles, authorized key verification, and unauthorized key rejection).
+- Built quiet, typography-focused `/login` view in `internal/pages/login/` with
+  embedded `style.css`, copyable command `ssh -p 2222 <token>@localhost` (with
+  Alpine.js clipboard button), and HTMX polling on `/auth/status`.
+- Added endpoints `/login`, `/auth/status`, and `/logout`. Upon successful SSH
+  verification, the server issues an HTTP-only session cookie (`res_imperii_session`)
+  and sends `HX-Redirect: /journals`.
+- Updated `/journals` and `/journal-editor` to display authenticated author state
+  and sign-in / sign-out links.
+- Added `.env.example` documenting all configuration keys.
+- Ran `mage test` - all 12 unit and integration tests pass cleanly across
+  `internal/app` and `internal/auth`. Binary builds cleanly via `mage build`.
