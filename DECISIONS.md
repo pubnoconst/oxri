@@ -55,10 +55,10 @@ Publication model
   The author can edit, hide or show, and delete journal entries.
 - Turso is the intended hosted content database. The current application has
   not yet implemented its connection or journal management flows.
-- `max_content_db_size` is configured in appsettings.json in bytes. The current
-  configured maximum is 1,073,741,824 bytes (1 GiB). If an edition would exceed
-  the maximum, journals must be deleted to free content storage. Enforcement
-  and deletion flows are not implemented in the current scaffold.
+- The product maximum content database size is 1,073,741,824 bytes (1 GiB). If
+  an edition would exceed the maximum, journals must be deleted to free content
+  storage. The Rust experiment has not selected database configuration or
+  implemented enforcement and deletion flows.
 - The repository uses a proprietary license. Keep the owner placeholder in
   LICENSE until the copyright owner's name is supplied.
 
@@ -95,24 +95,41 @@ Book pages
 
 Implementation conventions
 ---------------------------
-- Views/Page.fs owns the common HTML document frame, font, favicon, and shared
-  stylesheets. Page-specific content belongs in its own Views module.
-- wwwroot/css/overrides.css is layered after Bulma. Document meaningful CSS
-  sections and keep project styling there instead of editing minified Bulma.
-  Keep editor card surfaces, focus states, breakpoints, and reduced-motion
-  behavior consistent with the shared warm-neutral theme.
-- Local asset URLs use a ?v=N query parameter as a manual cache buster.
-  Increment the relevant URL version when its asset changes so browsers such
-  as Edge request the updated file.
-- Program.fs registers page routes explicitly. Add a route when a linked page
-  is implemented; a link alone does not create its destination.
-- oxri.fsproj uses explicit F# compile ordering. List each file after modules
-  it depends on and before the pages that consume it.
-- appsettings.Development.json currently duplicates the base logging settings.
-  It is unnecessary until local-only configuration differs.
+- `src/main.rs` owns application startup and explicit Axum routes. Add a route
+  when a linked page is implemented; a link alone does not create its
+  destination.
+- Each route lives in `src/pages/<page>/mod.rs`, beside its `style.css`. A page
+  module serves its stylesheet from an embedded compile-time string at a
+  versioned `/page-css/...` route. This keeps page logic and presentation
+  together without exposing Rust source files through the static server.
+- `src/pages/shared.rs` owns the common Maud document frame. Shared public files
+  live under `assets/`: Bulma and `overrides.css` in `assets/css/`, shared
+  browser scripts in `assets/js/`, and the favicon at `assets/favicon.png`.
+  Keep shared project styles in `overrides.css`, not in minified Bulma.
+- Keep editor surfaces, focus states, breakpoints, and reduced-motion behavior
+  consistent with the shared warm-neutral theme.
+- Local asset URLs use a `?v=N` query parameter as a manual cache buster.
+  Increment the relevant URL version when changing an asset.
+- This branch is a standalone Rust application; do not retain the .NET/F#
+  project, generated build output, or duplicate source asset tree here. The
+  `main` branch remains the home of the .NET application.
 
 Recent decisions
 ----------------
+- D-20261116-003 - Rust page and asset layout:
+  - Organize each Rust page as `src/pages/<page>/mod.rs` with its page-only
+    `style.css` beside it. Embed page CSS in the binary and serve it through
+    explicit versioned stylesheet routes; do not expose source directories as
+    static files.
+  - Keep shared browser assets in `assets/`: `assets/css/` contains Bulma and
+    `overrides.css`, `assets/js/` contains shared scripts, and the favicon is
+    `assets/favicon.png`.
+  - Remove the F#/Oxpecker project and generated .NET artifacts from
+    `rust-experiment`, making it a clean, standalone Rust application. Preserve
+    the source content and project journals. The .NET project remains unchanged
+    on `main`.
+  - This supersedes D-20261115-004's `Views`/`wwwroot` file placement for this
+    Rust branch; it does not change the .NET branch's layout.
 - D-20261116-002 - Parallel Rust MASH experiment:
   - Explore Maud, Axum, SQLx, and HTMX on the `rust-experiment` branch while
     leaving the F#/Oxpecker application on `main` unchanged.
