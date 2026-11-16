@@ -117,6 +117,13 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-002 - Adopt Alpine.js for client-side state alongside HTMX:
+  - Permit Alpine.js for client-side manipulation (e.g. reactive UI, local
+    state, and dynamic controls) provided it interoperates cleanly with HTMX.
+  - Alpine 3.x relies on MutationObserver to automatically discover and
+    initialize new `x-data` elements within HTMX-swapped fragments.
+  - Include Alpine.js 3.x (`defer`) in `src/pages/shared.rs` after HTMX so it
+    is available across application views.
 - D-20261117-001 - Restore native navigation and shared article measure:
   - Remove `hx-boost` from landing page navigation. HTMX body swapping bypassed
     `<head>` stylesheet updates, leaving `/book-i` and `/journals` without their
