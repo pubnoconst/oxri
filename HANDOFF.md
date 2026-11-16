@@ -209,3 +209,22 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   layout. Cargo formatting, metadata, `cargo check`, and `cargo build` succeeded
   for Windows ARM64. The only warning is the intentionally not-yet-used SQLx
   dependency. Tests were not run.
+
+## 2026-11-16 - Publish Book I source and restore shared error behavior
+
+- Decision: `D-20261116-004`, recorded in commit `d7ed0414359be3a068445cd05ee10e03ee089feb`.
+- Implementation: commit `7b69afde21330af957daa0b4dd8f4a77388bfaaf` (`Restore Book I, errors, and page styling D-20261116-004`).
+- Removed `rawcontent/` from `.gitignore` and added `rawcontent/book-i.md` to
+  the private repository. `/book-i` now embeds and renders the complete Markdown
+  source. The parser preserves Markdown formatting and drops raw HTML.
+- Added a status-page middleware for every application 4xx/5xx response, a
+  30-second route deadline that returns 504, and generic panic handling. The
+  formatted page shows the status, a random opaque reference, and a locally
+  generated QR encoding only that reference; a plain safe page is used if the
+  formatted renderer fails. Exception details and stack traces remain hidden.
+- Restored the Back-link icon and label markup. Updated the Book I CSS for
+  rendered Markdown headings and spacing, and refined the Journals empty-state
+  layout and action styling.
+- `cargo fmt`, `cargo check --offline`, and `cargo build --offline` succeeded
+  for Windows ARM64. The expected unused-SQLx warning remains. Tests were not
+  run.
