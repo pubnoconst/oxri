@@ -145,3 +145,16 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   35 seconds if the navigation does not complete.
 - Bumped the shared stylesheet cache version. `git diff --check` passed; tests
   were not run.
+
+## 2026-11-16 - Register journal routes in release
+
+- Decision: `D-20261116-001`, recorded in commit `98647b2`.
+- Implementation: commit `932fd8c` (`Register journal prototype routes in release`).
+- Added `/journals` and `/journal-editor` directly to the canonical `endpoints`
+  list, so both routes are registered in every environment. Removed the
+  Development-only endpoint condition. The editor remains browser-only, does
+  not save drafts, and keeps Publish disabled.
+- README and current decision guidance now describe both routes as available in
+  all environments.
+- `dotnet build --no-restore -c Release` succeeded with no warnings or errors;
+  tests were not run.
