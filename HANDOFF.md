@@ -343,4 +343,8 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   landing page login link, authenticated logout state, and root redirect flow.
 - Refined SSH terminal response (commit `74a33cf`): removed noisy ASCII banners and
   ensured standard `\r\n` line endings to prevent raw PTY staircase formatting.
+- Privacy enhancement (commit `529e191`): removed author email comment from the
+  `/login` template, stripped comment from `DefaultAuthorizedKey` and `.env.example`,
+  and added an automated regression check ensuring email addresses are never leaked
+  into the HTML.
 - Ran `mage test` - all 12 tests pass cleanly across `internal/app` and `internal/auth`.
