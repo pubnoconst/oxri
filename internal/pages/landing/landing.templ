@@ -1,0 +1,20 @@
+package landing
+
+import "github.com/oxri/oxri-go/internal/pages/shared"
+
+templ Page() {
+	@shared.Layout("RES IMPERII", "/page-css/landing.css?v=1") {
+		<main class="landing">
+			<nav class="landing-nav">
+				<h1 class="landing-title">RES·IMPERII</h1>
+				<ul class="landing-books">
+					<li><a href="/book-i">Book I</a></li>
+					<li><a href="/book-ii">Book II</a></li>
+					<li><a href="/book-iii">Book III</a></li>
+				</ul>
+				<hr class="landing-rule"/>
+				<a class="landing-journals" href="/journals">Journals</a>
+			</nav>
+		</main>
+	}
+}

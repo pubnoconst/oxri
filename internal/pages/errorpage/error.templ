@@ -1,0 +1,27 @@
+package errorpage
+
+import (
+	"fmt"
+	"github.com/oxri/oxri-go/internal/pages/shared"
+)
+
+templ Page(status int, message, reference, qrDataURI string) {
+	@shared.Layout("Error - RES IMPERII", "/page-css/error.css?v=1") {
+		<main class="error-page">
+			<section class="error-card">
+				<p class="error-wordmark">RES IMPERII</p>
+				<p class="error-code">{ fmt.Sprintf("%d", status) }</p>
+				<h1 class="error-title">{ message }</h1>
+				<p class="error-reference-label">Reference code</p>
+				<p class="error-reference">{ reference }</p>
+				if qrDataURI != "" {
+					<div class="error-qr">
+						<img src={ templ.SafeURL(qrDataURI) } alt="QR code containing the reference code"/>
+						<p>Scan for the reference code</p>
+					</div>
+				}
+				<a class="error-home-link" href="/">Return home</a>
+			</section>
+		</main>
+	}
+}

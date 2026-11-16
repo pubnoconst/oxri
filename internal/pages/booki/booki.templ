@@ -1,0 +1,19 @@
+package booki
+
+import (
+	"github.com/oxri/oxri-go/internal/pages/shared"
+)
+
+templ Page(contentHTML string) {
+	@shared.Layout("Book I - RES IMPERII", "/page-css/book-i.css?v=2") {
+		<main class="article-page">
+			<article class="book-article">
+				@shared.BackLink("/", "Back")
+				<section class="book-content">
+					@templ.Raw(contentHTML)
+				</section>
+				@shared.BackLink("/", "Back")
+			</article>
+		</main>
+	}
+}

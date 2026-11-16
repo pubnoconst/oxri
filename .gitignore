@@ -4,6 +4,8 @@
 # Local build output from tooling that may still target the former project
 /bin/
 /obj/
+/.mage/
+passkey.txt
 
 # Local secrets and settings
 .env

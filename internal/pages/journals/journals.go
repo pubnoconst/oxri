@@ -1,0 +1,6 @@
+package journals
+
+import _ "embed"
+
+//go:embed style.css
+var StyleCSS string

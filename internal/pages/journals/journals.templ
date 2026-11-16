@@ -1,0 +1,16 @@
+package journals
+
+import "github.com/oxri/oxri-go/internal/pages/shared"
+
+templ Page() {
+	@shared.Layout("Journals - RES IMPERII", "/page-css/journals.css?v=1") {
+		<main class="journals-page">
+			<header class="journals-header">
+				@shared.BackLink("/", "Back")
+				<h1>Journals</h1>
+			</header>
+			<p class="journals-empty">No entries yet.</p>
+			<a class="new-entry-link" href="/journal-editor">Add New Entry</a>
+		</main>
+	}
+}
