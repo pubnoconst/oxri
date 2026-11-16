@@ -324,3 +324,21 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Added `.env.example` documenting all configuration keys.
 - Ran `mage test` - all 12 unit and integration tests pass cleanly across
   `internal/app` and `internal/auth`. Binary builds cleanly via `mage build`.
+
+## 2026-11-17 - Landing login flow and CLI instructions
+
+- Decision: `D-20261117-007`, recorded in commit `7451d76` (`Decide landing page login entry and root redirect D-20261117-007`).
+- Implementation: commit `0881202` (`Add landing page login entry, clear CLI instructions and root redirect D-20261117-007`).
+- Added a quiet, theme-consistent `Log in` (or `Log out` when authenticated) link
+  to the landing page navigation stack below Journals in `internal/pages/landing/`.
+- Updated default redirect destination upon login approval to `/` so completing
+  the SSH loopback verification automatically brings the admin back to the home page.
+- Redesigned the `/login` view in `internal/pages/login/` with numbered, crystal-clear
+  CLI instructions:
+  1. Open your terminal.
+  2. Run the copyable command `ssh -p 2222 <token>@localhost` (with one-click "Copy Command" button).
+  3. Identity verification completes via OpenSSH or Proton Pass agent, unlocking the tab and returning to `/`.
+  Also shows the direct alternative command `ssh -p 2222 admin@localhost`.
+- Updated unit and integration tests in `internal/app/server_test.go` verifying the
+  landing page login link, authenticated logout state, and root redirect flow.
+- Ran `mage test` - all 12 tests pass cleanly across `internal/app` and `internal/auth`.
