@@ -158,3 +158,24 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   all environments.
 - `dotnet build --no-restore -c Release` succeeded with no warnings or errors;
   tests were not run.
+
+## 2026-11-16 - Start Rust MASH experiment
+
+- Decision: `D-20261116-002`, recorded in commit `50a1f5589a81a3264a80c23f923880dd3ef86c1e`.
+- Implementation: commit `29360142528442452c5487c32b602c8968ef8951` (`Scaffold Rust MASH experiment D-20261116-002`).
+- Created a parallel Rust application scaffold on `rust-experiment` using Maud,
+  Axum, SQLx, and HTMX. Added the shared page shell, the landing, Book I,
+  journals, and journal-editor routes, static asset services, a branded 404,
+  and a generic panic response that omits exception details.
+- Ported the current editor's browser-only Markdown, tags, and media preview;
+  publishing remains disabled. Added `Cargo.lock`, a stable ARM64 MSVC toolchain
+  file, and `/target/` to `.gitignore`. README documents the experiment and
+  build prerequisites.
+- Rustup stable `aarch64-pc-windows-msvc` and rustfmt are installed. Cargo
+  resolved dependencies and generated the lockfile. Cargo metadata
+  (`--no-deps --offline`) and `cargo fmt` succeeded. `cargo check` could not complete because
+  this machine has no MSVC `link.exe`; Clang is not currently required by the
+  selected dependency features. Tests were not run.
+- SQLx has no database driver or TLS backend enabled. Add these when selecting
+  and implementing the database connection. The .NET app on `main` remains the
+  canonical version.
