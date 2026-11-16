@@ -348,3 +348,12 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   and added an automated regression check ensuring email addresses are never leaked
   into the HTML.
 - Ran `mage test` - all 12 tests pass cleanly across `internal/app` and `internal/auth`.
+
+## 2026-11-17 - Production passkey bootstrap and author profile dashboard planning
+
+- Decision: `D-20261117-008`, recorded in commit `941af3c` (`Decide production passkey bootstrap and profile dashboard lifecycle D-20261117-008`).
+- Defined the roadmap for WebAuthn passkey enrollment upon production HTTPS deployment:
+  1. Register an initial primordial bootstrap passkey to establish first-time administrative ownership on the live domain origin (`rp_id`).
+  2. Implement an author profile dashboard to manage credentials, register durable security keys/passkeys (Proton Pass, FIDO2/WebAuthn), and inspect active sessions.
+  3. Retire and remove the primordial bootstrap credential once daily credentials are verified in the dashboard.
+- Updated `NEXT.md` actionable roadmap. Application codebase remains fully functional under Go GOTH and SSH loopback authentication. All 12 tests pass via `mage test`.
