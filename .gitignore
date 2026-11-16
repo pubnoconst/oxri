@@ -21,6 +21,7 @@ go.work.sum
 .env
 .env.*
 !.env.example
+.ssh_host_key*
 passkey.txt
 passkey.json
 

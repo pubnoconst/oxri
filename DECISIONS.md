@@ -117,6 +117,29 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-006 - SSH loopback authentication for single admin:
+  - Implement single-admin authentication using an embedded loopback SSH server
+    (`golang.org/x/crypto/ssh`) listening on a local port (default `:2222`,
+    configurable via `SSH_PORT` or `SSH_ADDR`).
+  - WebAuthn passkeys are deferred until a custom domain and HTTPS are provisioned,
+    as browser passkey managers (including Proton Pass) strictly require `https:`
+    and bind credentials cryptographically to domain origins (`rp_id`).
+  - The server authorizes client connections against an embedded default public
+    key (`ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILGeK+yBmZxTOmOW/qnIO9ErziQ7i3KyeBpnt3Ns0sc8 git.dev.noconst@outlook.com`),
+    overridable at runtime via the `ADMIN_SSH_PUBKEY` environment variable.
+  - The SSH server persists an auto-generated private host key to `.ssh_host_key`
+    (gitignored) to ensure stable host identity across server restarts and avoid
+    OpenSSH host identification warnings.
+  - The `/login` page displays a short ephemeral challenge code (valid 5 minutes)
+    and copyable command `ssh -p 2222 <token>@localhost`, while polling `/auth/status`
+    via HTMX every second. Running the command presents the admin's SSH key
+    (stored in OpenSSH or Proton Pass agent) to the server.
+  - Upon cryptographic verification of the public key, the SSH server marks the
+    challenge session approved and cleanly exits. The browser's next poll consumes
+    the approved challenge, sets a secure HTTP-only session cookie (`res_imperii_session`),
+    and redirects the admin via `HX-Redirect` to `/journals`.
+  - Protected routes verify the session cookie via `AuthMiddleware`. Visiting
+    `/logout` invalidates the active session and clears the cookie.
 - D-20261117-005 - Promote Go GOTH stack to main and preserve F# as fsharp-legacy:
   - Promote the Go GOTH application (Go 1.27, Chi, Templ, HTMX, Alpine, Bulma)
     to `main`.
