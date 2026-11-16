@@ -117,6 +117,20 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-001 - Restore native navigation and shared article measure:
+  - Remove `hx-boost` from landing page navigation. HTMX body swapping bypassed
+    `<head>` stylesheet updates, leaving `/book-i` and `/journals` without their
+    page CSS on navigation from the landing page. It also suppressed 4xx/5xx
+    responses (preventing the branded 404 error page from displaying on
+    unimplemented routes like `/book-ii`) and intercepted clicks before
+    `navigation-feedback.js` and cross-document view transitions could run.
+  - Preserve native browser navigation for same-origin routes so each page's
+    embedded stylesheet loads immediately, 4xx/5xx error responses display their
+    branded pages, and cross-document view transitions work cleanly.
+  - Add `.article-page` and `.book-article` layout rules (max 42rem, centered)
+    to shared `overrides.css` so Book I and any future book-n articles reliably
+    maintain a centered, Medium-like reading column.
+  - Bump `overrides.css` cache version in `src/pages/shared.rs`.
 - D-20261116-004 - Ship Book I source and restore shared page behavior:
   - Track `rawcontent/book-i.md` in the private repository and render Book I
     from this source. Keep the source wording canonical.
