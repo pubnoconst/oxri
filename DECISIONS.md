@@ -73,12 +73,13 @@ Book pages
   Its circular left chevron is drawn in CSS to avoid an icon-library dependency.
 - The shared Back link lives at Views/Misc/Back.fs so additional pages can use
   the same treatment.
-- The Development-only journal editor prototype uses two panes: editable
+- The browser-side journal editor prototype uses two panes: editable
   source and a rendered preview card. The left pane collects Markdown content,
   a media URL, and comma-separated tags; the right pane previews those fields
   as the published card would display them, with media centered above the body.
-  It does not write drafts to storage; keep it off production routes until
-  authentication and persistence are implemented.
+  It does not write drafts to storage. The route is available in all
+  environments; keep publishing disabled until authentication and persistence
+  are implemented.
 - The editor preview renders Markdown with raw HTML disabled and sanitizes the
   generated markup before inserting it into the page. Tags are inserted as text.
 - Media previews are browser-side and limited to recognizable YouTube and Vimeo
@@ -88,8 +89,9 @@ Book pages
   to load it from the provider or host.
 - The Publish entry button remains disabled while authentication and persistence
   are absent. Do not enable it until there is a real, protected save workflow.
-- The Development-only /journals page currently has an empty state and an
-  Add New Entry link to the Development-only editor prototype.
+- The /journals page currently has an empty state and an Add New Entry link to
+  the browser-side editor prototype. Both routes are available in all
+  environments.
 
 Implementation conventions
 ---------------------------
@@ -111,6 +113,11 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261116-001 - Journal prototype routes in all environments:
+  - Register `/journals` and `/journal-editor` in release as well as
+    Development. They are implemented pages, not development-only previews.
+  - Keep the editor browser-only, do not persist drafts, and leave Publish
+    disabled until authentication and persistence are implemented.
 - D-20261115-007 - Theme-aware pending navigation feedback:
   - Keep pending-navigation dimming confined to dark mode, including the
     reduced-motion fallback. Light-mode readers should not receive a darkening
