@@ -191,3 +191,21 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   part of the MASH stack but remains unused until persistence is implemented.
 - README now notes the developer environment needed to run Cargo commands.
   Clang is not needed for the current feature set; no Rust tests were run.
+
+## 2026-11-16 - Make Rust branch standalone and colocate page styles
+
+- Decision: `D-20261116-003`, recorded in commit `d3ed93f7400d165252b313b684a3114b03cdf1fb`.
+- Implementation: commit `781a5c8f6cbc90456b808407212aaf7b69a0e0b4` (`Refactor standalone Rust project layout D-20261116-003`).
+- Each Rust page now has `src/pages/<page>/mod.rs` and `style.css` together.
+  Page styles are embedded with `include_str!` and returned from explicit CSS
+  routes, keeping Rust source out of the static file service. Shared CSS,
+  browser scripts, and the favicon now live in `assets/`.
+- Removed the F#/Oxpecker project, appsettings, old `Views` and `wwwroot` trees,
+  and local .NET `bin`/`obj` output from this branch. `main` is unchanged, and
+  `rawcontent/` remains excluded from Git. Replaced the old .NET-heavy ignore
+  template with Rust, local secrets, author source, IDE, OS, and leftover build
+  output rules.
+- README and current implementation guidance in `DECISIONS.md` describe the
+  layout. Cargo formatting, metadata, `cargo check`, and `cargo build` succeeded
+  for Windows ARM64. The only warning is the intentionally not-yet-used SQLx
+  dependency. Tests were not run.
