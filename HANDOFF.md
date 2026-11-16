@@ -228,3 +228,22 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - `cargo fmt`, `cargo check --offline`, and `cargo build --offline` succeeded
   for Windows ARM64. The expected unused-SQLx warning remains. Tests were not
   run.
+
+## 2026-11-17 - Restore native navigation and shared article measure
+
+- Decision: `D-20261117-001`, recorded in commit `32dce1b5e084fcb55619ee5034edc46186138019`.
+- Implementation: commit `78dac388b072769cd5ffa0042787f6010c43d5a2` (`Restore native navigation and shared article measure D-20261117-001`).
+- Removed `hx-boost` from the landing page navigation. HTMX body swapping was
+  bypassing `<head>` updates on same-origin navigation, causing `/book-i` and
+  `/journals` to miss their page-specific stylesheets, breaking layout until
+  a full document reload. It also intercepted clicks before navigation feedback
+  and cross-document view transitions could run, and suppressed 4xx/5xx responses
+  (preventing the 404 error page from rendering on `/book-ii`).
+- Added centered article measure rules (`width: min(100%, 42rem); margin: 0 auto;`)
+  to shared `overrides.css`, ensuring Book I and any future book-n reading columns
+  consistently format as a Medium-style centered reading column. Bumped
+  `overrides.css` cache version to `v=22` in `src/pages/shared.rs`.
+- Added unit tests in `src/main.rs` covering landing page native navigation,
+  `/book-i` article styling and stylesheet links, `/journals` rendering and stylesheet
+  links, `/book-ii` 404 error page rendering, panic handling, and request timeouts.
+- `cargo fmt` and `cargo test` succeeded for Windows ARM64 (7 passed, 0 failed).
