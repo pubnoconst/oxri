@@ -113,6 +113,13 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261116-002 - Parallel Rust MASH experiment:
+  - Explore Maud, Axum, SQLx, and HTMX on the `rust-experiment` branch while
+    leaving the F#/Oxpecker application on `main` unchanged.
+  - Begin without a database driver or rustls provider so the first prototype
+    does not require bundled SQLite's C build or ring's Windows ARM64 Clang
+    toolchain. Choose SQLx database and TLS features when persistence is
+    implemented; Windows-native SChannel remains an option if SQLx needs TLS.
 - D-20261116-001 - Journal prototype routes in all environments:
   - Register `/journals` and `/journal-editor` in release as well as
     Development. They are implemented pages, not development-only previews.
