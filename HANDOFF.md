@@ -274,3 +274,15 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Added unit and integration tests in `internal/app/server_test.go` covering all
   routes, stylesheet delivery, 404/500/504 error handling, panic recovery, and
   30-second timeouts. All tests pass (`ok github.com/oxri/oxri-go/internal/app 0.124s`).
+
+## 2026-11-17 - Adopt Chi router and clean standalone Go repository
+
+- Decision: `D-20261117-004`, recorded in commit `444fe4d715eb470029a6b54d13aeb8f0d42eb056`.
+- Implementation: commit `4c9ff8961b85e5586ad1414155e38573314d12d4` (`Implement Chi router, refresh gitignore and update README D-20261117-004`).
+- Adopted `github.com/go-chi/chi/v5` for routing, not-found/method-not-allowed
+  handling, and middleware composition.
+- Removed all legacy Rust artifacts (`Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`,
+  `src/`, and `target/`), making `go-experiment` completely standalone.
+- Refreshed `.gitignore` for Go binaries, test artifacts, `.mage/` cache, and
+  IDE/OS patterns. Updated `README.md` to document the Go GOTH stack and Mage targets.
+- Ran `mage test` and verified all 8 unit and integration tests pass cleanly.
