@@ -1,10 +1,10 @@
 # Res Imperii
 
 Res Imperii is a private blog for long-form articles and journals. The
-`go-experiment` branch is a standalone Go application using the GOTH stack:
+application on `main` is a standalone Go application using the GOTH stack:
 Go, Templ, HTMX, and Tailwind/Bulma (Bulma + overrides in this project), paired
 with Alpine.js and Chi routing. The Rust experiment remains on `rust-experiment`
-and the .NET/F# application remains on `main`.
+and the legacy .NET/F# application is preserved on `fsharp-legacy`.
 
 ## Project structure
 
