@@ -1,0 +1,12 @@
+[package]
+name = "oxri-rust-experiment"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+
+[dependencies]
+axum = "0.8"
+maud = { version = "0.27", features = ["axum"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio"] }
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"] }
+tower-http = { version = "0.6", features = ["catch-panic", "fs"] }

@@ -54,6 +54,21 @@ dotnet restore
 dotnet run
 ```
 
+## Rust MASH experiment
+
+The `rust-experiment` branch contains a parallel prototype using Maud, Axum,
+SQLx, and HTMX. It preserves the current page routes and visual assets while
+leaving the .NET application on `main` as the canonical implementation. The
+SQLx dependency has no database driver or TLS backend enabled yet; choose those
+alongside the database before implementing persistence.
+
+The branch pins the Rust channel to stable for the current Windows ARM64 target.
+Run it with `cargo run` once the Rust toolchain and Visual Studio C++ Build
+Tools are installed. The Rust linker requires the MSVC linker (`link.exe`), even
+though this initial feature set does not require Clang or a C compiler. Adding
+SQLx SQLite or a rustls `ring` backend may introduce additional native build
+requirements and should be evaluated separately.
+
 ASP.NET Core loads `appsettings.json` and, when running in Development, also
 loads `appsettings.Development.json`. Keep credentials out of committed
 configuration files; no Turso credentials or connection settings are currently
