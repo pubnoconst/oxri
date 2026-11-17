@@ -386,3 +386,20 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Added a `MutationObserver` in `assets/js/journal-editor.js` to re-render embedded
   tweets when the active page theme is toggled.
 - Updated unit and integration tests in `internal/app/server_test.go`. All 12 tests pass cleanly via `mage test`.
+
+## 2026-11-17 - Global theme gesture, button standards, and /journals/new canonical route
+
+- Decision: `D-20261117-011`, recorded in commit `8077d14` (`Decide global theme toggle, button standards, and /journals/new D-20261117-011`).
+- Implementation: commit `6c83fab` (`Implement global theme toggle, button standards, and /journals/new D-20261117-011`).
+- Expanded background double-click theme toggle site-wide across all views in `assets/js/theme-toggle.js` (bumped to `?v=2`), ignoring interactions with interactive elements (`a, button, input, textarea, select, label, code, pre, iframe, video, audio`) and active text selections.
+- Standardized button hierarchy into three semantic variants in `assets/css/overrides.css` (bumped to `?v=23`):
+  1. `.btn-encouraged` / `.button.is-encouraged`: Primary ink presence for primary call-to-action (Publish).
+  2. `.btn-neutral` / `.button.is-neutral`: Quiet border and transparent surface for utility/secondary actions (Copy command, New Entry link).
+  3. `.btn-destructive` / `.button.is-destructive`: Understated crimson/rose for destructive or irreversible actions.
+- Renamed `/journal-editor` to canonical `/journals/new` and added a 301 permanent redirect from `/journal-editor` in `internal/app/server.go`.
+- Redesigned `/journals/new` layout in `internal/pages/editor/style.css` and `editor.templ`:
+  - Removed "Live preview" in favor of clean minimal headings (`Compose` and `Preview`).
+  - Equalized card width (`repeat(2, minmax(0, 1fr))`) and matched card heights, with `.journal-rendered-content` flex-stretching and scrolling smoothly to align with the compose card.
+  - Positioned the Publish button centered at the bottom of the page (`.journal-editor-actions`).
+- Updated unit and integration tests in `internal/app/server_test.go` and `internal/auth/auth_test.go` to assert `/journals/new` semantics, 301 redirect from `/journal-editor`, and button classes.
+- Updated `README.md` documentation. All 12 tests pass cleanly via `mage test` and server compiles via `mage build`.
