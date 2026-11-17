@@ -106,7 +106,8 @@ go run github.com/magefile/mage run
 - `/journals` is an empty state with a link to the editor, showing "Author sign in"
   when unauthenticated or "Sign out" when authenticated.
 - `/journal-editor` is a browser-only prototype with editable Markdown, tags,
-  and a live media/content preview. Drafts are not saved and Publish remains
+  and a live media/content preview (supporting YouTube, Vimeo, direct audio/video/images,
+  and X / Twitter post embeds). Drafts are not saved and Publish remains
   disabled until persistence is implemented.
 - `/login` is the loopback SSH authentication gateway. Running the copyable
   `ssh -p 2222 <token>@localhost` or `ssh -p 2222 admin@localhost` command

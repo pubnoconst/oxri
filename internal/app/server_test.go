@@ -148,6 +148,15 @@ func TestJournalEditorPage(t *testing.T) {
 	if !strings.Contains(body, "/page-css/journal-editor.css") {
 		t.Errorf("missing journal-editor stylesheet link")
 	}
+	if !strings.Contains(body, "widgets.js") {
+		t.Errorf("missing Twitter widgets.js script tag in editor")
+	}
+	if !strings.Contains(body, "journal-editor.js?v=4") {
+		t.Errorf("missing versioned journal-editor.js script tag")
+	}
+	if !strings.Contains(body, "Twitter post link") {
+		t.Errorf("missing Twitter media hint in editor")
+	}
 }
 
 func TestLoginPageAndAuthPolling(t *testing.T) {

@@ -36,6 +36,74 @@
     }
   }
 
+  function getActiveTheme() {
+    const override = document.documentElement.getAttribute("data-theme") || sessionStorage.getItem("theme-override");
+    if (override === "dark" || override === "light") return override;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+
+  function showTweetFallback(container, username, tweetId, isLoading) {
+    container.replaceChildren();
+    const card = document.createElement("div");
+    card.className = "tweet-fallback-card";
+
+    const badge = document.createElement("span");
+    badge.className = "tweet-fallback-badge";
+    badge.textContent = isLoading ? "Loading post…" : "X / Twitter Post";
+
+    const link = document.createElement("a");
+    link.href = `https://x.com/${encodeURIComponent(username)}/status/${encodeURIComponent(tweetId)}`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = username !== "post" ? `@${username} on X (status ${tweetId})` : `Post ${tweetId} on X`;
+
+    card.append(badge, link);
+    container.append(card);
+  }
+
+  function renderTweet(container, username, tweetId) {
+    const theme = getActiveTheme();
+
+    const doCreate = (twttr) => {
+      container.replaceChildren();
+      twttr.widgets.createTweet(tweetId, container, {
+        theme: theme,
+        dnt: true,
+        align: "center",
+        conversation: "none",
+      }).then((el) => {
+        if (!el) {
+          showTweetFallback(container, username, tweetId, false);
+        }
+      }).catch(() => {
+        showTweetFallback(container, username, tweetId, false);
+      });
+    };
+
+    if (window.twttr && window.twttr.widgets && typeof window.twttr.widgets.createTweet === "function") {
+      doCreate(window.twttr);
+      return;
+    }
+
+    showTweetFallback(container, username, tweetId, true);
+
+    if (window.twttr && window.twttr.ready) {
+      window.twttr.ready(doCreate);
+    } else {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (window.twttr && window.twttr.widgets && typeof window.twttr.widgets.createTweet === "function") {
+          clearInterval(interval);
+          doCreate(window.twttr);
+        } else if (attempts > 30) {
+          clearInterval(interval);
+          showTweetFallback(container, username, tweetId, false);
+        }
+      }, 100);
+    }
+  }
+
   function createMedia(url) {
     const host = url.hostname.toLowerCase().replace(/^www\./, "");
     const path = url.pathname.toLowerCase();
@@ -60,6 +128,20 @@
     if (host === "vimeo.com" || host === "player.vimeo.com") {
       const id = url.pathname.split("/").filter(Boolean).at(-1);
       if (id && /^\d+$/.test(id)) return frame(`https://player.vimeo.com/video/${id}`, "Vimeo video preview");
+    }
+    // Convert Twitter and X post links to official embeds using widgets.js
+    if (host === "twitter.com" || host === "x.com" || host === "mobile.twitter.com" || host === "mobile.x.com") {
+      const statusMatch = url.pathname.match(/(?:^|\/)(?:status|statuses)\/(\d+)/i);
+      if (statusMatch && /^\d+$/.test(statusMatch[1])) {
+        const tweetId = statusMatch[1];
+        const userMatch = url.pathname.match(/^\/([^/]+)\/(?:status|statuses)/i);
+        const username = (userMatch && userMatch[1] !== "i") ? userMatch[1] : "post";
+
+        const container = document.createElement("div");
+        container.className = "tweet-embed-container";
+        renderTweet(container, username, tweetId);
+        return container;
+      }
     }
     // Direct files use native browser controls. Metadata preload avoids
     // downloading the full media file just to build the preview.
