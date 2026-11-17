@@ -117,6 +117,13 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-012 - Ignore and untrack generated Templ Go files:
+  - Add `*_templ.go` to `.gitignore` and untrack all generated `*_templ.go` files
+    from the repository index.
+  - Mage handles template compilation on demand across `Generate`, `Build`, `Run`,
+    and `Test` targets; committing generated Go code creates noisy diffs, potential
+    merge conflicts, and pollutes Git history with machine-generated artifacts.
+  - Update `mage clean` to purge generated `*_templ.go` files alongside `bin/`.
 - D-20261117-011 - Global theme gesture, button standards, and editor refinement:
   - Expand background double-click theme toggle site-wide across all views,
     ignoring interactions with links, buttons, inputs, pre/code blocks, and text selections.
