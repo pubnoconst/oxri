@@ -369,3 +369,20 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Updated `internal/pages/editor/style.css` so Twitter embeds use dynamic auto-height instead of fixed 16:9 video aspect ratio.
 - Updated `internal/pages/editor/editor.templ` field hint, loaded `widgets.js`, and bumped cache versions.
 - Added test coverage in `internal/app/server_test.go`. All 12 unit and integration tests pass cleanly via `mage test`.
+
+## 2026-11-17 - Tactile media mounting on journal canvas
+
+- Decision: `D-20261117-010`, recorded in commit `e3003d5` (`Decide tactile media mounting on journal canvas D-20261117-010`).
+- Implementation: commit `542f3f7` (`Implement tactile media mounting and transparent canvas embedding D-20261117-010`).
+- Removed rigid solid background coloring and letterboxing from `.journal-preview-media`,
+  allowing the journal card surface to flow seamlessly with `background: transparent`.
+- Styled media items (photos, videos, and Twitter/X embeds) like physical artifacts
+  mounted on top of paper, with soft drop shadows (`filter: drop-shadow` / `box-shadow`)
+  and consistent rounded corners (`border-radius: 0.55rem` on images/video, native ~14px
+  for Twitter embeds).
+- Allowed Twitter's rounded-corner cards to float naturally over the canvas without
+  harsh rectangular cutouts or contrasting background bleeding.
+- Replaced the solid empty media box with an understated dashed placeholder inset.
+- Added a `MutationObserver` in `assets/js/journal-editor.js` to re-render embedded
+  tweets when the active page theme is toggled.
+- Updated unit and integration tests in `internal/app/server_test.go`. All 12 tests pass cleanly via `mage test`.
