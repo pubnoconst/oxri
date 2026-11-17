@@ -403,3 +403,12 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   - Positioned the Publish button centered at the bottom of the page (`.journal-editor-actions`).
 - Updated unit and integration tests in `internal/app/server_test.go` and `internal/auth/auth_test.go` to assert `/journals/new` semantics, 301 redirect from `/journal-editor`, and button classes.
 - Updated `README.md` documentation. All 12 tests pass cleanly via `mage test` and server compiles via `mage build`.
+
+## 2026-11-17 - Untrack generated Templ Go files
+
+- Decision: `D-20261117-012`, recorded in commit `8e98196` (`Decide ignore and untrack generated Templ Go files D-20261117-012`).
+- Implementation: commit `7428b22` (`Untrack generated Templ Go files and update Clean target D-20261117-012`).
+- Added `*_templ.go` to `.gitignore` so generated Go template source files are ignored.
+- Untracked all seven `*_templ.go` files from the Git index via `git rm --cached`, eliminating machine-generated clutter and noisy diffs from version control.
+- Updated `mage clean` in `magefile.go` to purge generated `*_templ.go` files in addition to `bin/`.
+- Tested the workflow: `mage clean` removes all generated Go files; `mage test` and `mage build` automatically regenerate templates on demand via `mg.Deps(Generate)` and pass all tests cleanly.
