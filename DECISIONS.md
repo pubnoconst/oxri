@@ -117,6 +117,19 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-011 - Global theme gesture, button standards, and editor refinement:
+  - Expand background double-click theme toggle site-wide across all views,
+    ignoring interactions with links, buttons, inputs, pre/code blocks, and text selections.
+  - Standardize button hierarchy into three semantic variants in `overrides.css`:
+    encouraged (`.btn-encouraged` / `.button.is-encouraged`), neutral (`.btn-neutral` /
+    `.button.is-neutral`), and destructive (`.btn-destructive` / `.button.is-destructive`).
+  - Rename route `/journal-editor` to canonical `/journals/new` with a 301 redirect
+    from `/journal-editor`.
+  - In `/journals/new`, eliminate the phrase "Live preview" in favor of minimal
+    headings (`Compose` and `Preview`). Equalize the width and height of the two
+    cards, stretching and scrolling the rendered journal body preview to match
+    the compose card.
+  - Position the Publish entry action at the bottom of the page, centered horizontally.
 - D-20261117-010 - Tactile media mounting on journal canvas:
   - Remove rigid rectangular background coloring and square letterboxing from
     the journal preview media area (`.journal-preview-media`).
