@@ -357,3 +357,15 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   2. Implement an author profile dashboard to manage credentials, register durable security keys/passkeys (Proton Pass, FIDO2/WebAuthn), and inspect active sessions.
   3. Retire and remove the primordial bootstrap credential once daily credentials are verified in the dashboard.
 - Updated `NEXT.md` actionable roadmap. Application codebase remains fully functional under Go GOTH and SSH loopback authentication. All 12 tests pass via `mage test`.
+
+## 2026-11-17 - Twitter/X post embeds in journal media links
+
+- Decision: `D-20261117-009`, recorded in commit `d2c9247` (`Decide Twitter/X post embeds in journal media links D-20261117-009`).
+- Implementation: commit `db40949` (`Implement Twitter/X post embeds in journal media links D-20261117-009`).
+- Added support for embedding Twitter and X post URLs (`x.com`, `twitter.com`, and mobile variants) in journal media links.
+- Implemented client-side parsing of numeric post IDs (`/status/<id>`) in `assets/js/journal-editor.js`.
+- Integrated Twitter's official widgets API (`widgets.js` / `twttr.widgets.createTweet`) with privacy Do-Not-Track (`dnt: true`) and dynamic theme matching the active light/dark state.
+- Provided a quiet, styled fallback card for offline or script-blocked environments so the post link remains accessible.
+- Updated `internal/pages/editor/style.css` so Twitter embeds use dynamic auto-height instead of fixed 16:9 video aspect ratio.
+- Updated `internal/pages/editor/editor.templ` field hint, loaded `widgets.js`, and bumped cache versions.
+- Added test coverage in `internal/app/server_test.go`. All 12 unit and integration tests pass cleanly via `mage test`.
