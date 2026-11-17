@@ -117,6 +117,16 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-010 - Tactile media mounting on journal canvas:
+  - Remove rigid rectangular background coloring and square letterboxing from
+    the journal preview media area (`.journal-preview-media`).
+  - Present media items (photos, videos, audio, and Twitter cards) as physical
+    artifacts mounted/stapled directly onto the journal card canvas.
+  - Apply soft physical drop shadows (`box-shadow` / `filter: drop-shadow`) and
+    rounded corners (`border-radius: 0.55rem` for photos/video, native ~14px for
+    Twitter embeds) so rounded embeds float seamlessly over the canvas without
+    corner artifacts or contrasting square cutout borders.
+  - When empty, replace the solid block with an understated dashed mount placeholder.
 - D-20261117-009 - Twitter/X post embeds in journal media links:
   - Expand browser-side media previews in journal links to support Twitter and X
     post URLs (`twitter.com`, `x.com`, and their mobile variants).
