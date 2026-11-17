@@ -78,13 +78,13 @@ func Page(isAuth bool) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<button type=\"button\" disabled>Publish entry</button></div></main><script src=\"https://cdn.jsdelivr.net/npm/markdown-it@15.0.3/dist/browser/markdown-it.umd.min.js\"></script> <script src=\"https://cdn.jsdelivr.net/npm/dompurify@3.4.17/dist/purify.min.js\"></script> <script src=\"https://platform.twitter.com/widgets.js\" charset=\"utf-8\" async></script> <script src=\"/assets/js/journal-editor.js?v=4\"></script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<button type=\"button\" disabled>Publish entry</button></div></main><script src=\"https://cdn.jsdelivr.net/npm/markdown-it@15.0.3/dist/browser/markdown-it.umd.min.js\"></script> <script src=\"https://cdn.jsdelivr.net/npm/dompurify@3.4.17/dist/purify.min.js\"></script> <script src=\"https://platform.twitter.com/widgets.js\" charset=\"utf-8\" async></script> <script src=\"/assets/js/journal-editor.js?v=5\"></script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = shared.Layout("New Journal Entry - RES IMPERII", "/page-css/journal-editor.css?v=3").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = shared.Layout("New Journal Entry - RES IMPERII", "/page-css/journal-editor.css?v=4").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -133,39 +133,84 @@
 .editor-preview-pane > .editor-section-heading { margin: 0 0 1.5rem; }
 .journal-preview-card { min-height: 28rem; }
 
+/*
+ * Journal preview media: mounted naturally on the journal canvas as a tactile
+ * artifact (like a photo or card pinned to paper), avoiding rigid square
+ * background letterboxing or harsh corner cutouts.
+ */
 .journal-preview-media {
   display: flex;
   width: 100%;
-  min-height: 12rem;
+  min-height: 0;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--page) 88%, var(--page-ink));
+  box-sizing: border-box;
+  background: transparent;
+  padding: clamp(1.2rem, 3vw, 2rem) clamp(1.2rem, 3vw, 2rem) 0;
 }
 
+/* Empty state: understated dashed placeholder indicating the mount area */
 .journal-preview-media.is-empty {
+  min-height: 5.5rem;
+  margin: clamp(1.2rem, 3vw, 2rem) clamp(1.2rem, 3vw, 2rem) 0;
+  padding: 1.25rem;
+  width: calc(100% - clamp(2.4rem, 6vw, 4rem));
+  border: 1px dashed color-mix(in srgb, var(--page-ink) 18%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--page-ink) 2%, transparent);
   color: var(--page-ink);
-  font-size: 1rem;
-  opacity: 0.48;
+  font-size: 0.95rem;
+  opacity: 0.45;
+  font-style: italic;
+  text-align: center;
 }
 
-.journal-preview-media iframe,
-.journal-preview-media video,
+/* Mounted photographs: softly rounded corners with subtle physical drop shadow */
 .journal-preview-media img {
+  display: block;
+  max-width: 100%;
+  max-height: 28rem;
+  width: auto;
+  height: auto;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 12%, transparent);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--page-ink) 8%, transparent);
+  object-fit: contain;
+}
+
+/* Mounted video players (YouTube, Vimeo, direct video) */
+.journal-preview-media video,
+.journal-preview-media > iframe {
   display: block;
   width: 100%;
   max-height: 24rem;
   aspect-ratio: 16 / 9;
-  border: 0;
-  object-fit: contain;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 12%, transparent);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--page-ink) 8%, transparent);
 }
 
-/* X / Twitter post embeds: allow natural card dimensions rather than 16:9 */
+/* Mounted audio player */
+.journal-preview-media audio {
+  width: min(90%, 34rem);
+  margin: 0.5rem 0;
+  border-radius: 2rem;
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--page-ink) 6%, transparent);
+}
+
+/*
+ * X / Twitter post embeds:
+ * Twitter widgets feature their own signature rounded corners (12-16px).
+ * We mount them directly on top of the journal canvas with soft drop-shadow
+ * so they appear natural and tactile, without square background clipping.
+ */
 .journal-preview-media .tweet-embed-container {
   display: flex;
   justify-content: center;
   width: 100%;
-  padding: 0.5rem 0;
+  background: transparent;
+  padding: 0.25rem 0;
+  filter: drop-shadow(0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent));
 }
 
 .journal-preview-media .tweet-embed-container iframe,
@@ -173,19 +218,23 @@
   max-height: none !important;
   aspect-ratio: auto !important;
   margin: 0 auto !important;
+  border-radius: 14px !important;
+  overflow: hidden;
 }
 
+/* Offline or blocked fallback card: matches the tactile mounted card treatment */
 .tweet-fallback-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1.5rem;
+  padding: 1.5rem 2rem;
   width: min(100%, 30rem);
-  border: 1px solid color-mix(in srgb, var(--page-ink) 16%, transparent);
-  border-radius: 0.45rem;
-  background: color-mix(in srgb, var(--page-ink) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--page-ink) 14%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--page-ink) 3%, transparent);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--page-ink) 5%, transparent);
   text-align: center;
 }
 
@@ -204,8 +253,6 @@
   text-underline-offset: 3px;
   word-break: break-all;
 }
-
-.journal-preview-media audio { width: min(90%, 34rem); }
 .journal-preview-body { padding: clamp(1.2rem, 3vw, 2rem); }
 .journal-preview-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.9rem; }
 .journal-preview-tags:empty { display: none; }

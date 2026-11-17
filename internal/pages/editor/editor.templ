@@ -3,7 +3,7 @@ package editor
 import "github.com/oxri/oxri-go/internal/pages/shared"
 
 templ Page(isAuth bool) {
-	@shared.Layout("New Journal Entry - RES IMPERII", "/page-css/journal-editor.css?v=3") {
+	@shared.Layout("New Journal Entry - RES IMPERII", "/page-css/journal-editor.css?v=4") {
 		<main class="journal-editor-page">
 			<header class="journal-editor-header">
 				@shared.BackLink("/journals", "Journals")
@@ -60,6 +60,6 @@ templ Page(isAuth bool) {
 		<script src="https://cdn.jsdelivr.net/npm/markdown-it@15.0.3/dist/browser/markdown-it.umd.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.17/dist/purify.min.js"></script>
 		<script src="https://platform.twitter.com/widgets.js" charset="utf-8" async></script>
-		<script src="/assets/js/journal-editor.js?v=4"></script>
+		<script src="/assets/js/journal-editor.js?v=5"></script>
 	}
 }

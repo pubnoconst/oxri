@@ -213,4 +213,12 @@
   updateContent();
   updateMedia();
   updateTags();
+
+  // If the page theme changes, re-render any active tweet widget to match the canvas
+  const themeObserver = new MutationObserver(() => {
+    if (mediaInput.value.trim() && mediaPreview.querySelector(".tweet-embed-container")) {
+      updateMedia();
+    }
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 })();
