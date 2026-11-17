@@ -97,18 +97,24 @@ go run github.com/magefile/mage run
 
 ## Current pages
 
-- `/` is the landing page. Double-clicking its empty background toggles light
-  or dark mode for the current browser tab. The operating-system preference is
-  the default. Same-origin page changes use navigation feedback where supported.
+- `/` is the landing page. Double-clicking an empty background on any page
+  toggles light or dark mode for the current browser tab. The operating-system
+  preference is the default. Same-origin page changes use navigation feedback
+  where supported.
 - `/book-i` renders the Markdown in `rawcontent/book-i.md`, the canonical Book I
   source tracked in this private repository. Raw HTML in the source is excluded
   from rendered output.
-- `/journals` is an empty state with a link to the editor, showing "Author sign in"
-  when unauthenticated or "Sign out" when authenticated.
-- `/journal-editor` is a browser-only prototype with editable Markdown, tags,
-  and a live media/content preview (supporting YouTube, Vimeo, direct audio/video/images,
-  and X / Twitter post embeds). Drafts are not saved and Publish remains
-  disabled until persistence is implemented.
+- `/journals` is an empty state with a link to create an entry (`/journals/new`),
+  showing "Author sign in" when unauthenticated or "Sign out" when authenticated.
+- `/journals/new` (formerly `/journal-editor`, which 301 permanently redirects to
+  `/journals/new`) is a minimal two-pane journal composition environment with
+  editable Markdown, tags, links, and a scroll-synchronized content preview
+  (supporting YouTube, Vimeo, direct audio/video/images, and X / Twitter post
+  embeds). The Publish action is centered at the bottom of the page; drafts and
+  publishing connect to persistence in upcoming work.
+- Standardized buttons: interactive actions use semantic classes (`.btn-encouraged`
+  for primary actions like publishing, `.btn-neutral` for utility/secondary
+  actions, and `.btn-destructive` for deletions).
 - `/login` is the loopback SSH authentication gateway. Running the copyable
   `ssh -p 2222 <token>@localhost` or `ssh -p 2222 admin@localhost` command
   authenticates via your local Ed25519 key (OpenSSH or Proton Pass agent) and

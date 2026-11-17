@@ -70,11 +70,18 @@ func NewServer(assetsDir string, authSvc *auth.Service) http.Handler {
 		w.Write([]byte(journals.StyleCSS))
 	})
 
-	// Journal Editor
-	r.Get("/journal-editor", func(w http.ResponseWriter, req *http.Request) {
+	// Journal Editor / Create New Entry
+	r.Get("/journals/new", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		isAuth := auth.IsAuthenticated(req.Context())
 		_ = editor.Page(isAuth).Render(req.Context(), w)
+	})
+	r.Get("/journal-editor", func(w http.ResponseWriter, req *http.Request) {
+		http.Redirect(w, req, "/journals/new", http.StatusMovedPermanently)
+	})
+	r.Get("/page-css/journals-new.css", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "text/css; charset=utf-8")
+		w.Write([]byte(editor.StyleCSS))
 	})
 	r.Get("/page-css/journal-editor.css", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")

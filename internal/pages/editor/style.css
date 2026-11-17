@@ -1,13 +1,13 @@
-﻿/* Journal editor: two calm, card-like work surfaces with clear field hierarchy. */
+﻿/* Journal editor: two calm, symmetrically balanced cards with matching width & height. */
 .journal-editor-page {
-  width: min(90rem, 100%);
+  width: min(92rem, 100%);
   min-height: 100vh;
   margin: 0 auto;
   padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1rem, 3vw, 2.5rem);
 }
 
 .journal-editor-header {
-  margin-bottom: 2rem;
+  margin-bottom: 2.25rem;
 }
 
 .editor-heading {
@@ -39,25 +39,34 @@
   opacity: 0.6;
 }
 
-/* Use modestly lifted surfaces while retaining the site's subdued palette. */
-.editor-pane,
-.journal-preview-card {
+/* Symmetrical 2-column grid: cards have identical 50/50 width and stretched height */
+.journal-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.25rem, 2.5vw, 2rem);
+  align-items: stretch;
+}
+
+/* Card foundation: shared borders, subtle elevation, and flex layout */
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   min-width: 0;
-  overflow: hidden;
+  box-sizing: border-box;
+  padding: clamp(1.2rem, 2.5vw, 1.8rem);
   border: 1px solid color-mix(in srgb, var(--page-ink) 14%, transparent);
   border-radius: 0.55rem;
   background: color-mix(in srgb, var(--page) 97%, var(--page-ink));
   box-shadow: 0 0.6rem 2rem color-mix(in srgb, var(--page-ink) 5%, transparent);
 }
 
-.editor-pane { padding: clamp(1rem, 2vw, 1.6rem); }
-
 .editor-section-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.8rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
   border-bottom: 1px solid color-mix(in srgb, var(--page-ink) 12%, transparent);
 }
 
@@ -81,8 +90,9 @@
 .editor-field label { font-size: 1.1rem; }
 
 .editor-field input,
-.editor-pane textarea {
+.editor-compose-card textarea {
   width: 100%;
+  box-sizing: border-box;
   border: 1px solid color-mix(in srgb, var(--page-ink) 18%, transparent);
   border-radius: 0.35rem;
   background: var(--page);
@@ -97,7 +107,7 @@
 }
 
 .editor-field input:focus,
-.editor-pane textarea:focus {
+.editor-compose-card textarea:focus {
   border-color: color-mix(in srgb, var(--page-ink) 48%, transparent);
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--page-ink) 8%, transparent);
@@ -105,22 +115,24 @@
 
 .field-hint {
   margin: 0.35rem 0 0;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   line-height: 1.35;
   opacity: 0.55;
 }
 
-/* Keep source and live card together on wide screens; stack for smaller screens. */
-.journal-editor-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-  gap: clamp(1rem, 2vw, 1.5rem);
-  align-items: stretch;
+/* Left Card: Entry content textarea expands to fill remaining card height */
+.editor-content-field {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 0;
 }
 
-.editor-pane textarea {
+.editor-content-field textarea {
   display: block;
-  min-height: 23rem;
+  flex: 1;
+  min-height: 22rem;
   padding: 0.9rem 1rem;
   resize: vertical;
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -128,10 +140,19 @@
   line-height: 1.55;
 }
 
-.editor-content-field { margin-bottom: 0; }
-.editor-preview-pane { padding: 0; background: transparent; box-shadow: none; border: 0; }
-.editor-preview-pane > .editor-section-heading { margin: 0 0 1.5rem; }
-.journal-preview-card { min-height: 28rem; }
+/* Right Card: Preview structure matching the left compose card */
+.editor-preview-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.journal-preview {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 
 /*
  * Journal preview media: mounted naturally on the journal canvas as a tactile
@@ -146,20 +167,21 @@
   justify-content: center;
   box-sizing: border-box;
   background: transparent;
-  padding: clamp(1.2rem, 3vw, 2rem) clamp(1.2rem, 3vw, 2rem) 0;
+  padding: 0.5rem 0 0;
 }
 
 /* Empty state: understated dashed placeholder indicating the mount area */
 .journal-preview-media.is-empty {
   min-height: 5.5rem;
-  margin: clamp(1.2rem, 3vw, 2rem) clamp(1.2rem, 3vw, 2rem) 0;
+  margin: 0.5rem 0 0;
   padding: 1.25rem;
-  width: calc(100% - clamp(2.4rem, 6vw, 4rem));
+  width: 100%;
+  box-sizing: border-box;
   border: 1px dashed color-mix(in srgb, var(--page-ink) 18%, transparent);
   border-radius: 0.55rem;
   background: color-mix(in srgb, var(--page-ink) 2%, transparent);
   color: var(--page-ink);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   opacity: 0.45;
   font-style: italic;
   text-align: center;
@@ -169,7 +191,7 @@
 .journal-preview-media img {
   display: block;
   max-width: 100%;
-  max-height: 28rem;
+  max-height: 24rem;
   width: auto;
   height: auto;
   border-radius: 0.55rem;
@@ -183,7 +205,7 @@
 .journal-preview-media > iframe {
   display: block;
   width: 100%;
-  max-height: 24rem;
+  max-height: 22rem;
   aspect-ratio: 16 / 9;
   border-radius: 0.55rem;
   border: 1px solid color-mix(in srgb, var(--page-ink) 12%, transparent);
@@ -198,12 +220,7 @@
   box-shadow: 0 2px 12px color-mix(in srgb, var(--page-ink) 6%, transparent);
 }
 
-/*
- * X / Twitter post embeds:
- * Twitter widgets feature their own signature rounded corners (12-16px).
- * We mount them directly on top of the journal canvas with soft drop-shadow
- * so they appear natural and tactile, without square background clipping.
- */
+/* X / Twitter post embeds: floating naturally on canvas */
 .journal-preview-media .tweet-embed-container {
   display: flex;
   justify-content: center;
@@ -222,15 +239,15 @@
   overflow: hidden;
 }
 
-/* Offline or blocked fallback card: matches the tactile mounted card treatment */
+/* Offline or blocked fallback card */
 .tweet-fallback-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1.5rem 2rem;
-  width: min(100%, 30rem);
+  padding: 1.5rem;
+  width: min(100%, 28rem);
   border: 1px solid color-mix(in srgb, var(--page-ink) 14%, transparent);
   border-radius: 0.55rem;
   background: color-mix(in srgb, var(--page-ink) 3%, transparent);
@@ -253,8 +270,23 @@
   text-underline-offset: 3px;
   word-break: break-all;
 }
-.journal-preview-body { padding: clamp(1.2rem, 3vw, 2rem); }
-.journal-preview-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.9rem; }
+
+/* Preview body: flex-1 takes up the remaining height to match compose card exactly */
+.journal-preview-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding-top: 1rem;
+}
+
+.journal-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
 .journal-preview-tags:empty { display: none; }
 .journal-preview-tags .journal-tag-chip {
   border-color: color-mix(in srgb, var(--page-ink) 16%, transparent);
@@ -263,24 +295,27 @@
   letter-spacing: 0.02em;
 }
 
-/* Article preview styling mirrors the site's understated long-form typography. */
+/* Rendered preview content scrolls smoothly within matching card height */
 .journal-rendered-content {
+  flex: 1;
+  overflow-y: auto;
   overflow-wrap: anywhere;
   font-size: 1.15rem;
   line-height: 1.7;
+  padding-right: 0.4rem;
 }
 
 .journal-rendered-content h1,
 .journal-rendered-content h2,
 .journal-rendered-content h3 {
-  margin: 1.4rem 0 0.65rem;
+  margin: 1.2rem 0 0.6rem;
   font-weight: 400;
   line-height: 1.2;
 }
 
-.journal-rendered-content h1 { font-size: 2rem; }
-.journal-rendered-content h2 { font-size: 1.6rem; }
-.journal-rendered-content h3 { font-size: 1.3rem; }
+.journal-rendered-content h1 { font-size: 1.85rem; }
+.journal-rendered-content h2 { font-size: 1.5rem; }
+.journal-rendered-content h3 { font-size: 1.25rem; }
 .journal-rendered-content p,
 .journal-rendered-content ul,
 .journal-rendered-content ol,
@@ -293,25 +328,21 @@
 }
 .journal-rendered-content a { color: inherit; text-decoration-thickness: 1px; }
 
+/* Publish button action: centered horizontally at the bottom of the page */
 .journal-editor-actions {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.25rem;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 3.5rem auto 2.5rem;
+  text-align: center;
 }
 
-.publish-note { margin: 0; font-size: 0.95rem; opacity: 0.55; }
-
-.journal-editor-actions button {
-  padding: 0.62rem 1.15rem;
-  border: 1px solid color-mix(in srgb, var(--page-ink) 12%, transparent);
-  border-radius: 0.35rem;
-  background: color-mix(in srgb, var(--page) 90%, var(--page-ink));
-  color: var(--page-ink);
-  font: inherit;
-  opacity: 0.45;
-  cursor: not-allowed;
+.publish-note {
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.55;
 }
 
 @media (max-width: 760px) {
@@ -320,10 +351,10 @@
   }
   .editor-heading { align-items: start; flex-direction: column; gap: 0.35rem; }
   .editor-notice { margin: 0; }
-  .editor-pane textarea { min-height: 18rem; }
+  .editor-content-field textarea { min-height: 18rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .editor-field input,
-  .editor-pane textarea { transition: none; }
+  .editor-compose-card textarea { transition: none; }
 }

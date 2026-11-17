@@ -58,12 +58,12 @@ func Page(isAuth bool) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<p class=\"editor-notice\">Draft preview · <a href=\"/login?next=/journal-editor\" style=\"color: inherit; text-decoration: underline;\">Sign in</a></p>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<p class=\"editor-notice\">Draft preview · <a href=\"/login?next=/journals/new\" style=\"color: inherit; text-decoration: underline;\">Sign in</a></p>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div></header><div class=\"journal-editor-grid\"><section class=\"editor-pane editor-input-card\"><div class=\"editor-section-heading\"><h2>Compose</h2><span>01</span></div><div class=\"editor-field\"><label for=\"journal-media-link\">Media link</label> <input id=\"journal-media-link\" type=\"url\" placeholder=\"https://...\" autocomplete=\"url\"><p class=\"field-hint\">Paste a video, audio, image, or X / Twitter post link to show it in the preview.</p></div><div class=\"editor-field\"><label for=\"journal-tags\">Tags</label> <input id=\"journal-tags\" type=\"text\" placeholder=\"history, notes, travel\"><p class=\"field-hint\">Separate tags with commas.</p></div><div class=\"editor-field editor-content-field\"><label for=\"journal-content\">Entry content</label> <textarea id=\"journal-content\" rows=\"16\"># A journal entry&#10;&#10;Write here and see it take shape in the preview.&#10;&#10;## A section&#10;&#10;Add **emphasis**, lists, links, or `inline code`.&#10;&#10;- First thought&#10;- Another thought</textarea></div></section><section class=\"editor-pane editor-preview-pane\"><div class=\"editor-section-heading\"><h2>Live preview</h2><span>02</span></div><article id=\"journal-preview\" class=\"journal-preview journal-preview-card\"><div id=\"journal-preview-media\" class=\"journal-preview-media\" title=\"Media preview\"></div><div class=\"journal-preview-body\"><div id=\"journal-preview-tags\" class=\"journal-preview-tags\"></div><div id=\"journal-rendered-content\" class=\"journal-rendered-content\"></div></div></article></section></div><div class=\"journal-editor-actions\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div></header><div class=\"journal-editor-grid\"><section class=\"editor-pane editor-compose-card\"><div class=\"editor-section-heading\"><h2>Compose</h2><span>01</span></div><div class=\"editor-field\"><label for=\"journal-media-link\">Media link</label> <input id=\"journal-media-link\" type=\"url\" placeholder=\"https://...\" autocomplete=\"url\"><p class=\"field-hint\">Paste a video, audio, image, or X / Twitter post link to show it in the preview.</p></div><div class=\"editor-field\"><label for=\"journal-tags\">Tags</label> <input id=\"journal-tags\" type=\"text\" placeholder=\"history, notes, travel\"><p class=\"field-hint\">Separate tags with commas.</p></div><div class=\"editor-field editor-content-field\"><label for=\"journal-content\">Entry content</label> <textarea id=\"journal-content\" rows=\"16\"># A journal entry&#10;&#10;Write here and see it take shape in the preview.&#10;&#10;## A section&#10;&#10;Add **emphasis**, lists, links, or `inline code`.&#10;&#10;- First thought&#10;- Another thought</textarea></div></section><section class=\"editor-pane editor-preview-card\"><div class=\"editor-section-heading\"><h2>Preview</h2><span>02</span></div><article id=\"journal-preview\" class=\"journal-preview\"><div id=\"journal-preview-media\" class=\"journal-preview-media\" title=\"Media preview\"></div><div class=\"journal-preview-body\"><div id=\"journal-preview-tags\" class=\"journal-preview-tags\"></div><div id=\"journal-rendered-content\" class=\"journal-rendered-content\"></div></div></article></section></div><div class=\"journal-editor-actions\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -78,13 +78,13 @@ func Page(isAuth bool) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<button type=\"button\" disabled>Publish entry</button></div></main><script src=\"https://cdn.jsdelivr.net/npm/markdown-it@15.0.3/dist/browser/markdown-it.umd.min.js\"></script> <script src=\"https://cdn.jsdelivr.net/npm/dompurify@3.4.17/dist/purify.min.js\"></script> <script src=\"https://platform.twitter.com/widgets.js\" charset=\"utf-8\" async></script> <script src=\"/assets/js/journal-editor.js?v=5\"></script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<button type=\"button\" class=\"btn btn-encouraged\" disabled>Publish entry</button></div></main><script src=\"https://cdn.jsdelivr.net/npm/markdown-it@15.0.3/dist/browser/markdown-it.umd.min.js\"></script> <script src=\"https://cdn.jsdelivr.net/npm/dompurify@3.4.17/dist/purify.min.js\"></script> <script src=\"https://platform.twitter.com/widgets.js\" charset=\"utf-8\" async></script> <script src=\"/assets/js/journal-editor.js?v=5\"></script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = shared.Layout("New Journal Entry - RES IMPERII", "/page-css/journal-editor.css?v=4").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = shared.Layout("New Journal Entry - RES IMPERII", "/page-css/journals-new.css?v=1").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

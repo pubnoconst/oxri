@@ -3,7 +3,7 @@ package editor
 import "github.com/oxri/oxri-go/internal/pages/shared"
 
 templ Page(isAuth bool) {
-	@shared.Layout("New Journal Entry - RES IMPERII", "/page-css/journal-editor.css?v=4") {
+	@shared.Layout("New Journal Entry - RES IMPERII", "/page-css/journals-new.css?v=1") {
 		<main class="journal-editor-page">
 			<header class="journal-editor-header">
 				@shared.BackLink("/journals", "Journals")
@@ -15,12 +15,12 @@ templ Page(isAuth bool) {
 					if isAuth {
 						<p class="editor-notice">Author authenticated · Draft preview</p>
 					} else {
-						<p class="editor-notice">Draft preview · <a href="/login?next=/journal-editor" style="color: inherit; text-decoration: underline;">Sign in</a></p>
+						<p class="editor-notice">Draft preview · <a href="/login?next=/journals/new" style="color: inherit; text-decoration: underline;">Sign in</a></p>
 					}
 				</div>
 			</header>
 			<div class="journal-editor-grid">
-				<section class="editor-pane editor-input-card">
+				<section class="editor-pane editor-compose-card">
 					<div class="editor-section-heading"><h2>Compose</h2><span>01</span></div>
 					<div class="editor-field">
 						<label for="journal-media-link">Media link</label>
@@ -37,9 +37,9 @@ templ Page(isAuth bool) {
 						<textarea id="journal-content" rows="16"># A journal entry&#10;&#10;Write here and see it take shape in the preview.&#10;&#10;## A section&#10;&#10;Add **emphasis**, lists, links, or `inline code`.&#10;&#10;- First thought&#10;- Another thought</textarea>
 					</div>
 				</section>
-				<section class="editor-pane editor-preview-pane">
-					<div class="editor-section-heading"><h2>Live preview</h2><span>02</span></div>
-					<article id="journal-preview" class="journal-preview journal-preview-card">
+				<section class="editor-pane editor-preview-card">
+					<div class="editor-section-heading"><h2>Preview</h2><span>02</span></div>
+					<article id="journal-preview" class="journal-preview">
 						<div id="journal-preview-media" class="journal-preview-media" title="Media preview"></div>
 						<div class="journal-preview-body">
 							<div id="journal-preview-tags" class="journal-preview-tags"></div>
@@ -54,7 +54,7 @@ templ Page(isAuth bool) {
 				} else {
 					<p class="publish-note">Publishing requires author authentication.</p>
 				}
-				<button type="button" disabled>Publish entry</button>
+				<button type="button" class="btn btn-encouraged" disabled>Publish entry</button>
 			</div>
 		</main>
 		<script src="https://cdn.jsdelivr.net/npm/markdown-it@15.0.3/dist/browser/markdown-it.umd.min.js"></script>

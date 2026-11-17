@@ -211,3 +211,119 @@ html {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
+
+/*
+ * Standardized Button Hierarchy
+ * ------------------------------
+ * Three semantic button variants aligned with Res Imperii's quiet, typography-first aesthetic:
+ * 1. Encouraged: Primary action (e.g. Publish, Confirm, Save) with solid ink presence.
+ * 2. Neutral: Secondary or utility action (e.g. Cancel, Copy, Back) with quiet border.
+ * 3. Destructive: Critical or irreversible action (e.g. Delete, Revoke) with subdued warning tone.
+ */
+
+/* Base button properties */
+.btn,
+.button.is-standard {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.35rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, opacity 160ms ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.btn:focus-visible,
+.button.is-standard:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--page-ink) 45%, transparent);
+  outline-offset: 2px;
+}
+
+/* 1. Encouraged Button: high presence, authoritative, filled with primary ink */
+.btn-encouraged,
+.button.is-encouraged {
+  border: 1px solid var(--page-ink);
+  background-color: var(--page-ink);
+  color: var(--page);
+}
+
+.btn-encouraged:hover,
+.button.is-encouraged:hover {
+  background-color: color-mix(in srgb, var(--page-ink) 85%, var(--page));
+  border-color: color-mix(in srgb, var(--page-ink) 85%, var(--page));
+  color: var(--page);
+}
+
+/* 2. Neutral Button: quiet, translucent, subtle outline */
+.btn-neutral,
+.button.is-neutral {
+  border: 1px solid color-mix(in srgb, var(--page-ink) 22%, transparent);
+  background-color: transparent;
+  color: var(--page-ink);
+}
+
+.btn-neutral:hover,
+.button.is-neutral:hover {
+  border-color: color-mix(in srgb, var(--page-ink) 45%, transparent);
+  background-color: color-mix(in srgb, var(--page-ink) 6%, transparent);
+  color: var(--page-ink);
+}
+
+/* 3. Destructive Button: understated crimson/rose border and text, gentle wash on hover */
+.btn-destructive,
+.button.is-destructive {
+  border: 1px solid color-mix(in srgb, #d9534f 60%, transparent);
+  background-color: transparent;
+  color: #d9534f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .btn-destructive,
+  :root:not([data-theme="light"]) .button.is-destructive {
+    border-color: color-mix(in srgb, #e67373 60%, transparent);
+    color: #e67373;
+  }
+}
+
+:root[data-theme="dark"] .btn-destructive,
+:root[data-theme="dark"] .button.is-destructive {
+  border-color: color-mix(in srgb, #e67373 60%, transparent);
+  color: #e67373;
+}
+
+.btn-destructive:hover,
+.button.is-destructive:hover {
+  background-color: color-mix(in srgb, #d9534f 12%, transparent);
+  border-color: #d9534f;
+}
+
+/* Disabled state across all button variants */
+.btn:disabled,
+.btn[disabled],
+.button.is-standard:disabled,
+.button.is-standard[disabled],
+.button.is-encouraged:disabled,
+.button.is-encouraged[disabled],
+.button.is-neutral:disabled,
+.button.is-neutral[disabled],
+.button.is-destructive:disabled,
+.button.is-destructive[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .button.is-standard {
+    transition: none;
+  }
+}

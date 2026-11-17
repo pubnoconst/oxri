@@ -11,7 +11,7 @@ templ Page(isAuth bool) {
 			</header>
 			<p class="journals-empty">No entries yet.</p>
 			<div class="journals-actions">
-				<a class="new-entry-link" href="/journal-editor">Add New Entry</a>
+				<a class="new-entry-link btn btn-neutral" href="/journals/new">Add New Entry</a>
 				if isAuth {
 					<a class="auth-action-link" href="/logout">Sign out</a>
 				} else {

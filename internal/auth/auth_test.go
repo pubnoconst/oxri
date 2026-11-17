@@ -37,7 +37,7 @@ func TestAuthService_Lifecycle(t *testing.T) {
 	}
 
 	// 2. Create pending login
-	token, err := svc.CreatePendingLogin("/journal-editor")
+	token, err := svc.CreatePendingLogin("/journals/new")
 	if err != nil {
 		t.Fatalf("CreatePendingLogin: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestAuthService_Lifecycle(t *testing.T) {
 	}
 
 	approved, redirect, found := svc.CheckPendingLogin(token)
-	if !found || approved || redirect != "/journal-editor" {
+	if !found || approved || redirect != "/journals/new" {
 		t.Fatalf("unexpected pending login state: found=%v, approved=%v, redirect=%v", found, approved, redirect)
 	}
 
@@ -62,7 +62,7 @@ func TestAuthService_Lifecycle(t *testing.T) {
 
 	// 4. Consume approved challenge
 	sessionID, redirectURL, ok := svc.ConsumeApprovedLogin(token)
-	if !ok || sessionID == "" || redirectURL != "/journal-editor" {
+	if !ok || sessionID == "" || redirectURL != "/journals/new" {
 		t.Fatalf("failed to consume approved login: ok=%v, session=%q, redirect=%q", ok, sessionID, redirectURL)
 	}
 

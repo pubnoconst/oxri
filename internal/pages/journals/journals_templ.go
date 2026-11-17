@@ -48,7 +48,7 @@ func Page(isAuth bool) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<h1>Journals</h1></header><p class=\"journals-empty\">No entries yet.</p><div class=\"journals-actions\"><a class=\"new-entry-link\" href=\"/journal-editor\">Add New Entry</a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<h1>Journals</h1></header><p class=\"journals-empty\">No entries yet.</p><div class=\"journals-actions\"><a class=\"new-entry-link btn btn-neutral\" href=\"/journals/new\">Add New Entry</a> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

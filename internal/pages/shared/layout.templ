@@ -12,7 +12,7 @@ templ Layout(title, stylesheet string) {
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
 			<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap"/>
 			<link rel="stylesheet" href="/assets/css/bulma.min.css"/>
-			<link rel="stylesheet" href="/assets/css/overrides.css?v=22"/>
+			<link rel="stylesheet" href="/assets/css/overrides.css?v=23"/>
 			if stylesheet != "" {
 				<link rel="stylesheet" href={ stylesheet }/>
 			}
@@ -21,7 +21,7 @@ templ Layout(title, stylesheet string) {
 			{ children... }
 			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
 			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
-			<script src="/assets/js/theme-toggle.js?v=1"></script>
+			<script src="/assets/js/theme-toggle.js?v=2"></script>
 			<script src="/assets/js/navigation-feedback.js?v=1"></script>
 		</body>
 	</html>

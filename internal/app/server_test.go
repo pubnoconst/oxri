@@ -133,9 +133,10 @@ func TestJournalsPage(t *testing.T) {
 
 func TestJournalEditorPage(t *testing.T) {
 	server := newTestServer(t)
-	req := httptest.NewRequest(http.MethodGet, "/journal-editor", nil)
-	rec := httptest.NewRecorder()
 
+	// 1. Primary route: /journals/new
+	req := httptest.NewRequest(http.MethodGet, "/journals/new", nil)
+	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -145,8 +146,8 @@ func TestJournalEditorPage(t *testing.T) {
 	if !strings.Contains(body, "journal-editor-page") {
 		t.Errorf("missing journal-editor-page container")
 	}
-	if !strings.Contains(body, "/page-css/journal-editor.css") {
-		t.Errorf("missing journal-editor stylesheet link")
+	if !strings.Contains(body, "/page-css/journals-new.css") {
+		t.Errorf("missing journals-new stylesheet link")
 	}
 	if !strings.Contains(body, "widgets.js") {
 		t.Errorf("missing Twitter widgets.js script tag in editor")
@@ -156,6 +157,24 @@ func TestJournalEditorPage(t *testing.T) {
 	}
 	if !strings.Contains(body, "Twitter post link") {
 		t.Errorf("missing Twitter media hint in editor")
+	}
+	if !strings.Contains(body, "Preview") {
+		t.Errorf("missing minimal Preview heading")
+	}
+	if strings.Contains(body, "Live preview") {
+		t.Errorf("editor must not contain 'Live preview'")
+	}
+	if !strings.Contains(body, "btn btn-encouraged") {
+		t.Errorf("missing standardized encouraged publish button")
+	}
+
+	// 2. Legacy route redirect: /journal-editor -> 301 to /journals/new
+	oldReq := httptest.NewRequest(http.MethodGet, "/journal-editor", nil)
+	oldRec := httptest.NewRecorder()
+	server.ServeHTTP(oldRec, oldReq)
+
+	if oldRec.Code != http.StatusMovedPermanently || oldRec.Header().Get("Location") != "/journals/new" {
+		t.Errorf("expected 301 redirect to /journals/new, got code=%d loc=%s", oldRec.Code, oldRec.Header().Get("Location"))
 	}
 }
 

@@ -30,7 +30,7 @@ templ Page(token, sshCommand, nextURL, sshPort string) {
 								<code class="auth-command">{ sshCommand }</code>
 								<button
 									type="button"
-									class="auth-copy-button"
+									class="auth-copy-button btn btn-neutral"
 									@click={ fmt.Sprintf("navigator.clipboard.writeText('%s'); copied = true; setTimeout(() => copied = false, 2000)", sshCommand) }
 								>
 									<span x-show="!copied">Copy Command</span>
