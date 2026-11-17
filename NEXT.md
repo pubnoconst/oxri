@@ -6,9 +6,11 @@ Upcoming work:
   verify that error responses never expose exception details or stack traces.
 - Configure hosting and reverse-proxy error pages and timeouts to match the
   app's safe responses; verify provider-generated failures contain no traces.
-- Production deployment & passkey bootstrap (D-20261117-008): enroll an initial
-  primordial passkey on the live HTTPS domain, establish an author profile
-  dashboard to register durable credentials, and remove the primordial key.
+- Production deployment & passkey bootstrap (D-20261117-008, D-20261117-013):
+  upon live HTTPS deployment, activate WebAuthn registration in the
+  `/pilot/user/settings` profile dashboard, enroll an initial primordial passkey,
+  register durable credentials (Proton Pass, security keys), and retire the
+  primordial key.
 - Design the Turso data model, search index, storage limit behavior, and
   migrations before connecting persistence.
 - Implement the journal catalog and protected management flows after those

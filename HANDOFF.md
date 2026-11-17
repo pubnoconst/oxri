@@ -412,3 +412,16 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Untracked all seven `*_templ.go` files from the Git index via `git rm --cached`, eliminating machine-generated clutter and noisy diffs from version control.
 - Updated `mage clean` in `magefile.go` to purge generated `*_templ.go` files in addition to `bin/`.
 - Tested the workflow: `mage clean` removes all generated Go files; `mage test` and `mage build` automatically regenerate templates on demand via `mg.Deps(Generate)` and pass all tests cleanly.
+
+## 2026-11-17 - Protected pilot route namespace and user settings dashboard
+
+- Decision: `D-20261117-013`, recorded in commit `ceb0ca1` (`Decide protected pilot route namespace and settings dashboard D-20261117-013`).
+- Implementation: commit `d8f1de6` (`Implement protected pilot settings dashboard for auth methods D-20261117-013`).
+- Designated `/pilot` as the dedicated route namespace for experimental author features, security prototypes, and sandbox environments in Res Imperii.
+- Implemented the administrative profile dashboard at `/pilot/user/settings` (`internal/pages/pilot/`), enforced by `auth.RequireAuth(authSvc)`. Unauthenticated access redirects to `/login?next=%2Fpilot%2Fuser%2Fsettings`, and accessing `/pilot` redirects to `/pilot/user/settings`.
+- Displayed active loopback SSH credentials and future FIDO2/WebAuthn passkeys (hardware security keys, biometrics, Proton Pass).
+- Rendered "Add Passkey", "Add SSH Key", and credential "Remove" controls in a disabled state (`disabled`, `aria-disabled="true"`) accompanied by a clear explanatory callout that WebAuthn passkey enrollment requires a registered domain origin (`rp_id`) and HTTPS transport.
+- Added `AuthorizedKeyType()` method to `auth.Service` to query configured key types dynamically.
+- Surfaced a quiet "Settings" link in the landing page and journals page navigation stacks when authenticated.
+- Added unit and integration tests in `internal/app/server_test.go` (`TestPilotUserSettingsPage`) verifying redirect flows, authenticated rendering, button disabled attributes, and stylesheet delivery.
+- Updated `README.md` and `NEXT.md`. All 13 tests pass cleanly via `mage test` and the server compiles via `mage build`.
