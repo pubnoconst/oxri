@@ -117,6 +117,19 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-013 - Protected pilot route namespace and user settings dashboard:
+  - Designate `/pilot` as the dedicated protected namespace for experimental author
+    features, security prototypes, and sandbox environments in Res Imperii.
+  - Introduce an administrative profile dashboard at route `/pilot/user/settings`,
+    enforced by `auth.RequireAuth(authSvc)`. If accessed directly, `/pilot` provides
+    an index of experimental modules (or routes to `/pilot/user/settings`).
+  - Display configured and available authentication methods (current active loopback
+    SSH key, and future FIDO2/WebAuthn passkeys for hardware keys, biometrics, and
+    Proton Pass).
+  - Expose "Add Passkey", "Add SSH Key", and credential "Remove" controls in a
+    disabled state (`disabled`, `aria-disabled="true"`) with an informative callout
+    explaining that WebAuthn credential enrollment requires a public domain and HTTPS.
+  - Surface a `Settings` link on the landing page auth stack when authenticated.
 - D-20261117-012 - Ignore and untrack generated Templ Go files:
   - Add `*_templ.go` to `.gitignore` and untrack all generated `*_templ.go` files
     from the repository index.
