@@ -14,6 +14,7 @@ import (
 	"github.com/oxri/oxri-go/internal/pages/journals"
 	"github.com/oxri/oxri-go/internal/pages/landing"
 	"github.com/oxri/oxri-go/internal/pages/login"
+	"github.com/oxri/oxri-go/internal/pages/pilot"
 )
 
 // NewServer configures and returns the main application HTTP handler using Chi.
@@ -193,6 +194,36 @@ func NewServer(assetsDir string, authSvc *auth.Service) http.Handler {
 		})
 
 		http.Redirect(w, req, "/", http.StatusSeeOther)
+	})
+
+	// Pilot Experimental Namespace (Protected)
+	r.Group(func(pilotRouter chi.Router) {
+		if authSvc != nil {
+			pilotRouter.Use(auth.RequireAuth(authSvc))
+		} else {
+			pilotRouter.Use(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					RenderError(w, req, http.StatusServiceUnavailable)
+				})
+			})
+		}
+
+		pilotRouter.Get("/pilot", func(w http.ResponseWriter, req *http.Request) {
+			http.Redirect(w, req, "/pilot/user/settings", http.StatusTemporaryRedirect)
+		})
+
+		pilotRouter.Get("/pilot/user/settings", func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			keyType := "ssh-ed25519"
+			if authSvc != nil {
+				keyType = authSvc.AuthorizedKeyType()
+			}
+			_ = pilot.SettingsPage(keyType).Render(req.Context(), w)
+		})
+	})
+	r.Get("/page-css/pilot-settings.css", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "text/css; charset=utf-8")
+		w.Write([]byte(pilot.StyleCSS))
 	})
 
 	// Error Page Stylesheet

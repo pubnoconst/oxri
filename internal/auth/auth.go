@@ -400,6 +400,14 @@ func sendExitStatus(channel ssh.Channel, status uint32) {
 	_, _ = channel.SendRequest("exit-status", false, b)
 }
 
+// AuthorizedKeyType returns the algorithm type of the configured authorized public key (e.g. "ssh-ed25519").
+func (s *Service) AuthorizedKeyType() string {
+	if s == nil || s.authorizedKey == nil {
+		return "ssh-ed25519"
+	}
+	return s.authorizedKey.Type()
+}
+
 func (s *Service) cleanupExpiredLocked() {
 	now := time.Now()
 	for k, v := range s.pendingLogins {

@@ -115,6 +115,14 @@ go run github.com/magefile/mage run
 - Standardized buttons: interactive actions use semantic classes (`.btn-encouraged`
   for primary actions like publishing, `.btn-neutral` for utility/secondary
   actions, and `.btn-destructive` for deletions).
+- `/pilot` is the dedicated route namespace for experimental author features,
+  prototypes, and administrative tools (redirects to `/pilot/user/settings`).
+  Access requires an authenticated session.
+- `/pilot/user/settings` is the experimental profile dashboard for security and
+  authentication method management. It displays active loopback SSH credentials
+  and future FIDO2/WebAuthn passkeys (Proton Pass, hardware keys, biometrics);
+  credential addition and removal are visually represented but disabled until a
+  domain and HTTPS are configured.
 - `/login` is the loopback SSH authentication gateway. Running the copyable
   `ssh -p 2222 <token>@localhost` or `ssh -p 2222 admin@localhost` command
   authenticates via your local Ed25519 key (OpenSSH or Proton Pass agent) and

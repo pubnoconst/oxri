@@ -3,7 +3,7 @@ package landing
 import "github.com/oxri/oxri-go/internal/pages/shared"
 
 templ Page(isAuth bool) {
-	@shared.Layout("RES IMPERII", "/page-css/landing.css?v=2") {
+	@shared.Layout("RES IMPERII", "/page-css/landing.css?v=3") {
 		<main class="landing">
 			<nav class="landing-nav">
 				<h1 class="landing-title">RES·IMPERII</h1>
@@ -16,6 +16,7 @@ templ Page(isAuth bool) {
 				<a class="landing-journals" href="/journals">Journals</a>
 				<div class="landing-auth-wrapper">
 					if isAuth {
+						<a class="landing-auth" href="/pilot/user/settings">Settings</a>
 						<a class="landing-auth" href="/logout">Log out</a>
 					} else {
 						<a class="landing-auth" href="/login">Log in</a>

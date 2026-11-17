@@ -1,0 +1,304 @@
+/*
+ * Pilot User Settings Stylesheet
+ * ------------------------------
+ * Aligned with Res Imperii's quiet, typography-first aesthetic.
+ */
+
+.settings-page {
+  width: min(52rem, 100%);
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 6vw, 4rem) 1.25rem 5rem;
+  box-sizing: border-box;
+}
+
+.settings-header {
+  margin-bottom: 2.5rem;
+}
+
+.settings-heading {
+  margin-top: 2rem;
+}
+
+.settings-eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  opacity: 0.55;
+  text-transform: uppercase;
+}
+
+.settings-heading h1 {
+  margin: 0 0 0.6rem;
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.settings-subtitle {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  opacity: 0.65;
+}
+
+/* Stack layout */
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* Shared card container */
+.settings-card {
+  padding: 1.75rem;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 14%, transparent);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--page-ink) 2%, var(--page));
+  box-sizing: border-box;
+}
+
+/* Status Banner Card */
+.status-card {
+  padding: 1.15rem 1.5rem;
+  border-color: color-mix(in srgb, var(--page-ink) 18%, transparent);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.status-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background-color: #4caf50;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #4caf50 22%, transparent);
+  flex-shrink: 0;
+}
+
+.status-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.status-title {
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.status-desc {
+  font-size: 0.9rem;
+  opacity: 0.65;
+}
+
+/* Card Header */
+.card-header {
+  margin-bottom: 1.5rem;
+}
+
+.card-header h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+.card-desc {
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.65;
+}
+
+/* Methods List */
+.methods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.method-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.25rem 1.4rem;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 10%, transparent);
+  border-radius: 0.35rem;
+  background: var(--page);
+  box-sizing: border-box;
+}
+
+.method-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.method-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.method-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.method-description {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  opacity: 0.7;
+}
+
+.method-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  opacity: 0.65;
+}
+
+.meta-code {
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.2rem;
+  background: color-mix(in srgb, var(--page-ink) 6%, transparent);
+  font-family: monospace;
+  font-size: 0.82rem;
+}
+
+.meta-sep {
+  opacity: 0.4;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.badge-active {
+  background: color-mix(in srgb, #4caf50 14%, transparent);
+  color: #2e7d32;
+  border: 1px solid color-mix(in srgb, #4caf50 30%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .badge-active {
+    color: #81c784;
+    border-color: color-mix(in srgb, #81c784 30%, transparent);
+  }
+}
+
+:root[data-theme="dark"] .badge-active {
+  color: #81c784;
+  border-color: color-mix(in srgb, #81c784 30%, transparent);
+}
+
+.badge-pending {
+  background: color-mix(in srgb, var(--page-ink) 8%, transparent);
+  color: var(--page-ink);
+  opacity: 0.75;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 15%, transparent);
+}
+
+/* Actions */
+.method-actions {
+  flex-shrink: 0;
+}
+
+/* Footer / Notice */
+.methods-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--page-ink) 10%, transparent);
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* Informative notice callout */
+.https-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border: 1px dashed color-mix(in srgb, var(--page-ink) 22%, transparent);
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--page-ink) 2.5%, transparent);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.notice-icon {
+  font-size: 1.1rem;
+  opacity: 0.6;
+  line-height: 1.2;
+}
+
+.notice-body {
+  flex: 1;
+}
+
+.notice-title {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.2rem;
+  color: var(--page-ink);
+}
+
+.notice-body p {
+  margin: 0;
+  opacity: 0.7;
+}
+
+.notice-body code {
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.2rem;
+  background: color-mix(in srgb, var(--page-ink) 6%, transparent);
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+  .method-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .method-actions {
+    width: 100%;
+  }
+
+  .method-actions .btn {
+    width: 100%;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-buttons .btn {
+    width: 100%;
+  }
+}

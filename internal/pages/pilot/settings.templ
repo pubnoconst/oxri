@@ -1,0 +1,135 @@
+package pilot
+
+import (
+	"github.com/oxri/oxri-go/internal/pages/shared"
+)
+
+templ SettingsPage(keyType string) {
+	@shared.Layout("Settings - RES IMPERII", "/page-css/pilot-settings.css?v=1") {
+		<main class="settings-page">
+			<header class="settings-header">
+				@shared.BackLink("/", "Home")
+				<div class="settings-heading">
+					<p class="settings-eyebrow">PILOT / EXPERIMENTAL · SETTINGS</p>
+					<h1>Security & Authentication</h1>
+					<p class="settings-subtitle">Manage administrative credentials, hardware security keys, and access controls in the experimental pilot environment.</p>
+				</div>
+			</header>
+
+			<div class="settings-stack">
+				<!-- Session Status Banner -->
+				<section class="settings-card status-card">
+					<div class="status-indicator">
+						<span class="status-dot"></span>
+						<div class="status-content">
+							<span class="status-title">Administrative Session Active</span>
+							<span class="status-desc">Authenticated via Loopback SSH Gateway · Session is active and valid</span>
+						</div>
+					</div>
+				</section>
+
+				<!-- Authentication Methods Section -->
+				<section class="settings-card">
+					<div class="card-header">
+						<div>
+							<h2>Authentication Methods</h2>
+							<p class="card-desc">Configured credentials and keys used to sign in to Res Imperii.</p>
+						</div>
+					</div>
+
+					<div class="methods-list">
+						<!-- Method 1: Loopback SSH Key -->
+						<div class="method-card">
+							<div class="method-info">
+								<div class="method-title-row">
+									<h3 class="method-name">Loopback SSH Key</h3>
+									<span class="badge badge-active">Active</span>
+								</div>
+								<p class="method-description">Terminal-based cryptographic handshake via OpenSSH or local key agent.</p>
+								<div class="method-meta">
+									<span class="meta-label">Key type:</span>
+									<code class="meta-code">{ keyType }</code>
+									<span class="meta-sep">·</span>
+									<span class="meta-label">Source:</span>
+									<span class="meta-val">Environment (ADMIN_SSH_PUBKEY)</span>
+								</div>
+							</div>
+							<div class="method-actions">
+								<button
+									type="button"
+									class="btn btn-destructive"
+									disabled
+									aria-disabled="true"
+									title="Primary loopback key is configured via environment"
+								>
+									Remove
+								</button>
+							</div>
+						</div>
+
+						<!-- Method 2: Passkeys / WebAuthn -->
+						<div class="method-card">
+							<div class="method-info">
+								<div class="method-title-row">
+									<h3 class="method-name">Passkeys (FIDO2 / WebAuthn)</h3>
+									<span class="badge badge-pending">Pending HTTPS</span>
+								</div>
+								<p class="method-description">Hardware security keys (YubiKey), platform biometrics (Windows Hello, Touch ID), and passkey managers (Proton Pass).</p>
+								<div class="method-meta">
+									<span class="meta-label">Enrolled:</span>
+									<span class="meta-val">0 credentials</span>
+									<span class="meta-sep">·</span>
+									<span class="meta-label">Standard:</span>
+									<span class="meta-val">W3C WebAuthn Level 3</span>
+								</div>
+							</div>
+							<div class="method-actions">
+								<button
+									type="button"
+									class="btn btn-destructive"
+									disabled
+									aria-disabled="true"
+									title="No registered passkey to remove"
+								>
+									Remove
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<!-- Disabled Action Controls & Explanatory Notice -->
+					<div class="methods-footer">
+						<div class="action-buttons">
+							<button
+								type="button"
+								class="btn btn-encouraged"
+								disabled
+								aria-disabled="true"
+								title="Passkey registration requires HTTPS and a registered domain"
+							>
+								Add Passkey
+							</button>
+							<button
+								type="button"
+								class="btn btn-neutral"
+								disabled
+								aria-disabled="true"
+								title="Requires HTTPS and a registered domain"
+							>
+								Add SSH Key
+							</button>
+						</div>
+
+						<div class="https-notice" role="note">
+							<div class="notice-icon">ℹ</div>
+							<div class="notice-body">
+								<span class="notice-title">Passkey management is locked in development</span>
+								<p>Adding and removing FIDO2/WebAuthn passkeys requires a registered public domain origin (<code>rp_id</code>) and a secure HTTPS transport. These controls will be enabled once deployed to production.</p>
+							</div>
+						</div>
+					</div>
+				</section>
+			</div>
+		</main>
+	}
+}

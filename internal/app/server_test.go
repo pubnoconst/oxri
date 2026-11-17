@@ -88,6 +88,9 @@ func TestLandingPage(t *testing.T) {
 	if !strings.Contains(authBody, "Log out") {
 		t.Errorf("authenticated landing page should contain 'Log out' link")
 	}
+	if !strings.Contains(authBody, "/pilot/user/settings") {
+		t.Errorf("authenticated landing page should contain Settings link")
+	}
 }
 
 func TestBookIPage(t *testing.T) {
@@ -110,7 +113,7 @@ func TestBookIPage(t *testing.T) {
 }
 
 func TestJournalsPage(t *testing.T) {
-	server := newTestServer(t)
+	server, svc := newTestServerWithAuth(t)
 	req := httptest.NewRequest(http.MethodGet, "/journals", nil)
 	rec := httptest.NewRecorder()
 
@@ -128,6 +131,24 @@ func TestJournalsPage(t *testing.T) {
 	}
 	if !strings.Contains(body, "Author sign in") {
 		t.Errorf("unauthenticated journals view should offer sign in link")
+	}
+
+	// 2. Authenticated journals view shows Settings and Sign out
+	token, _ := svc.CreatePendingLogin("/journals")
+	svc.ApprovePendingLogin(token, "test")
+	sessID, _, _ := svc.ConsumeApprovedLogin(token)
+
+	authReq := httptest.NewRequest(http.MethodGet, "/journals", nil)
+	authReq.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: sessID})
+	authRec := httptest.NewRecorder()
+	server.ServeHTTP(authRec, authReq)
+
+	authBody := authRec.Body.String()
+	if !strings.Contains(authBody, "Sign out") {
+		t.Errorf("authenticated journals view should offer Sign out link")
+	}
+	if !strings.Contains(authBody, "/pilot/user/settings") {
+		t.Errorf("authenticated journals view should offer Settings link")
 	}
 }
 
@@ -364,13 +385,89 @@ func TestTimeoutHandling(t *testing.T) {
 	}
 }
 
+func TestPilotUserSettingsPage(t *testing.T) {
+	server, svc := newTestServerWithAuth(t)
+
+	// 1. Unauthenticated request to /pilot/user/settings redirects to /login?next=...
+	req := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 See Other redirect for unauthenticated settings, got %d", rec.Code)
+	}
+	loc := rec.Header().Get("Location")
+	if !strings.Contains(loc, "/login") || !strings.Contains(loc, "pilot") {
+		t.Errorf("expected redirect to login with next param, got %s", loc)
+	}
+
+	// 2. Unauthenticated request to /pilot redirects to login
+	pilotReq := httptest.NewRequest(http.MethodGet, "/pilot", nil)
+	pilotRec := httptest.NewRecorder()
+	server.ServeHTTP(pilotRec, pilotReq)
+	if pilotRec.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 redirect for unauthenticated /pilot, got %d", pilotRec.Code)
+	}
+
+	// 3. Authenticated request to /pilot/user/settings succeeds
+	token, _ := svc.CreatePendingLogin("/pilot/user/settings")
+	svc.ApprovePendingLogin(token, "test")
+	sessID, _, _ := svc.ConsumeApprovedLogin(token)
+
+	authReq := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
+	authReq.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: sessID})
+	authRec := httptest.NewRecorder()
+	server.ServeHTTP(authRec, authReq)
+
+	if authRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for authenticated settings, got %d", authRec.Code)
+	}
+	body := authRec.Body.String()
+	if !strings.Contains(body, "Security & Authentication") {
+		t.Errorf("missing Security & Authentication heading in body")
+	}
+	if !strings.Contains(body, "PILOT / EXPERIMENTAL") {
+		t.Errorf("missing PILOT / EXPERIMENTAL eyebrow in body")
+	}
+	if !strings.Contains(body, "Loopback SSH Key") {
+		t.Errorf("missing Loopback SSH Key method card")
+	}
+	if !strings.Contains(body, "Passkeys (FIDO2 / WebAuthn)") {
+		t.Errorf("missing Passkeys method card")
+	}
+	if !strings.Contains(body, "Add Passkey") {
+		t.Errorf("missing Add Passkey button")
+	}
+	if !strings.Contains(body, "disabled") {
+		t.Errorf("expected disabled attribute on auth mutation controls")
+	}
+	if !strings.Contains(body, "HTTPS") {
+		t.Errorf("missing explanation notice regarding HTTPS and domain origin")
+	}
+
+	// 4. Authenticated request to /pilot redirects to /pilot/user/settings
+	authPilotReq := httptest.NewRequest(http.MethodGet, "/pilot", nil)
+	authPilotReq.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: sessID})
+	authPilotRec := httptest.NewRecorder()
+	server.ServeHTTP(authPilotRec, authPilotReq)
+
+	if authPilotRec.Code != http.StatusTemporaryRedirect {
+		t.Errorf("expected 307 Temporary Redirect for authenticated /pilot, got %d", authPilotRec.Code)
+	}
+	if authPilotRec.Header().Get("Location") != "/pilot/user/settings" {
+		t.Errorf("expected redirect location /pilot/user/settings, got %s", authPilotRec.Header().Get("Location"))
+	}
+}
+
 func TestPageStylesheets(t *testing.T) {
 	server := newTestServer(t)
 	cssRoutes := []string{
 		"/page-css/landing.css",
 		"/page-css/book-i.css",
 		"/page-css/journals.css",
+		"/page-css/journals-new.css",
 		"/page-css/journal-editor.css",
+		"/page-css/pilot-settings.css",
 		"/page-css/login.css",
 		"/page-css/error.css",
 	}
