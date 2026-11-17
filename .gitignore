@@ -6,6 +6,9 @@
 *.so
 *.dylib
 
+# Generated Templ templates
+*_templ.go
+
 # Test binaries and coverage
 *.test
 *.out

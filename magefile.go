@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -63,8 +64,20 @@ func Test() error {
 	return sh.RunV("go", "test", "-v", "./...")
 }
 
-// Clean removes build artifacts in bin/.
+// Clean removes build artifacts in bin/ and generated templ Go files.
 func Clean() error {
 	fmt.Println("==> Removing bin/...")
-	return os.RemoveAll("bin")
+	if err := os.RemoveAll("bin"); err != nil {
+		return err
+	}
+	fmt.Println("==> Removing generated *_templ.go files...")
+	return filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && strings.HasSuffix(info.Name(), "_templ.go") {
+			return os.Remove(path)
+		}
+		return nil
+	})
 }
