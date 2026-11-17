@@ -117,6 +117,18 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261117-009 - Twitter/X post embeds in journal media links:
+  - Expand browser-side media previews in journal links to support Twitter and X
+    post URLs (`twitter.com`, `x.com`, and their mobile variants).
+  - Parse and validate numeric post IDs (`/status/<id>`) from recognizable paths.
+    Arbitrary iframe URLs are not accepted.
+  - Embed posts via Twitter's official widgets API (`widgets.js` / `twttr.widgets.createTweet`),
+    passing `dnt: true` to respect reader privacy and matching the embed theme
+    (`dark` or `light`) to the active page theme.
+  - Provide a quiet fallback card with post metadata and direct link if widgets.js
+    is blocked, fails to load, or the client is offline.
+  - Update `.journal-preview-media` styles so Twitter embeds use dynamic auto-height
+    instead of the 16:9 aspect ratio reserved for video players.
 - D-20261117-008 - Production passkey bootstrap and author profile dashboard:
   - Plan the post-deployment WebAuthn lifecycle for production (under HTTPS):
     1. Bootstrap administrative access on the live domain using an initial
