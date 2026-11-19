@@ -451,3 +451,8 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Transformed `/journals` into a compact multi-column preview collage (`grid-template-columns: repeat(auto-fill, minmax(min(100%, 19.5rem), 1fr))`) displaying tactile compact media previews, tag chips, and up to 280-character plain-text excerpts (`Excerpt280`).
 - Implemented accessible stretched-card links (`entry-card-link::after`) so clicking anywhere on a collage card opens its full-page reading view (`/journals/{id}`), while preserving elevated `z-index` for interactive embeds, selection checkboxes, and author controls.
 - Added `TestExcerpt280` in `internal/pages/journals/journals_test.go` and updated catalog assertions in `internal/app/server_test.go`. All 19 tests pass via `mage test` and binary builds via `mage build`.
+- Queued next-session priority items at the top of `NEXT.md`:
+  1. Tag uniqueness per journal entry (`tag1`, `tag2`, `tag3`).
+  2. Journals keyword search.
+  3. Filter by tag(s).
+  4. Fluid catalog layout (`auto-fit` / balanced row filling for low entry counts, avoiding centering or lone trailing cards).
