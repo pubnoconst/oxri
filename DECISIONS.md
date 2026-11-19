@@ -117,6 +117,18 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261120-004 - Title Case tag schema constraint, per-entry tag uniqueness, tag autocomplete, search/filter, and fluid catalog layout:
+  - Upgrade the `journals` table schema via idempotent table-rebuild migration to
+    enforce Title Case (`tagN = upper(substr(tagN, 1, 1)) || lower(substr(tagN, 2))`)
+    and per-entry tag uniqueness (`tag1 != tag2`, `tag1 != tag3`, `tag2 != tag3`)
+    at the SQLite `CHECK` level.
+  - Auto-capitalize tags into Title Case and reject duplicate tags in both the
+    client-side editor (`journal-editor.js`) and server-side validation (`db.ValidateInput`).
+  - Provide live tag autocomplete suggestions in `/journals/new` and `/journals/{id}/edit`
+    populated from `SELECT DISTINCT tag` across existing `tag1..tag3` columns.
+  - Add keyword search (`q`) and multi-tag filtering (`tag`) on `/journals`, paired
+    with a fluid flexbox collage layout (`flex: 1 1 19.5rem`) so low entry counts
+    and trailing row items fill the row naturally without gaps or centering.
 - D-20261120-003 - Turso 90% free-tier storage budget and earliest-unpublished eviction policy:
   - Supersede the earlier 1 GiB storage limit with up to 90% of Turso's free-tier
     storage capacity (4.5 GB out of the 5 GB free tier).
