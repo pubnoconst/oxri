@@ -22,6 +22,12 @@ See the commit-traceability decision below for how to link decisions to Git.
 
 Product direction
 -----------------
+- ALL INPUTS ARE EVIL. Treat every user-supplied or external input (form fields,
+  URLs, query parameters, tags, and prose) as untrusted at both the UI layer and
+  the server layer. Enforce strict character-set whitelisting permitting only
+  English alphanumeric, Latin, and Greek characters (plus standard prose/Markdown
+  punctuation where applicable), and reject emojis, control characters, zero-width
+  / bidi spoofing codepoints, and non-whitelisted scripts.
 - Minimalism is a deliberate constraint. Keep the interface quiet and focused;
   avoid adding decoration, controls, or explanatory copy without a clear need.
 - EB Garamond is the primary typeface. It is loaded from Google Fonts in the
@@ -117,6 +123,21 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261120-005 - "ALL INPUTS ARE EVIL" input sanitization and Latin/Greek/alphanumeric character-set whitelist:
+  - Adopt the core security axiom `"ALL INPUTS ARE EVIL"` in `DECISIONS.md` and
+    `README.md`.
+  - Enforce strict character-set whitelisting at both the UI layer (`journal-editor.js`)
+    and the server layer (`db.ValidateInput` and query-parameter sanitizers):
+    - Tags (`tag1..tag3`): only English/Latin (`\p{Latin}`), Greek (`\p{Greek}`),
+      and ASCII digits (`0–9`). No punctuation, spaces, or emojis.
+    - Media URL (`media_url`): only printable ASCII URL characters (`0x21–0x7E`)
+      with `http://` or `https://` scheme. No emojis, whitespace, or non-ASCII
+      homographs.
+    - Entry prose (`body`) and search queries (`q`): only English/Latin letters,
+      Greek letters, ASCII digits, standard whitespace (`space, \n, \r, \t`), and
+      standard ASCII/typographic prose & Markdown punctuation. Explicitly block
+      all emojis, variation selectors, control characters, zero-width/bidi
+      spoofing characters, and non-Latin/non-Greek scripts.
 - D-20261120-004 - Title Case tag schema constraint, per-entry tag uniqueness, tag autocomplete, search/filter, and fluid catalog layout:
   - Upgrade the `journals` table schema via idempotent table-rebuild migration to
     enforce Title Case (`tagN = upper(substr(tagN, 1, 1)) || lower(substr(tagN, 2))`)
