@@ -425,3 +425,20 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Surfaced a quiet "Settings" link in the landing page and journals page navigation stacks when authenticated.
 - Added unit and integration tests in `internal/app/server_test.go` (`TestPilotUserSettingsPage`) verifying redirect flows, authenticated rendering, button disabled attributes, and stylesheet delivery.
 - Updated `README.md` and `NEXT.md`. All 13 tests pass cleanly via `mage test` and the server compiles via `mage build`.
+
+## 2026-11-20 - Turso database persistence, schema migration, UI constraints, and journal CRUD
+
+- Decision: `D-20261120-001`, recorded in commit `3ed14f6` (`Decide Turso persistence, schema migration, and journal CRUD D-20261120-001`).
+- Implementation: commit `1f448f7` (`Implement Turso persistence, schema constraints, and journal CRUD D-20261120-001`).
+- Added `*.env` to `.gitignore`, reformatted untracked `db.env` with `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`, and documented both variables in `.env.example`.
+- Installed `github.com/tursodatabase/libsql-client-go/libsql` (pure-Go Turso connectivity) and `modernc.org/sqlite` (pure-Go local SQLite/in-memory testing fallback).
+- Created `internal/db` package:
+  - `LoadEnvFiles` (`internal/db/env.go`) loads `db.env` and `.env` at startup (`cmd/server/main.go`).
+  - `Store` (`internal/db/db.go`) connects via `libsql` or local `sqlite`, runs idempotent schema initialization (`EnsureSchema`), and migrated the live Turso `journals` table (`ALTER TABLE journals ADD COLUMN published INTEGER NOT NULL DEFAULT 1 CHECK(published IN (0,1))`).
+  - `ValidateInput` enforces schema limits server-side (`media_url` valid http/https URL 1–128 chars, up to 3 tags <= 4 chars each, non-empty Markdown body).
+- Extracted shared media mounting into `assets/js/journal-media.js` so editor previews, `/journals` feed cards, and `/journals/{id}` permalinks share identical tactile YouTube, Vimeo, X/Twitter, image, audio, and video rendering.
+- Updated `/journals/new` and added `/journals/{id}/edit` (`editor.templ`, `editor.go`, `journal-editor.js`) with live constraint counters (`0 / 128`, `0 / 3`), inline errors, publish/bookmark checkboxes, and submit locking until valid & authenticated.
+- Updated `/journals` catalog and added `/journals/{id}` permalink (`journals.templ`, `journals.go`, `journals-catalog.js`):
+  - Public visitors see only `published = 1` entries (returns 404 on unpublished permalinks).
+  - Logged-in admin sees all entries with status badges, Edit, Bookmark toggle, Publish/Unpublish toggle, Delete, and multi-select batch toolbar (`Publish selected`, `Unpublish selected`, `Delete selected`, `Unpublish all`, `Delete all`).
+- Added unit and integration tests across `internal/db/db_test.go` and `internal/app/server_test.go` (`TestJournalPersistenceAndManagement`). All 18 tests pass via `mage test` and binary builds via `mage build`.
