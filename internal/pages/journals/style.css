@@ -3,7 +3,7 @@
   width: min(72rem, 100%);
   min-height: 100svh;
   margin: 0 auto;
-  padding: clamp(1.5rem, 6vw, 4.5rem) 1.25rem 5rem;
+  padding: var(--space-page-y) var(--space-page-x) 5rem;
   box-sizing: border-box;
 }
 
@@ -15,7 +15,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-header-bottom);
 }
 
 .journals-title-row {
@@ -25,12 +25,12 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 1rem 1.5rem;
-  margin-top: 2rem;
+  margin-top: var(--space-header-top);
 }
 
 .journals-title-row h1 {
   margin: 0;
-  font-size: clamp(2.25rem, 6vw, 3.25rem);
+  font-size: var(--heading-h1);
   font-weight: 400;
   line-height: 1.1;
 }
@@ -58,17 +58,10 @@
 .journals-empty {
   margin: 0 0 1.5rem;
   padding-top: 1.4rem;
-  border-top: 1px solid color-mix(in srgb, var(--page-ink) 16%, transparent);
+  border-top: 1px solid var(--border-card);
   font-size: 1.15rem;
   line-height: 1.6;
   opacity: 0.66;
-}
-
-/* Compact size modifier for card/batch utility buttons */
-.btn-sm {
-  min-height: 2.05rem;
-  padding: 0.3rem 0.75rem;
-  font-size: 0.85rem;
 }
 
 /* Search & Tag Filter Bar */
@@ -77,10 +70,10 @@
   flex-direction: column;
   gap: 0.85rem;
   margin-bottom: 1.6rem;
-  padding: 0.95rem 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--page-ink) 13%, transparent);
-  border-radius: 0.4rem;
-  background: color-mix(in srgb, var(--page-ink) 2%, var(--page));
+  padding: var(--space-card-pad-sm);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
 }
 
 .journals-search-form {
@@ -95,8 +88,8 @@
   flex: 1 1 14rem;
   min-height: 2.15rem;
   padding: 0.35rem 0.75rem;
-  border: 1px solid color-mix(in srgb, var(--page-ink) 20%, transparent);
-  border-radius: 0.35rem;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
   background: var(--page);
   color: var(--page-ink);
   font: inherit;
@@ -106,7 +99,7 @@
 
 .journals-search-input:focus {
   outline: none;
-  border-color: color-mix(in srgb, var(--page-ink) 48%, transparent);
+  border-color: var(--border-focus);
 }
 
 .filter-clear-link {
@@ -129,8 +122,8 @@
 }
 
 .tag-filter-label {
-  font-family: system-ui, sans-serif;
-  font-size: 0.74rem;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
   opacity: 0.55;
   margin-right: 0.15rem;
 }
@@ -139,10 +132,10 @@
   display: inline-flex;
   align-items: center;
   padding: 0.16rem 0.6rem;
-  border: 1px solid color-mix(in srgb, var(--page-ink) 20%, transparent);
-  border-radius: 999px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-pill);
   color: inherit;
-  font-family: system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.74rem;
   letter-spacing: 0.02em;
   text-decoration: none;
@@ -151,7 +144,7 @@
 
 .tag-filter-pill:hover,
 .tag-filter-pill:focus-visible {
-  border-color: color-mix(in srgb, var(--page-ink) 45%, transparent);
+  border-color: var(--border-focus);
   background: color-mix(in srgb, var(--page-ink) 7%, transparent);
 }
 
@@ -168,11 +161,11 @@
   justify-content: space-between;
   align-items: center;
   gap: 0.85rem 1.25rem;
-  padding: 0.85rem 1.1rem;
+  padding: 0.9rem var(--space-card-pad-sm);
   margin-bottom: 2rem;
-  border: 1px solid color-mix(in srgb, var(--page-ink) 14%, transparent);
-  border-radius: 0.4rem;
-  background: color-mix(in srgb, var(--page-ink) 2.5%, var(--page));
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
 }
 
 .batch-select-group {
@@ -199,7 +192,7 @@
 }
 
 .batch-count {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   opacity: 0.6;
 }
@@ -215,7 +208,7 @@
   width: 1px;
   height: 1.4rem;
   margin: 0 0.25rem;
-  background: color-mix(in srgb, var(--page-ink) 16%, transparent);
+  background: var(--border-card);
 }
 
 /* Collage Grid & Cards */
@@ -239,10 +232,11 @@
 
 .journal-card {
   position: relative;
-  padding: 1.75rem;
-  border: 1px solid color-mix(in srgb, var(--page-ink) 13%, transparent);
-  border-radius: 0.45rem;
-  background: color-mix(in srgb, var(--page) 97%, var(--page-ink));
+  padding: var(--space-card-pad);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
   box-sizing: border-box;
 }
 
@@ -251,7 +245,7 @@
   min-width: min(100%, 18.5rem);
   display: flex;
   flex-direction: column;
-  padding: 1.15rem;
+  padding: var(--space-card-pad-sm);
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
@@ -259,13 +253,13 @@
 .journal-card.is-collage:hover,
 .journal-card.is-collage:focus-within {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--page-ink) 32%, transparent);
-  box-shadow: 0 8px 24px color-mix(in srgb, #000000 7%, transparent);
+  border-color: var(--border-focus);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--page-ink) 8%, transparent);
 }
 
 .journal-card.is-unpublished {
   border-style: dashed;
-  border-color: color-mix(in srgb, var(--page-ink) 28%, transparent);
+  border-color: var(--border-input);
 }
 
 /* Stretched card link makes the whole card open the full-page entry */
@@ -299,7 +293,7 @@
   gap: 0.65rem;
   margin-bottom: 1rem;
   padding-bottom: 0.65rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--page-ink) 10%, transparent);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .journal-card.is-collage .journal-card-meta {
@@ -336,20 +330,21 @@
   display: inline-flex;
   align-items: center;
   padding: 0.12rem 0.5rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
   font-size: 0.72rem;
   letter-spacing: 0.03em;
-  border: 1px solid color-mix(in srgb, var(--page-ink) 18%, transparent);
+  border: 1px solid var(--border-card);
 }
 
 .entry-badge.is-draft {
   opacity: 0.75;
-  background: color-mix(in srgb, var(--page-ink) 7%, transparent);
+  background: var(--surface-subtle);
 }
 
 .entry-badge.is-bookmarked {
-  border-color: color-mix(in srgb, var(--page-ink) 30%, transparent);
-  background: color-mix(in srgb, var(--page-ink) 10%, transparent);
+  border-color: var(--border-input);
+  background: var(--surface-subtle);
 }
 
 /* Tactile media slot (shared rules in overrides.css; catalog spacing & compact overrides below) */
@@ -386,15 +381,6 @@
   margin-bottom: 0.75rem;
 }
 
-.journal-entry-tags .journal-tag-chip {
-  padding: 0.14rem 0.48rem;
-  border: 1px solid color-mix(in srgb, var(--page-ink) 16%, transparent);
-  border-radius: 999px;
-  font-family: system-ui, sans-serif;
-  font-size: 0.7rem;
-  letter-spacing: 0.02em;
-}
-
 /* Compact 280-char Excerpt in Collage */
 .journal-entry-excerpt {
   flex: 1;
@@ -422,7 +408,7 @@
 
 .journal-entry-body h1 { font-size: 1.85rem; }
 .journal-entry-body h2 { font-size: 1.5rem; }
-.journal-entry-body h3 { font-size: 1.25rem; }
+.journal-entry-body h3 { font-size: var(--heading-h3); }
 .journal-entry-body p,
 .journal-entry-body ul,
 .journal-entry-body ol,
@@ -432,8 +418,9 @@
 .journal-entry-body pre {
   overflow-x: auto;
   padding: 0.85rem;
-  border-radius: 0.35rem;
-  background: color-mix(in srgb, var(--page) 88%, var(--page-ink));
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
+  font-family: var(--font-mono);
 }
 .journal-entry-body a { color: inherit; text-decoration-thickness: 1px; }
 
@@ -445,7 +432,7 @@
   gap: 0.45rem;
   margin-top: 1.25rem;
   padding-top: 0.85rem;
-  border-top: 1px solid color-mix(in srgb, var(--page-ink) 10%, transparent);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .journal-card.is-collage .journal-card-actions {
@@ -473,7 +460,7 @@
     display: none;
   }
   .journal-card {
-    padding: 1.25rem;
+    padding: var(--space-card-pad-sm);
   }
 }
 

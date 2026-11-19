@@ -92,8 +92,14 @@ find without exposing source files through the static file server.
 Shared public files live in `assets/`: Bulma and shared project overrides are
 under `assets/css/`, browser scripts are under `assets/js/`, and the favicon is
 at `assets/favicon.png`. The `/assets` route serves only this directory. Keep
-shared styling in `overrides.css`; leave minified Bulma untouched. Bump a local
-asset's `?v=N` query version when changing its contents.
+shared styling and canonical design tokens in `overrides.css` (`:root` custom
+properties for `--page`, `--page-ink`, `--surface-card`, `--border-card`,
+`--font-serif`, `--font-sans`, `--font-mono`, `--radius-card`, `--radius-control`,
+`--radius-pill`, `--space-page-y`, `--space-page-x`, `--space-card-pad`, and
+`--heading-h1..h3`); every page stylesheet must consume these shared tokens for
+color scheme, fonts, regular `400` weights, radii, padding, and margins. Leave
+minified Bulma untouched, and bump a local asset's `?v=N` query version when
+changing its contents.
 
 ## Run locally
 

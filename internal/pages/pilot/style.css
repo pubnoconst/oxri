@@ -1,43 +1,44 @@
 /*
  * Pilot User Settings Stylesheet
  * ------------------------------
- * Aligned with Res Imperii's quiet, typography-first aesthetic.
+ * Consumes canonical tokens from overrides.css for colors, fonts, radii, and spacing.
  */
 
 .settings-page {
   width: min(52rem, 100%);
   min-height: 100svh;
   margin: 0 auto;
-  padding: clamp(1.5rem, 6vw, 4rem) 1.25rem 5rem;
+  padding: var(--space-page-y) var(--space-page-x) 5rem;
   box-sizing: border-box;
 }
 
 .settings-header {
-  margin-bottom: 2.5rem;
+  margin-bottom: var(--space-header-bottom);
 }
 
 .settings-heading {
-  margin-top: 2rem;
+  margin-top: var(--space-header-top);
 }
 
 .settings-eyebrow {
-  margin: 0 0 0.4rem;
-  font-size: 0.8rem;
-  letter-spacing: 0.12em;
+  margin: 0 0 0.35rem;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
   opacity: 0.55;
   text-transform: uppercase;
 }
 
 .settings-heading h1 {
   margin: 0 0 0.6rem;
-  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-size: var(--heading-h1);
   font-weight: 400;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .settings-subtitle {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   line-height: 1.5;
   opacity: 0.65;
 }
@@ -46,22 +47,22 @@
 .settings-stack {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  gap: 1.65rem;
 }
 
 /* Shared card container */
 .settings-card {
-  padding: 1.75rem;
-  border: 1px solid color-mix(in srgb, var(--page-ink) 14%, transparent);
-  border-radius: 0.45rem;
-  background: color-mix(in srgb, var(--page-ink) 2%, var(--page));
+  padding: var(--space-card-pad);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
   box-sizing: border-box;
 }
 
 /* Status Banner Card */
 .status-card {
-  padding: 1.15rem 1.5rem;
-  border-color: color-mix(in srgb, var(--page-ink) 18%, transparent);
+  padding: var(--space-card-pad-sm) var(--space-card-pad);
 }
 
 .status-indicator {
@@ -74,8 +75,8 @@
   width: 0.65rem;
   height: 0.65rem;
   border-radius: 50%;
-  background-color: #4caf50;
-  box-shadow: 0 0 0 3px color-mix(in srgb, #4caf50 22%, transparent);
+  background-color: var(--accent-active);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-active) 22%, transparent);
   flex-shrink: 0;
 }
 
@@ -87,7 +88,7 @@
 
 .status-title {
   font-size: 1.05rem;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.25;
 }
 
@@ -103,7 +104,7 @@
 
 .card-header h2 {
   margin: 0 0 0.35rem;
-  font-size: 1.35rem;
+  font-size: var(--heading-h2);
   font-weight: 400;
 }
 
@@ -126,9 +127,9 @@
   justify-content: space-between;
   align-items: center;
   gap: 1.5rem;
-  padding: 1.25rem 1.4rem;
-  border: 1px solid color-mix(in srgb, var(--page-ink) 10%, transparent);
-  border-radius: 0.35rem;
+  padding: var(--space-card-pad-sm) 1.35rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
   background: var(--page);
   box-sizing: border-box;
 }
@@ -148,7 +149,7 @@
 .method-name {
   margin: 0;
   font-size: 1.1rem;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .method-description {
@@ -168,10 +169,10 @@
 }
 
 .meta-code {
-  padding: 0.1rem 0.35rem;
-  border-radius: 0.2rem;
-  background: color-mix(in srgb, var(--page-ink) 6%, transparent);
-  font-family: monospace;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
+  font-family: var(--font-mono);
   font-size: 0.82rem;
 }
 
@@ -183,37 +184,26 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
+  padding: 0.14rem 0.55rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
   letter-spacing: 0.03em;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.2;
 }
 
 .badge-active {
-  background: color-mix(in srgb, #4caf50 14%, transparent);
-  color: #2e7d32;
-  border: 1px solid color-mix(in srgb, #4caf50 30%, transparent);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .badge-active {
-    color: #81c784;
-    border-color: color-mix(in srgb, #81c784 30%, transparent);
-  }
-}
-
-:root[data-theme="dark"] .badge-active {
-  color: #81c784;
-  border-color: color-mix(in srgb, #81c784 30%, transparent);
+  background: color-mix(in srgb, var(--accent-active) 14%, transparent);
+  color: var(--accent-active);
+  border: 1px solid color-mix(in srgb, var(--accent-active) 35%, transparent);
 }
 
 .badge-pending {
-  background: color-mix(in srgb, var(--page-ink) 8%, transparent);
+  background: var(--surface-subtle);
   color: var(--page-ink);
   opacity: 0.75;
-  border: 1px solid color-mix(in srgb, var(--page-ink) 15%, transparent);
+  border: 1px solid var(--border-card);
 }
 
 /* Actions */
@@ -227,7 +217,7 @@
   flex-direction: column;
   gap: 1.5rem;
   padding-top: 1.5rem;
-  border-top: 1px solid color-mix(in srgb, var(--page-ink) 10%, transparent);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .action-buttons {
@@ -242,9 +232,9 @@
   align-items: flex-start;
   gap: 0.85rem;
   padding: 1rem 1.25rem;
-  border: 1px dashed color-mix(in srgb, var(--page-ink) 22%, transparent);
-  border-radius: 0.35rem;
-  background: color-mix(in srgb, var(--page-ink) 2.5%, transparent);
+  border: 1px dashed var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -261,7 +251,7 @@
 
 .notice-title {
   display: block;
-  font-weight: 500;
+  font-weight: 400;
   margin-bottom: 0.2rem;
   color: var(--page-ink);
 }
@@ -272,11 +262,11 @@
 }
 
 .notice-body code {
-  padding: 0.05rem 0.3rem;
-  border-radius: 0.2rem;
-  background: color-mix(in srgb, var(--page-ink) 6%, transparent);
-  font-family: monospace;
-  font-size: 0.85rem;
+  padding: 0.08rem 0.35rem;
+  border-radius: var(--radius-control);
+  background: var(--page);
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
 }
 
 /* Mobile Responsiveness */
