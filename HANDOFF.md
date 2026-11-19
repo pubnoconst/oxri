@@ -480,3 +480,14 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   - Journal prose (`body`) and search queries (`q`): only English/Latin letters, Greek letters, ASCII digits, standard whitespace (`space, \n, \r, \t`), and whitelisted ASCII/typographic prose & Markdown punctuation. Explicitly rejects emojis, variation selectors, control characters, zero-width/bidi spoofing characters, and non-Latin/non-Greek scripts.
 - Added unit and integration test cases in `internal/db/db_test.go` and `internal/app/server_test.go` verifying Latin/Greek acceptance and emoji/non-whitelisted-script rejection. All tests pass via `mage test`.
 - Refined live preview and validation notices (`b9fa7dc`, `journal-editor.js?v=9`): disallowed characters and emojis are stripped before rendering preview tag chips and Markdown prose, and offending characters are reported by Unicode codepoint (`U+XXXX`) rather than echoed as raw glyphs.
+
+## 2026-11-20 - Modular handler split, race-free timeout buffering, HTTP hardening, and shared media CSS deduplication
+
+- Decision: `D-20261120-006`, recorded in commit `a0e6da5` (`Decide modular handler split, race-free timeout, HTTP hardening, and CSS deduplication D-20261120-006`).
+- Implementation: commit `923b72c` (`Implement modular handler split, race-free timeout, HTTP hardening, and CSS deduplication D-20261120-006`).
+- Documented the architectural principle `"No monoliths — small, focused modules"` in `DECISIONS.md` and `README.md`.
+- Split the 544-line `internal/app/server.go` monolith into small, focused domain handler modules (`handlers_journals.go`, `handlers_auth.go`, `handlers_pilot.go`) while reducing `server.go` to a clean declarative routing table.
+- Fixed the concurrent `ResponseWriter` data race in `TimeoutMiddleware` (`internal/app/middleware.go`) by buffering handler writes under a mutex (`timeoutWriter`), and implemented `RenderErrorWithCause` to log opaque error reference codes (`ref`) and their underlying causes privately to `os.Stderr` without leaking details to HTTP responses.
+- Hardened the HTTP server with explicit `ReadHeaderTimeout`, `ReadTimeout`, `WriteTimeout`, `IdleTimeout` in `cmd/server/main.go`, a 1 MiB request body cap (`MaxBodyBytesMiddleware`), and cross-origin `POST` protection (`CrossOriginMiddleware` checking `Sec-Fetch-Site` and `Origin`).
+- Deduplicated shared tactile media mounting rules (`.journal-preview-media`, `.tweet-embed-container`, `.tweet-fallback-card`) into `assets/css/overrides.css` (`?v=24`).
+- Added `TestCrossOriginProtection` in `internal/app/server_test.go`. All tests pass via `mage test` and binary builds via `mage build`.
