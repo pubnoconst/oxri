@@ -37,11 +37,11 @@ func TestLoadEnvFiles(t *testing.T) {
 func TestValidateInput(t *testing.T) {
 	valid := JournalInput{
 		MediaURL: "https://x.com/user/status/123",
-		Tags:     []string{"log", "dev", "go"},
-		Body:     "# Hello World",
+		Tags:     []string{"log", "Rōma", "Νόος"},
+		Body:     "# RES·IMPERII\n\nEnglish 123, Latin Rōma æterna, and Greek Λόγος — no emojis.",
 	}
 	if _, err := ValidateInput(valid); err != nil {
-		t.Fatalf("expected valid input to pass, got: %v", err)
+		t.Fatalf("expected valid Latin/Greek/alphanumeric input to pass, got: %v", err)
 	}
 
 	cases := []struct {
@@ -51,11 +51,18 @@ func TestValidateInput(t *testing.T) {
 		{"empty media url", func(in *JournalInput) { in.MediaURL = "" }},
 		{"invalid media url scheme", func(in *JournalInput) { in.MediaURL = "ftp://example.com/a.mp4" }},
 		{"media url over 128 chars", func(in *JournalInput) { in.MediaURL = "https://example.com/" + strings.Repeat("a", 115) }},
+		{"emoji in media url", func(in *JournalInput) { in.MediaURL = "https://example.com/🚀" }},
 		{"more than 3 tags", func(in *JournalInput) { in.Tags = []string{"a", "b", "c", "d"} }},
 		{"tag over 4 chars", func(in *JournalInput) { in.Tags = []string{"notes"} }},
 		{"duplicate tags exact", func(in *JournalInput) { in.Tags = []string{"Log", "Log"} }},
 		{"duplicate tags case-insensitive", func(in *JournalInput) { in.Tags = []string{"log", "LOG"} }},
+		{"emoji in tag", func(in *JournalInput) { in.Tags = []string{"😀"} }},
+		{"punctuation in tag", func(in *JournalInput) { in.Tags = []string{"a-b"} }},
+		{"non-Latin/Greek script in tag", func(in *JournalInput) { in.Tags = []string{"Тест"} }},
 		{"empty body", func(in *JournalInput) { in.Body = "   \n\t " }},
+		{"emoji in body", func(in *JournalInput) { in.Body = "Hello world 🚀" }},
+		{"non-Latin/Greek script in body", func(in *JournalInput) { in.Body = "Hello мир" }},
+		{"zero-width spoofing char in body", func(in *JournalInput) { in.Body = "Hello\u200Bworld" }},
 	}
 
 	for _, tc := range cases {

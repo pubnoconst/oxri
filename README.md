@@ -139,6 +139,25 @@ go run github.com/magefile/mage run
   code containing only that reference. Application route work has a 30-second
   deadline. Exception details and stack traces are never included in responses.
 
+## Input sanitization
+
+**ALL INPUTS ARE EVIL.** Every user-supplied input (media URLs, tags, Markdown
+prose, and query parameters) is validated against a strict character-set
+whitelist at both the UI layer (`assets/js/journal-editor.js`) and the server
+layer (`internal/db/sanitize.go`):
+
+- **Tags (`tag1..tag3`)**: Only English/Latin letters (`\p{Latin}`), Greek
+  letters (`\p{Greek}`), and ASCII digits (`0–9`), normalized to Title Case and
+  unique per entry. No spaces, punctuation, or emojis.
+- **Media URL (`media_url`)**: Only printable ASCII URL characters (`0x21–0x7E`)
+  with an `http://` or `https://` scheme (1–128 characters). No emojis or
+  Unicode homographs.
+- **Journal Prose (`body`) & Search Queries (`q`)**: Only English/Latin letters,
+  Greek letters, ASCII digits, standard whitespace (`space, \n, \r, \t`), and
+  standard ASCII/typographic prose and Markdown punctuation. All emojis,
+  variation selectors, control characters, zero-width/bidi spoofing characters,
+  and non-Latin/non-Greek scripts are rejected.
+
 ## Authentication (SSH loopback)
 
 Res Imperii uses loopback SSH public-key authentication for single-admin operations:

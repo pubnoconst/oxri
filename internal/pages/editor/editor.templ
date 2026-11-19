@@ -73,7 +73,7 @@ templ FormPage(isAuth bool, data FormData) {
 								data-existing-tags={ data.ExistingTagsCSV() }
 							/>
 							<div id="tag-suggestions" class="tag-suggestions" role="listbox" aria-label="Tag suggestions"></div>
-							<p class="field-hint">Up to 3 unique Title Case tags, max 4 characters each.</p>
+							<p class="field-hint">Up to 3 unique Title Case tags, max 4 characters each (Latin/Greek/digits only; no emojis).</p>
 							<p id="tags-error" class="field-error" aria-live="polite"></p>
 						</div>
 						<div class="editor-field editor-content-field">
@@ -126,6 +126,6 @@ templ FormPage(isAuth bool, data FormData) {
 		<script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.17/dist/purify.min.js"></script>
 		<script src="https://platform.twitter.com/widgets.js" charset="utf-8" async></script>
 		<script src="/assets/js/journal-media.js?v=1"></script>
-		<script src="/assets/js/journal-editor.js?v=7"></script>
+		<script src="/assets/js/journal-editor.js?v=8"></script>
 	}
 }

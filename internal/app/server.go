@@ -67,11 +67,13 @@ func NewServer(assetsDir string, authSvc *auth.Service, store *db.Store) http.Ha
 	// Journals Public & Composition Routes
 	r.Get("/journals", func(w http.ResponseWriter, req *http.Request) {
 		isAuth := auth.IsAuthenticated(req.Context())
-		q := strings.TrimSpace(req.URL.Query().Get("q"))
+		q := db.SanitizeSearchQuery(req.URL.Query().Get("q"))
 		var selectedTags []string
 		for _, rawTag := range req.URL.Query()["tag"] {
 			if norm := db.FormatTagTitleCase(rawTag); norm != "" {
-				selectedTags = append(selectedTags, norm)
+				if _, ok := db.ValidateTagChars(norm); ok {
+					selectedTags = append(selectedTags, norm)
+				}
 			}
 		}
 

@@ -191,7 +191,7 @@ func TestJournalEditorPage(t *testing.T) {
 	if !strings.Contains(body, "journal-media.js?v=1") {
 		t.Errorf("missing journal-media.js script tag in editor")
 	}
-	if !strings.Contains(body, "journal-editor.js?v=7") {
+	if !strings.Contains(body, "journal-editor.js?v=8") {
 		t.Errorf("missing versioned journal-editor.js script tag")
 	}
 	if !strings.Contains(body, `maxlength="128"`) {
@@ -562,6 +562,22 @@ func TestJournalPersistenceAndManagement(t *testing.T) {
 	server.ServeHTTP(dupRec, dupReq)
 	if dupRec.Code != http.StatusUnprocessableEntity || !strings.Contains(dupRec.Body.String(), "duplicate tag") {
 		t.Fatalf("expected 422 duplicate tag error, got code=%d", dupRec.Code)
+	}
+
+	// 2c. Server rejects emoji in body or tags with 422 ("ALL INPUTS ARE EVIL")
+	emojiForm := url.Values{
+		"media_url": {"https://x.com/user/status/12345"},
+		"tags":      {"Log"},
+		"body":      {"# Entry with emoji 🚀"},
+		"published": {"1"},
+	}
+	emojiReq := httptest.NewRequest(http.MethodPost, "/journals", strings.NewReader(emojiForm.Encode()))
+	emojiReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	emojiReq.AddCookie(cookie)
+	emojiRec := httptest.NewRecorder()
+	server.ServeHTTP(emojiRec, emojiReq)
+	if emojiRec.Code != http.StatusUnprocessableEntity || !strings.Contains(emojiRec.Body.String(), "no emojis") {
+		t.Fatalf("expected 422 emoji rejection error, got code=%d", emojiRec.Code)
 	}
 
 	// 3. Valid POST creates entry, normalizes tags to Title Case, and redirects to /journals

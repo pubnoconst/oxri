@@ -1,5 +1,7 @@
 /*
+ * ALL INPUTS ARE EVIL.
  * Journal editor preview, Title Case tag auto-capitalization, autocomplete,
+ * strict character-set whitelisting (English alphanumeric, Latin, Greek; no emojis),
  * and schema constraint validation.
  * Reuses window.ResImperiiMedia for shared media preview rendering.
  */
@@ -31,6 +33,50 @@
   const MAX_TAG_COUNT = 3;
   const MAX_TAG_LEN = 4;
 
+  // Strict Unicode script regexes matching server-side internal/db/sanitize.go
+  const TAG_CHAR_RE = /^[\p{Script=Latin}\p{Script=Greek}0-9\u0300-\u036F]$/u;
+  const PROSE_LETTER_RE = /^[\p{Script=Latin}\p{Script=Greek}\u0300-\u036F]$/u;
+  const ALLOWED_TYPO_SET = new Set([
+    0x00A1, 0x00A7, 0x00AB, 0x00B0, 0x00B7, 0x00BB, 0x00BF,
+    0x2013, 0x2014, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2026,
+    0x037E, 0x0384, 0x0385, 0x0387, 0x1FFD, 0x1FFE,
+  ]);
+
+  function findInvalidMediaChar(str) {
+    for (const ch of Array.from(str)) {
+      const cp = ch.codePointAt(0);
+      if (cp < 0x21 || cp > 0x7E) return ch;
+    }
+    return null;
+  }
+
+  function findInvalidTagChar(str) {
+    for (const ch of Array.from(str)) {
+      if (!TAG_CHAR_RE.test(ch)) return ch;
+    }
+    return null;
+  }
+
+  function isAllowedProseChar(ch) {
+    if (ch === " " || ch === "\n" || ch === "\r" || ch === "\t") return true;
+    const cp = ch.codePointAt(0);
+    if (cp >= 0x21 && cp <= 0x7E) return true;
+    if (PROSE_LETTER_RE.test(ch)) return true;
+    if (ALLOWED_TYPO_SET.has(cp)) return true;
+    if ((cp >= 0x1FBD && cp <= 0x1FC1) || (cp >= 0x1FCD && cp <= 0x1FCF) ||
+        (cp >= 0x1FDD && cp <= 0x1FDF) || (cp >= 0x1FED && cp <= 0x1FEF)) {
+      return true;
+    }
+    return false;
+  }
+
+  function findInvalidProseChar(str) {
+    for (const ch of Array.from(str)) {
+      if (!isAllowedProseChar(ch)) return ch;
+    }
+    return null;
+  }
+
   const { safeUrl, createMedia } = window.ResImperiiMedia;
   const markdown = window.markdownit({ html: false, linkify: false, breaks: false });
 
@@ -50,8 +96,6 @@
     return chars[0].toUpperCase() + chars.slice(1).join("").toLowerCase();
   }
 
-  // Capitalize each comma-separated token in place while preserving leading/trailing
-  // spaces so typing commas and spaces feels completely natural.
   function autoCapitalizeInputValue(rawVal) {
     return rawVal
       .split(",")
@@ -102,6 +146,16 @@
       return;
     }
 
+    const badChar = findInvalidMediaChar(raw);
+    if (badChar !== null) {
+      mediaPreview.classList.add("is-empty");
+      mediaPreview.textContent = "Media link contains disallowed characters.";
+      isMediaValid = false;
+      if (mediaError) mediaError.textContent = `Disallowed character "${badChar}": only printable ASCII URL characters are permitted (no emojis).`;
+      syncSubmitButton();
+      return;
+    }
+
     const url = safeUrl(raw);
     if (!url) {
       mediaPreview.classList.add("is-empty");
@@ -137,7 +191,7 @@
     updateTags();
   }
 
-  function renderSuggestions(chips) {
+  function renderSuggestions() {
     if (!tagSuggestions) return;
     tagSuggestions.replaceChildren();
     if (existingTags.length === 0) return;
@@ -178,7 +232,6 @@
   }
 
   function updateTags() {
-    // Auto-capitalize while preserving cursor position
     const start = tagsInput.selectionStart;
     const end = tagsInput.selectionEnd;
     const capitalizedVal = autoCapitalizeInputValue(tagsInput.value);
@@ -200,11 +253,16 @@
     }
 
     const seen = new Set();
-    const duplicateSet = new Set();
     let firstDuplicate = "";
+    let badTagInfo = null;
     chips.forEach((t) => {
+      if (!badTagInfo) {
+        const badCh = findInvalidTagChar(t);
+        if (badCh !== null) {
+          badTagInfo = { tag: t, char: badCh };
+        }
+      }
       if (seen.has(t)) {
-        duplicateSet.add(t);
         if (!firstDuplicate) firstDuplicate = t;
       }
       seen.add(t);
@@ -213,6 +271,8 @@
     let errText = "";
     if (chips.length > MAX_TAG_COUNT) {
       errText = `Maximum ${MAX_TAG_COUNT} tags allowed (currently ${chips.length}).`;
+    } else if (badTagInfo) {
+      errText = `Tag "${badTagInfo.tag}" contains disallowed character "${badTagInfo.char}" (only English/Latin, Greek, and digits permitted; no emojis).`;
     } else {
       const tooLong = chips.find((t) => Array.from(t).length > MAX_TAG_LEN);
       if (tooLong) {
@@ -230,21 +290,33 @@
       const chip = document.createElement("span");
       const over = Array.from(tag).length > MAX_TAG_LEN;
       const isDup = seenInRender.has(tag);
+      const hasBadChar = findInvalidTagChar(tag) !== null;
       seenInRender.add(tag);
-      chip.className = (over || isDup) ? "journal-tag-chip is-invalid" : "journal-tag-chip";
+      chip.className = (over || isDup || hasBadChar) ? "journal-tag-chip is-invalid" : "journal-tag-chip";
       chip.textContent = tag;
       return chip;
     }));
 
-    renderSuggestions(chips);
+    renderSuggestions();
     syncSubmitButton();
   }
 
   function updateContent() {
     const raw = contentInput.value;
-    isBodyValid = raw.trim().length > 0;
-    if (bodyError) {
-      bodyError.textContent = isBodyValid ? "" : "Required: journal entry cannot be empty.";
+    if (raw.trim().length === 0) {
+      isBodyValid = false;
+      if (bodyError) bodyError.textContent = "Required: journal entry cannot be empty.";
+    } else {
+      const badChar = findInvalidProseChar(raw);
+      if (badChar !== null) {
+        isBodyValid = false;
+        if (bodyError) {
+          bodyError.textContent = `Disallowed character "${badChar}": only English, Latin, Greek, numbers, and standard punctuation are permitted (no emojis).`;
+        }
+      } else {
+        isBodyValid = true;
+        if (bodyError) bodyError.textContent = "";
+      }
     }
     renderedContent.innerHTML = window.DOMPurify.sanitize(markdown.render(raw));
     syncSubmitButton();

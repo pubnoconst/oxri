@@ -118,6 +118,9 @@ func ValidateInput(in JournalInput) (JournalInput, error) {
 	if utf8.RuneCountInString(in.MediaURL) > MaxMediaURLLength {
 		return in, fmt.Errorf("%w: media link must be at most %d characters", ErrInvalidInput, MaxMediaURLLength)
 	}
+	if badRune, ok := ValidateMediaURLChars(in.MediaURL); !ok {
+		return in, fmt.Errorf("%w: media link contains disallowed character %q (only printable ASCII URL characters permitted; no emojis)", ErrInvalidInput, badRune)
+	}
 	u, err := url.ParseRequestURI(in.MediaURL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return in, fmt.Errorf("%w: media link must be a valid http or https URL", ErrInvalidInput)
@@ -136,6 +139,9 @@ func ValidateInput(in JournalInput) (JournalInput, error) {
 		if utf8.RuneCountInString(t) > MaxTagLength {
 			return in, fmt.Errorf("%w: tag %q exceeds %d characters", ErrInvalidInput, t, MaxTagLength)
 		}
+		if badRune, ok := ValidateTagChars(t); !ok {
+			return in, fmt.Errorf("%w: tag %q contains disallowed character %q (only English/Latin, Greek, and digits permitted; no emojis)", ErrInvalidInput, t, badRune)
+		}
 		if seen[t] {
 			return in, fmt.Errorf("%w: duplicate tag %q (tags must be unique)", ErrInvalidInput, t)
 		}
@@ -146,6 +152,9 @@ func ValidateInput(in JournalInput) (JournalInput, error) {
 
 	if strings.TrimSpace(in.Body) == "" {
 		return in, fmt.Errorf("%w: journal content cannot be empty", ErrInvalidInput)
+	}
+	if badRune, ok := ValidateProseChars(in.Body); !ok {
+		return in, fmt.Errorf("%w: journal content contains disallowed character %q (only English, Latin, Greek, digits, and standard punctuation permitted; no emojis)", ErrInvalidInput, badRune)
 	}
 
 	return in, nil
@@ -405,7 +414,7 @@ func (s *Store) ListFiltered(ctx context.Context, filter ListFilter) ([]Journal,
 		clauses = append(clauses, "published = 1")
 	}
 
-	qText := strings.TrimSpace(filter.Query)
+	qText := SanitizeSearchQuery(filter.Query)
 	if qText != "" {
 		likePattern := "%" + strings.ToLower(qText) + "%"
 		clauses = append(clauses, "(LOWER(body) LIKE ? OR LOWER(COALESCE(tag1, '')) LIKE ? OR LOWER(COALESCE(tag2, '')) LIKE ? OR LOWER(COALESCE(tag3, '')) LIKE ?)")
@@ -414,7 +423,10 @@ func (s *Store) ListFiltered(ctx context.Context, filter ListFilter) ([]Journal,
 
 	for _, rawTag := range filter.Tags {
 		t := FormatTagTitleCase(rawTag)
-		if t == "" {
+		if t == "" || utf8.RuneCountInString(t) > MaxTagLength {
+			continue
+		}
+		if _, ok := ValidateTagChars(t); !ok {
 			continue
 		}
 		clauses = append(clauses, "(tag1 = ? OR tag2 = ? OR tag3 = ?)")
