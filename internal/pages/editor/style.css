@@ -89,6 +89,70 @@
 .editor-field { margin-bottom: 1.15rem; }
 .editor-field label { font-size: 1.1rem; }
 
+.field-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.25rem;
+}
+
+.field-counter {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.78rem;
+  opacity: 0.55;
+}
+
+.field-counter.is-invalid {
+  color: #d9534f;
+  opacity: 1;
+}
+
+.field-error {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  color: #d9534f;
+  min-height: 0;
+}
+
+.field-error:empty {
+  display: none;
+}
+
+.editor-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid color-mix(in srgb, var(--page-ink) 10%, transparent);
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--page-ink);
+}
+
+.editor-server-error {
+  margin: 0 0 1.5rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid color-mix(in srgb, #d9534f 50%, transparent);
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, #d9534f 8%, transparent);
+  color: #d9534f;
+  font-size: 0.95rem;
+}
+
 .editor-field input,
 .editor-compose-card textarea {
   width: 100%;
@@ -295,6 +359,11 @@
   letter-spacing: 0.02em;
 }
 
+.journal-preview-tags .journal-tag-chip.is-invalid {
+  border-color: color-mix(in srgb, #d9534f 65%, transparent);
+  color: #d9534f;
+}
+
 /* Rendered preview content scrolls smoothly within matching card height */
 .journal-rendered-content {
   flex: 1;
@@ -331,15 +400,17 @@
 /* Publish button action: centered horizontally at the bottom of the page */
 .journal-editor-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.85rem 1rem;
   margin: 3.5rem auto 2.5rem;
   text-align: center;
 }
 
 .publish-note {
+  flex-basis: 100%;
   margin: 0;
   font-size: 0.95rem;
   opacity: 0.55;

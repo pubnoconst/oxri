@@ -1,11 +1,14 @@
 package app
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -13,10 +16,11 @@ import (
 	"time"
 
 	"github.com/oxri/oxri-go/internal/auth"
+	"github.com/oxri/oxri-go/internal/db"
 	"golang.org/x/crypto/ssh"
 )
 
-func newTestServerWithAuth(t *testing.T) (http.Handler, *auth.Service) {
+func newTestServerWithAll(t *testing.T) (http.Handler, *auth.Service, *db.Store) {
 	pub, _, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatalf("GenerateKey: %v", err)
@@ -35,7 +39,18 @@ func newTestServerWithAuth(t *testing.T) (http.Handler, *auth.Service) {
 		t.Fatalf("NewService: %v", err)
 	}
 
-	return NewServer("../../assets", svc), svc
+	store, err := db.Open(context.Background(), ":memory:", "")
+	if err != nil {
+		t.Fatalf("db.Open(:memory:): %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+
+	return NewServer("../../assets", svc, store), svc, store
+}
+
+func newTestServerWithAuth(t *testing.T) (http.Handler, *auth.Service) {
+	server, svc, _ := newTestServerWithAll(t)
+	return server, svc
 }
 
 func newTestServer(t *testing.T) http.Handler {
@@ -173,8 +188,14 @@ func TestJournalEditorPage(t *testing.T) {
 	if !strings.Contains(body, "widgets.js") {
 		t.Errorf("missing Twitter widgets.js script tag in editor")
 	}
-	if !strings.Contains(body, "journal-editor.js?v=5") {
+	if !strings.Contains(body, "journal-media.js?v=1") {
+		t.Errorf("missing journal-media.js script tag in editor")
+	}
+	if !strings.Contains(body, "journal-editor.js?v=6") {
 		t.Errorf("missing versioned journal-editor.js script tag")
+	}
+	if !strings.Contains(body, `maxlength="128"`) {
+		t.Errorf("missing maxlength=128 constraint on media_url input")
 	}
 	if !strings.Contains(body, "Twitter post link") {
 		t.Errorf("missing Twitter media hint in editor")
@@ -488,5 +509,145 @@ func TestPageStylesheets(t *testing.T) {
 		if len(bytes) == 0 {
 			t.Errorf("route %s returned empty stylesheet", route)
 		}
+	}
+}
+
+func TestJournalPersistenceAndManagement(t *testing.T) {
+	server, svc, store := newTestServerWithAll(t)
+
+	// 1. Unauthenticated write endpoints redirect to /login
+	unauthPost := httptest.NewRequest(http.MethodPost, "/journals", nil)
+	unauthRec := httptest.NewRecorder()
+	server.ServeHTTP(unauthRec, unauthPost)
+	if unauthRec.Code != http.StatusSeeOther || !strings.Contains(unauthRec.Header().Get("Location"), "/login") {
+		t.Fatalf("expected 303 redirect to login for unauthenticated POST /journals, got %d", unauthRec.Code)
+	}
+
+	// Authenticate admin session
+	token, _ := svc.CreatePendingLogin("/journals")
+	svc.ApprovePendingLogin(token, "test")
+	sessID, _, _ := svc.ConsumeApprovedLogin(token)
+	cookie := &http.Cookie{Name: auth.SessionCookieName, Value: sessID}
+
+	// 2. Server rejects constraint violation (>4 char tag) with 422 and preserves input
+	badForm := url.Values{
+		"media_url": {"https://x.com/user/status/12345"},
+		"tags":      {"toolong"},
+		"body":      {"# Test body"},
+		"published": {"1"},
+	}
+	badReq := httptest.NewRequest(http.MethodPost, "/journals", strings.NewReader(badForm.Encode()))
+	badReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	badReq.AddCookie(cookie)
+	badRec := httptest.NewRecorder()
+	server.ServeHTTP(badRec, badReq)
+	if badRec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422 Unprocessable Entity for oversized tag, got %d", badRec.Code)
+	}
+	if !strings.Contains(badRec.Body.String(), "exceeds 4 characters") {
+		t.Errorf("expected tag validation error message in body")
+	}
+
+	// 3. Valid POST creates entry and redirects to /journals
+	goodForm := url.Values{
+		"media_url":  {"https://x.com/user/status/12345"},
+		"tags":       {"go, dev"},
+		"body":       {"# Valid Journal Entry\n\nPersisted in DB."},
+		"published":  {"1"},
+		"bookmarked": {"1"},
+	}
+	goodReq := httptest.NewRequest(http.MethodPost, "/journals", strings.NewReader(goodForm.Encode()))
+	goodReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	goodReq.AddCookie(cookie)
+	goodRec := httptest.NewRecorder()
+	server.ServeHTTP(goodRec, goodReq)
+	if goodRec.Code != http.StatusSeeOther || goodRec.Header().Get("Location") != "/journals" {
+		t.Fatalf("expected 303 redirect to /journals, got %d loc=%s", goodRec.Code, goodRec.Header().Get("Location"))
+	}
+
+	entries, _ := store.List(context.Background(), true)
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry in DB, got %d", len(entries))
+	}
+	entryID := entries[0].ID
+
+	// 4. Public /journals displays the published entry
+	pubReq := httptest.NewRequest(http.MethodGet, "/journals", nil)
+	pubRec := httptest.NewRecorder()
+	server.ServeHTTP(pubRec, pubReq)
+	if pubRec.Code != http.StatusOK || !strings.Contains(pubRec.Body.String(), "Valid Journal Entry") {
+		t.Errorf("expected published entry on public /journals, code=%d", pubRec.Code)
+	}
+
+	// 5. Unpublish single entry hides it from public /journals and /journals/{id}
+	unpubReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/journals/%d/unpublish", entryID), nil)
+	unpubReq.AddCookie(cookie)
+	unpubRec := httptest.NewRecorder()
+	server.ServeHTTP(unpubRec, unpubReq)
+	if unpubRec.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 on unpublish, got %d", unpubRec.Code)
+	}
+
+	pubReq2 := httptest.NewRequest(http.MethodGet, "/journals", nil)
+	pubRec2 := httptest.NewRecorder()
+	server.ServeHTTP(pubRec2, pubReq2)
+	if strings.Contains(pubRec2.Body.String(), "Valid Journal Entry") {
+		t.Errorf("unpublished entry should be hidden from public /journals")
+	}
+
+	singlePubReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/journals/%d", entryID), nil)
+	singlePubRec := httptest.NewRecorder()
+	server.ServeHTTP(singlePubRec, singlePubReq)
+	if singlePubRec.Code != http.StatusNotFound {
+		t.Errorf("expected 404 for unpublished entry accessed by public, got %d", singlePubRec.Code)
+	}
+
+	// 6. Authenticated catalog shows unpublished entry and Edit page loads it
+	authCatReq := httptest.NewRequest(http.MethodGet, "/journals", nil)
+	authCatReq.AddCookie(cookie)
+	authCatRec := httptest.NewRecorder()
+	server.ServeHTTP(authCatRec, authCatReq)
+	if !strings.Contains(authCatRec.Body.String(), "Unpublished") || !strings.Contains(authCatRec.Body.String(), "Select all") {
+		t.Errorf("authenticated catalog missing Unpublished badge or batch bar")
+	}
+
+	editReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/journals/%d/edit", entryID), nil)
+	editReq.AddCookie(cookie)
+	editRec := httptest.NewRecorder()
+	server.ServeHTTP(editRec, editReq)
+	if editRec.Code != http.StatusOK || !strings.Contains(editRec.Body.String(), "Save changes") {
+		t.Errorf("expected 200 and Save changes on edit page, code=%d", editRec.Code)
+	}
+
+	// 7. POST /journals/{id} updates entry and re-publishes it
+	updateForm := url.Values{
+		"media_url": {"https://example.com/photo.jpg"},
+		"tags":      {"edit"},
+		"body":      {"# Updated Content"},
+		"published": {"1"},
+	}
+	updateReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/journals/%d", entryID), strings.NewReader(updateForm.Encode()))
+	updateReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	updateReq.AddCookie(cookie)
+	updateRec := httptest.NewRecorder()
+	server.ServeHTTP(updateRec, updateReq)
+	if updateRec.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 on update, got %d", updateRec.Code)
+	}
+
+	// 8. Batch delete_all clears all entries
+	batchForm := url.Values{"action": {"delete_all"}}
+	batchReq := httptest.NewRequest(http.MethodPost, "/journals/batch", strings.NewReader(batchForm.Encode()))
+	batchReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	batchReq.AddCookie(cookie)
+	batchRec := httptest.NewRecorder()
+	server.ServeHTTP(batchRec, batchReq)
+	if batchRec.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 on batch delete_all, got %d", batchRec.Code)
+	}
+
+	afterAll, _ := store.List(context.Background(), true)
+	if len(afterAll) != 0 {
+		t.Errorf("expected 0 entries after batch delete_all, got %d", len(afterAll))
 	}
 }

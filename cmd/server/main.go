@@ -1,17 +1,24 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/oxri/oxri-go/internal/app"
 	"github.com/oxri/oxri-go/internal/auth"
+	"github.com/oxri/oxri-go/internal/db"
 )
 
 func main() {
+	if err := db.LoadEnvFiles("db.env", ".env"); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning loading env files: %v\n", err)
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -50,15 +57,31 @@ func main() {
 	}()
 	defer authSvc.StopSSH()
 
+	dbURL := os.Getenv("TURSO_DATABASE_URL")
+	dbToken := os.Getenv("TURSO_AUTH_TOKEN")
+	initCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	store, err := db.Open(initCtx, dbURL, dbToken)
+	cancel()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize database store: %v\n", err)
+		os.Exit(1)
+	}
+	defer store.Close()
+
 	assetsDir := os.Getenv("ASSETS_DIR")
 	if assetsDir == "" {
 		assetsDir = "assets"
 	}
 
-	handler := app.NewServer(assetsDir, authSvc)
+	handler := app.NewServer(assetsDir, authSvc, store)
 
 	fmt.Printf("Res Imperii HTTP server listening on http://%s\n", addr)
 	fmt.Printf("Res Imperii SSH auth gateway listening on %s\n", authSvc.SSHAddr())
+	if dbURL == "" {
+		fmt.Println("Database connected: file:res_imperii.db")
+	} else {
+		fmt.Printf("Database connected: %s\n", dbURL)
+	}
 	fmt.Printf("Authorized SSH key: %s\n", authSvc.AuthorizedKeyComment())
 
 	if err := http.ListenAndServe(addr, handler); err != nil && err != http.ErrServerClosed {

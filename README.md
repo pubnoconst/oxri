@@ -104,14 +104,17 @@ go run github.com/magefile/mage run
 - `/book-i` renders the Markdown in `rawcontent/book-i.md`, the canonical Book I
   source tracked in this private repository. Raw HTML in the source is excluded
   from rendered output.
-- `/journals` is an empty state with a link to create an entry (`/journals/new`),
-  showing "Author sign in" when unauthenticated or "Sign out" when authenticated.
-- `/journals/new` (formerly `/journal-editor`, which 301 permanently redirects to
-  `/journals/new`) is a minimal two-pane journal composition environment with
-  editable Markdown, tags, links, and a scroll-synchronized content preview
-  (supporting YouTube, Vimeo, direct audio/video/images, and X / Twitter post
-  embeds). The Publish action is centered at the bottom of the page; drafts and
-  publishing connect to persistence in upcoming work.
+- `/journals` renders published journal entries from Turso/SQLite (showing
+  tactile media previews, tags, and safe Markdown prose). When authenticated as
+  the author, unpublished drafts are also shown alongside Edit, Bookmark,
+  Publish/Unpublish, Delete, and multi-select batch management controls.
+- `/journals/{id}` renders a single journal entry permalink (unpublished entries
+  return 404 unless authenticated).
+- `/journals/new` (and `/journals/{id}/edit` when editing) provides a two-pane
+  composition environment with schema-enforced live validation (required media
+  link 1–128 chars, up to 3 tags <= 4 chars each, required Markdown body) and
+  scroll-synchronized preview (supporting YouTube, Vimeo, audio/video/images,
+  and X / Twitter post embeds).
 - Standardized buttons: interactive actions use semantic classes (`.btn-encouraged`
   for primary actions like publishing, `.btn-neutral` for utility/secondary
   actions, and `.btn-destructive` for deletions).
@@ -149,6 +152,8 @@ Environment variables (see `.env.example`):
 - `SSH_ADDR`: SSH listening address (default `127.0.0.1:2222`).
 - `ADMIN_SSH_PUBKEY`: Authorized SSH public key (defaults to author's Ed25519 key).
 - `HOST_KEY_PATH`: Path to persist auto-generated host key (defaults to `.ssh_host_key`).
+- `TURSO_DATABASE_URL`: Turso/libSQL database URL (`libsql://...` or local `file:...` fallback; reads `db.env` or `.env`).
+- `TURSO_AUTH_TOKEN`: Turso database JWT token (stored in untracked `db.env`).
 
 Turso is the intended hosted content database. The product limit is 1 GiB.
 

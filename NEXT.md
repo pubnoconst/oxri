@@ -11,10 +11,9 @@ Upcoming work:
   `/pilot/user/settings` profile dashboard, enroll an initial primordial passkey,
   register durable credentials (Proton Pass, security keys), and retire the
   primordial key.
-- Design the Turso data model, search index, storage limit behavior, and
-  migrations before connecting persistence.
-- Implement the journal catalog and protected management flows after those
-  designs are settled, keeping the visual treatment consistent with the editor.
-- Review the catalog, empty state, and editor together once the catalog exists.
+- Add search/filter by tag (`tag1..tag3`), bookmark filter, and storage limit
+  monitoring for the Turso database (1 GiB limit).
+- Review the populated catalog, empty state, permalink, and editor together in
+  browser visual verification.
 
 For the latest session context and commit reference, see [HANDOFF.md](HANDOFF.md).

@@ -1,24 +1,148 @@
 package journals
 
-import "github.com/oxri/oxri-go/internal/pages/shared"
+import (
+	"fmt"
+	"github.com/oxri/oxri-go/internal/pages/shared"
+)
 
-templ Page(isAuth bool) {
-	@shared.Layout("Journals - RES IMPERII", "/page-css/journals.css?v=2") {
+templ Page(isAuth bool, entries []RenderedEntry) {
+	@shared.Layout("Journals - RES IMPERII", "/page-css/journals.css?v=3") {
 		<main class="journals-page">
 			<header class="journals-header">
 				@shared.BackLink("/", "Back")
-				<h1>Journals</h1>
+				<div class="journals-title-row">
+					<h1>Journals</h1>
+					<div class="journals-actions">
+						if isAuth {
+							<a class="new-entry-link btn btn-neutral" href="/journals/new">Add New Entry</a>
+							<a class="auth-action-link" href="/pilot/user/settings">Settings</a>
+							<a class="auth-action-link" href="/logout">Sign out</a>
+						} else {
+							<a class="new-entry-link btn btn-neutral" href="/journals/new">Add New Entry</a>
+							<a class="auth-action-link" href="/login?next=/journals">Author sign in</a>
+						}
+					</div>
+				</div>
 			</header>
-			<p class="journals-empty">No entries yet.</p>
-			<div class="journals-actions">
-				<a class="new-entry-link btn btn-neutral" href="/journals/new">Add New Entry</a>
-				if isAuth {
-					<a class="auth-action-link" href="/pilot/user/settings">Settings</a>
-					<a class="auth-action-link" href="/logout">Sign out</a>
-				} else {
-					<a class="auth-action-link" href="/login">Author sign in</a>
-				}
+
+			if isAuth && len(entries) > 0 {
+				<form id="batch-form" class="journals-batch-bar" method="POST" action="/journals/batch">
+					<div class="batch-select-group">
+						<label class="batch-select-all">
+							<input type="checkbox" id="select-all-entries"/>
+							<span>Select all</span>
+						</label>
+						<span id="selected-count" class="batch-count">0 selected</span>
+					</div>
+					<div class="batch-buttons">
+						<button type="submit" name="action" value="publish_selected" class="btn btn-neutral btn-sm" data-requires-selection="true" disabled>Publish selected</button>
+						<button type="submit" name="action" value="unpublish_selected" class="btn btn-neutral btn-sm" data-requires-selection="true" disabled>Unpublish selected</button>
+						<button type="submit" name="action" value="delete_selected" class="btn btn-destructive btn-sm" data-requires-selection="true" disabled>Delete selected</button>
+						<span class="batch-divider" aria-hidden="true"></span>
+						<button type="submit" name="action" value="unpublish_all" class="btn btn-neutral btn-sm">Unpublish all</button>
+						<button type="submit" name="action" value="delete_all" class="btn btn-destructive btn-sm">Delete all</button>
+					</div>
+				</form>
+			}
+
+			if len(entries) == 0 {
+				<p class="journals-empty">No entries yet.</p>
+			} else {
+				<div class="journals-feed">
+					for _, item := range entries {
+						@EntryCard(isAuth, item, true)
+					}
+				</div>
+			}
+		</main>
+		<script src="https://platform.twitter.com/widgets.js" charset="utf-8" async></script>
+		<script src="/assets/js/journal-media.js?v=1"></script>
+		if isAuth {
+			<script src="/assets/js/journals-catalog.js?v=1"></script>
+		}
+	}
+}
+
+templ EntryPage(isAuth bool, item RenderedEntry) {
+	@shared.Layout("Journal Entry - RES IMPERII", "/page-css/journals.css?v=3") {
+		<main class="journals-page">
+			<header class="journals-header">
+				@shared.BackLink("/journals", "Journals")
+			</header>
+			<div class="journals-feed journals-single">
+				@EntryCard(isAuth, item, false)
 			</div>
 		</main>
+		<script src="https://platform.twitter.com/widgets.js" charset="utf-8" async></script>
+		<script src="/assets/js/journal-media.js?v=1"></script>
 	}
+}
+
+templ EntryCard(isAuth bool, item RenderedEntry, showSelectCheckbox bool) {
+	<article class={ "journal-card", templ.KV("is-unpublished", !item.Entry.Published) }>
+		<header class="journal-card-meta">
+			<div class="journal-meta-left">
+				if isAuth && showSelectCheckbox {
+					<input
+						type="checkbox"
+						class="entry-select-cb"
+						form="batch-form"
+						name="ids"
+						value={ fmt.Sprintf("%d", item.Entry.ID) }
+						aria-label="Select journal entry"
+					/>
+				}
+				<a class="entry-date" href={ templ.SafeURL(EntryURL(item.Entry.ID)) }>{ item.FormattedDate }</a>
+			</div>
+			<div class="journal-meta-badges">
+				if !item.Entry.Published {
+					<span class="entry-badge is-draft">Unpublished</span>
+				}
+				if item.Entry.Bookmarked {
+					<span class="entry-badge is-bookmarked">★ Bookmarked</span>
+				}
+			</div>
+		</header>
+
+		<div class="journal-media-slot journal-preview-media" data-media-url={ item.Entry.MediaURL }></div>
+
+		if len(item.Tags) > 0 {
+			<div class="journal-entry-tags">
+				for _, tag := range item.Tags {
+					<span class="journal-tag-chip">{ tag }</span>
+				}
+			</div>
+		}
+
+		<div class="journal-entry-body journal-rendered-content">
+			@templ.Raw(item.RenderedHTML)
+		</div>
+
+		if isAuth {
+			<footer class="journal-card-actions">
+				<a class="btn btn-neutral btn-sm" href={ templ.SafeURL(EditURL(item.Entry.ID)) }>Edit</a>
+				<form method="POST" action={ templ.SafeURL(ActionURL(item.Entry.ID, "bookmark")) }>
+					<button type="submit" class="btn btn-neutral btn-sm">
+						if item.Entry.Bookmarked {
+							Unbookmark
+						} else {
+							Bookmark
+						}
+					</button>
+				</form>
+				if item.Entry.Published {
+					<form method="POST" action={ templ.SafeURL(ActionURL(item.Entry.ID, "unpublish")) }>
+						<button type="submit" class="btn btn-neutral btn-sm">Unpublish</button>
+					</form>
+				} else {
+					<form method="POST" action={ templ.SafeURL(ActionURL(item.Entry.ID, "publish")) }>
+						<button type="submit" class="btn btn-neutral btn-sm">Publish</button>
+					</form>
+				}
+				<form method="POST" action={ templ.SafeURL(ActionURL(item.Entry.ID, "delete")) } onsubmit="return confirm('Delete this journal entry permanently?');">
+					<button type="submit" class="btn btn-destructive btn-sm">Delete</button>
+				</form>
+			</footer>
+		}
+	</article>
 }
