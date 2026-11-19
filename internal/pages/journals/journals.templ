@@ -6,19 +6,17 @@ import (
 )
 
 templ Page(isAuth bool, entries []RenderedEntry) {
-	@shared.Layout("Journals - RES IMPERII", "/page-css/journals.css?v=3") {
+	@shared.Layout("Journals - RES IMPERII", "/page-css/journals.css?v=4") {
 		<main class="journals-page">
 			<header class="journals-header">
 				@shared.BackLink("/", "Back")
 				<div class="journals-title-row">
 					<h1>Journals</h1>
 					<div class="journals-actions">
+						<a class="new-entry-link btn btn-neutral" href="/journals/new">Add New Entry</a>
 						if isAuth {
-							<a class="new-entry-link btn btn-neutral" href="/journals/new">Add New Entry</a>
-							<a class="auth-action-link" href="/pilot/user/settings">Settings</a>
 							<a class="auth-action-link" href="/logout">Sign out</a>
 						} else {
-							<a class="new-entry-link btn btn-neutral" href="/journals/new">Add New Entry</a>
 							<a class="auth-action-link" href="/login?next=/journals">Author sign in</a>
 						}
 					</div>
@@ -48,7 +46,7 @@ templ Page(isAuth bool, entries []RenderedEntry) {
 			if len(entries) == 0 {
 				<p class="journals-empty">No entries yet.</p>
 			} else {
-				<div class="journals-feed">
+				<div class="journals-feed is-collage-grid">
 					for _, item := range entries {
 						@EntryCard(isAuth, item, true)
 					}
@@ -64,8 +62,8 @@ templ Page(isAuth bool, entries []RenderedEntry) {
 }
 
 templ EntryPage(isAuth bool, item RenderedEntry) {
-	@shared.Layout("Journal Entry - RES IMPERII", "/page-css/journals.css?v=3") {
-		<main class="journals-page">
+	@shared.Layout("Journal Entry - RES IMPERII", "/page-css/journals.css?v=4") {
+		<main class="journals-page journals-single-page">
 			<header class="journals-header">
 				@shared.BackLink("/journals", "Journals")
 			</header>
@@ -78,11 +76,11 @@ templ EntryPage(isAuth bool, item RenderedEntry) {
 	}
 }
 
-templ EntryCard(isAuth bool, item RenderedEntry, showSelectCheckbox bool) {
-	<article class={ "journal-card", templ.KV("is-unpublished", !item.Entry.Published) }>
+templ EntryCard(isAuth bool, item RenderedEntry, isCollage bool) {
+	<article class={ "journal-card", templ.KV("is-collage", isCollage), templ.KV("is-full", !isCollage), templ.KV("is-unpublished", !item.Entry.Published) }>
 		<header class="journal-card-meta">
 			<div class="journal-meta-left">
-				if isAuth && showSelectCheckbox {
+				if isAuth && isCollage {
 					<input
 						type="checkbox"
 						class="entry-select-cb"
@@ -92,14 +90,18 @@ templ EntryCard(isAuth bool, item RenderedEntry, showSelectCheckbox bool) {
 						aria-label="Select journal entry"
 					/>
 				}
-				<a class="entry-date" href={ templ.SafeURL(EntryURL(item.Entry.ID)) }>{ item.FormattedDate }</a>
+				if isCollage {
+					<a class="entry-date entry-card-link" href={ templ.SafeURL(EntryURL(item.Entry.ID)) }>{ item.FormattedDate }</a>
+				} else {
+					<span class="entry-date">{ item.FormattedDate }</span>
+				}
 			</div>
 			<div class="journal-meta-badges">
 				if !item.Entry.Published {
 					<span class="entry-badge is-draft">Unpublished</span>
 				}
 				if item.Entry.Bookmarked {
-					<span class="entry-badge is-bookmarked">★ Bookmarked</span>
+					<span class="entry-badge is-bookmarked">★</span>
 				}
 			</div>
 		</header>
@@ -114,9 +116,13 @@ templ EntryCard(isAuth bool, item RenderedEntry, showSelectCheckbox bool) {
 			</div>
 		}
 
-		<div class="journal-entry-body journal-rendered-content">
-			@templ.Raw(item.RenderedHTML)
-		</div>
+		if isCollage {
+			<p class="journal-entry-excerpt">{ item.Excerpt }</p>
+		} else {
+			<div class="journal-entry-body journal-rendered-content">
+				@templ.Raw(item.RenderedHTML)
+			</div>
+		}
 
 		if isAuth {
 			<footer class="journal-card-actions">

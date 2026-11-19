@@ -1,10 +1,14 @@
 /* Keep the catalog aligned with the reading and editor quiet warm-neutral aesthetic. */
 .journals-page {
-  width: min(52rem, 100%);
+  width: min(72rem, 100%);
   min-height: 100svh;
   margin: 0 auto;
   padding: clamp(1.5rem, 6vw, 4.5rem) 1.25rem 5rem;
   box-sizing: border-box;
+}
+
+.journals-single-page {
+  width: min(52rem, 100%);
 }
 
 .journals-header {
@@ -124,11 +128,18 @@
   background: color-mix(in srgb, var(--page-ink) 16%, transparent);
 }
 
-/* Feed & Cards */
+/* Collage Grid & Cards */
 .journals-feed {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
+}
+
+.journals-feed.is-collage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19.5rem), 1fr));
+  gap: 1.35rem;
+  align-items: start;
 }
 
 .journals-single {
@@ -136,15 +147,52 @@
 }
 
 .journal-card {
+  position: relative;
   padding: 1.75rem;
   border: 1px solid color-mix(in srgb, var(--page-ink) 13%, transparent);
   border-radius: 0.45rem;
   background: color-mix(in srgb, var(--page) 97%, var(--page-ink));
 }
 
+.journal-card.is-collage {
+  padding: 1.15rem;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.journal-card.is-collage:hover,
+.journal-card.is-collage:focus-within {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--page-ink) 32%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, #000000 7%, transparent);
+}
+
 .journal-card.is-unpublished {
   border-style: dashed;
-  border-color: color-mix(in srgb, var(--page-ink) 26%, transparent);
+  border-color: color-mix(in srgb, var(--page-ink) 28%, transparent);
+}
+
+/* Stretched card link makes the whole card open the full-page entry */
+.entry-card-link {
+  text-decoration: none;
+}
+
+.entry-card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Elevate interactive controls above stretched link overlay */
+.journal-card.is-collage .entry-select-cb,
+.journal-card.is-collage .journal-media-slot iframe,
+.journal-card.is-collage .journal-media-slot video,
+.journal-card.is-collage .journal-media-slot audio,
+.journal-card.is-collage .journal-media-slot a,
+.journal-card.is-collage .journal-card-actions {
+  position: relative;
+  z-index: 2;
 }
 
 .journal-card-meta {
@@ -153,19 +201,24 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 0.65rem;
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.65rem;
   border-bottom: 1px solid color-mix(in srgb, var(--page-ink) 10%, transparent);
+}
+
+.journal-card.is-collage .journal-card-meta {
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.5rem;
 }
 
 .journal-meta-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .entry-date {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: inherit;
   opacity: 0.65;
   text-decoration: none;
@@ -175,21 +228,20 @@
 .entry-date:hover,
 .entry-date:focus-visible {
   opacity: 1;
-  text-decoration: underline;
 }
 
 .journal-meta-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 .entry-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.15rem 0.55rem;
+  padding: 0.12rem 0.5rem;
   border-radius: 999px;
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   letter-spacing: 0.03em;
   border: 1px solid color-mix(in srgb, var(--page-ink) 18%, transparent);
 }
@@ -212,6 +264,10 @@
   background: transparent;
 }
 
+.journal-card.is-collage .journal-media-slot {
+  margin: 0 0 0.85rem;
+}
+
 .journal-media-slot:empty {
   display: none;
 }
@@ -223,6 +279,14 @@
   border-radius: 0.55rem;
   display: block;
   box-shadow: 0 6px 20px color-mix(in srgb, #000000 14%, transparent);
+}
+
+.journal-card.is-collage .journal-media-slot img,
+.journal-card.is-collage .journal-media-slot video {
+  width: 100%;
+  max-height: 13.5rem;
+  object-fit: cover;
+  box-shadow: 0 4px 14px color-mix(in srgb, #000000 11%, transparent);
 }
 
 .journal-media-slot iframe {
@@ -246,6 +310,12 @@
   background: transparent;
 }
 
+.journal-card.is-collage .journal-media-slot .tweet-embed-container {
+  max-height: 22rem;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
 .journal-media-slot .tweet-embed-container iframe,
 .journal-media-slot .twitter-tweet {
   aspect-ratio: auto !important;
@@ -260,19 +330,19 @@
 .journal-media-slot .tweet-fallback-card {
   width: 100%;
   max-width: 480px;
-  padding: 1rem 1.25rem;
+  padding: 0.85rem 1rem;
   border: 1px solid color-mix(in srgb, var(--page-ink) 16%, transparent);
   border-radius: 0.55rem;
   background: color-mix(in srgb, var(--page) 97%, var(--page-ink));
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.35rem;
   box-shadow: 0 4px 14px color-mix(in srgb, #000000 8%, transparent);
 }
 
 .journal-media-slot .tweet-fallback-badge {
   font-family: system-ui, sans-serif;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   opacity: 0.55;
@@ -280,6 +350,7 @@
 
 .journal-media-slot .tweet-fallback-card a {
   color: inherit;
+  font-size: 0.88rem;
   text-decoration: underline;
   text-underline-offset: 0.16em;
   overflow-wrap: anywhere;
@@ -289,20 +360,29 @@
 .journal-entry-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 1rem;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
 }
 
 .journal-entry-tags .journal-tag-chip {
-  padding: 0.16rem 0.52rem;
+  padding: 0.14rem 0.48rem;
   border: 1px solid color-mix(in srgb, var(--page-ink) 16%, transparent);
   border-radius: 999px;
   font-family: system-ui, sans-serif;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   letter-spacing: 0.02em;
 }
 
-/* Prose content */
+/* Compact 280-char Excerpt in Collage */
+.journal-entry-excerpt {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  opacity: 0.88;
+  overflow-wrap: anywhere;
+}
+
+/* Full Reading Prose content */
 .journal-entry-body {
   font-size: 1.15rem;
   line-height: 1.7;
@@ -339,10 +419,21 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
+  gap: 0.45rem;
+  margin-top: 1.25rem;
+  padding-top: 0.85rem;
   border-top: 1px solid color-mix(in srgb, var(--page-ink) 10%, transparent);
+}
+
+.journal-card.is-collage .journal-card-actions {
+  margin-top: 1rem;
+  padding-top: 0.7rem;
+}
+
+.journal-card.is-collage .journal-card-actions .btn-sm {
+  min-height: 1.8rem;
+  padding: 0.22rem 0.55rem;
+  font-size: 0.78rem;
 }
 
 .journal-card-actions form {
@@ -364,5 +455,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-action-link { transition: none; }
+  .auth-action-link,
+  .journal-card.is-collage { transition: none; }
 }

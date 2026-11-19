@@ -162,8 +162,8 @@ func TestJournalsPage(t *testing.T) {
 	if !strings.Contains(authBody, "Sign out") {
 		t.Errorf("authenticated journals view should offer Sign out link")
 	}
-	if !strings.Contains(authBody, "/pilot/user/settings") {
-		t.Errorf("authenticated journals view should offer Settings link")
+	if strings.Contains(authBody, "/pilot/user/settings") {
+		t.Errorf("authenticated journals view should NOT expose user Settings link")
 	}
 }
 
@@ -571,12 +571,16 @@ func TestJournalPersistenceAndManagement(t *testing.T) {
 	}
 	entryID := entries[0].ID
 
-	// 4. Public /journals displays the published entry
+	// 4. Public /journals displays collage preview with link to full entry
 	pubReq := httptest.NewRequest(http.MethodGet, "/journals", nil)
 	pubRec := httptest.NewRecorder()
 	server.ServeHTTP(pubRec, pubReq)
-	if pubRec.Code != http.StatusOK || !strings.Contains(pubRec.Body.String(), "Valid Journal Entry") {
+	pubBody := pubRec.Body.String()
+	if pubRec.Code != http.StatusOK || !strings.Contains(pubBody, "Valid Journal Entry") {
 		t.Errorf("expected published entry on public /journals, code=%d", pubRec.Code)
+	}
+	if !strings.Contains(pubBody, "is-collage-grid") || !strings.Contains(pubBody, fmt.Sprintf("/journals/%d", entryID)) {
+		t.Errorf("expected collage grid and clickable link to /journals/%d", entryID)
 	}
 
 	// 5. Unpublish single entry hides it from public /journals and /journals/{id}

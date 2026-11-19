@@ -104,12 +104,13 @@ go run github.com/magefile/mage run
 - `/book-i` renders the Markdown in `rawcontent/book-i.md`, the canonical Book I
   source tracked in this private repository. Raw HTML in the source is excluded
   from rendered output.
-- `/journals` renders published journal entries from Turso/SQLite (showing
-  tactile media previews, tags, and safe Markdown prose). When authenticated as
+- `/journals` renders a compact multi-column preview collage of published journal
+  entries from Turso/SQLite (showing compact media embeds, tags, and a 280-character
+  excerpt; clicking any card navigates to `/journals/{id}`). When authenticated as
   the author, unpublished drafts are also shown alongside Edit, Bookmark,
   Publish/Unpublish, Delete, and multi-select batch management controls.
-- `/journals/{id}` renders a single journal entry permalink (unpublished entries
-  return 404 unless authenticated).
+- `/journals/{id}` renders the full-page journal entry with full Markdown prose
+  and uncropped tactile media (unpublished entries return 404 unless authenticated).
 - `/journals/new` (and `/journals/{id}/edit` when editing) provides a two-pane
   composition environment with schema-enforced live validation (required media
   link 1–128 chars, up to 3 tags <= 4 chars each, required Markdown body) and
