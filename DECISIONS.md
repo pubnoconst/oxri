@@ -31,6 +31,11 @@ Product direction
 - Avoid monoliths. Keep the codebase structured as small, focused modules with
   clear single responsibilities (e.g., separate route wiring from domain route
   handlers, isolate shared CSS/JS primitives from page-specific views).
+- Unified CSS design tokens across all pages. Every stylesheet must use the same
+  shared CSS custom properties defined in `assets/css/overrides.css` for color
+  surfaces/borders/accents, font stacks (`--font-serif`, `--font-sans`, `--font-mono`),
+  regular `400` heading weights, border radii (`--radius-card`, `--radius-control`,
+  `--radius-pill`), and page/card padding and margin scales.
 - Minimalism is a deliberate constraint. Keep the interface quiet and focused;
   avoid adding decoration, controls, or explanatory copy without a clear need.
 - EB Garamond is the primary typeface. It is loaded from Google Fonts in the
@@ -126,6 +131,18 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261120-007 - Unified CSS design tokens for colors, typography, radii, padding, and margins across all pages:
+  - Define canonical CSS custom properties in `assets/css/overrides.css` (`:root`)
+    for surfaces (`--surface-card`, `--surface-subtle`), borders (`--border-subtle`,
+    `--border-card`, `--border-input`, `--border-focus`), semantic Ayu-aligned
+    accents (`--accent-active`, `--accent-warn`, `--accent-danger`), font stacks
+    (`--font-serif`, `--font-sans`, `--font-mono`), border radii (`--radius-card: 0.5rem`,
+    `--radius-control: 0.35rem`, `--radius-pill: 999px`), and page/card spacing
+    (`--space-page-y`, `--space-page-x`, `--space-card-pad`, `--space-card-pad-sm`,
+    `--space-header-top`, `--space-header-bottom`).
+  - Refactor all page stylesheets (`landing`, `booki`, `journals`, `editor`, `login`,
+    `pilot`, `errorpage`) to consume these shared tokens and enforce regular `400`
+    typographic weights uniformly.
 - D-20261120-006 - Modular handler split, race-free timeout buffering, HTTP hardening, and shared media CSS deduplication:
   - Enforce the architectural rule: do not create monoliths; organize code into
     small, focused modules (`server.go` for router wiring, `handlers_journals.go`,
