@@ -117,6 +117,13 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261120-003 - Turso 90% free-tier storage budget and earliest-unpublished eviction policy:
+  - Supersede the earlier 1 GiB storage limit with up to 90% of Turso's free-tier
+    storage capacity (4.5 GB out of the 5 GB free tier).
+  - When database usage exceeds the 90% threshold during entry creation or update,
+    prompt the author to either manually delete existing entries first or
+    automatically delete the earliest unpublished entries (`published = 0` ordered
+    by `created_at ASC, id ASC`) to reclaim capacity.
 - D-20261120-002 - Collage-style compact journal catalog and navigation separation:
   - Remove `Settings` (`/pilot/user/settings`) navigation link from `/journals`,
     keeping user settings isolated on the landing page auth navigation stack.
