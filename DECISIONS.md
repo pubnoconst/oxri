@@ -28,6 +28,9 @@ Product direction
   English alphanumeric, Latin, and Greek characters (plus standard prose/Markdown
   punctuation where applicable), and reject emojis, control characters, zero-width
   / bidi spoofing codepoints, and non-whitelisted scripts.
+- Avoid monoliths. Keep the codebase structured as small, focused modules with
+  clear single responsibilities (e.g., separate route wiring from domain route
+  handlers, isolate shared CSS/JS primitives from page-specific views).
 - Minimalism is a deliberate constraint. Keep the interface quiet and focused;
   avoid adding decoration, controls, or explanatory copy without a clear need.
 - EB Garamond is the primary typeface. It is loaded from Google Fonts in the
@@ -123,6 +126,21 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261120-006 - Modular handler split, race-free timeout buffering, HTTP hardening, and shared media CSS deduplication:
+  - Enforce the architectural rule: do not create monoliths; organize code into
+    small, focused modules (`server.go` for router wiring, `handlers_journals.go`,
+    `handlers_auth.go`, and `handlers_pilot.go` for domain handlers).
+  - Fix the concurrent `ResponseWriter` data race in `TimeoutMiddleware` by
+    buffering handler output inside a mutex-guarded `timeoutWriter`, and log
+    opaque error reference codes (`ref`) with their internal cause privately to
+    `os.Stderr` in `RenderErrorWithCause`.
+  - Harden the HTTP server with explicit `ReadHeaderTimeout`, `ReadTimeout`,
+    `WriteTimeout`, `IdleTimeout`, a 1 MiB request body cap (`MaxBodyBytesMiddleware`),
+    and cross-origin `POST` protection (`CrossOriginMiddleware` checking `Sec-Fetch-Site`
+    and `Origin`).
+  - Deduplicate shared tactile media CSS rules (`.journal-preview-media`,
+    `.journal-media-slot`, `.tweet-embed-container`, `.tweet-fallback-card`) into
+    `assets/css/overrides.css`.
 - D-20261120-005 - "ALL INPUTS ARE EVIL" input sanitization and Latin/Greek/alphanumeric character-set whitelist:
   - Adopt the core security axiom `"ALL INPUTS ARE EVIL"` in `DECISIONS.md` and
     `README.md`.
