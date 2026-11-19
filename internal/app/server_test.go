@@ -191,7 +191,7 @@ func TestJournalEditorPage(t *testing.T) {
 	if !strings.Contains(body, "journal-media.js?v=1") {
 		t.Errorf("missing journal-media.js script tag in editor")
 	}
-	if !strings.Contains(body, "journal-editor.js?v=6") {
+	if !strings.Contains(body, "journal-editor.js?v=7") {
 		t.Errorf("missing versioned journal-editor.js script tag")
 	}
 	if !strings.Contains(body, `maxlength="128"`) {
@@ -548,7 +548,23 @@ func TestJournalPersistenceAndManagement(t *testing.T) {
 		t.Errorf("expected tag validation error message in body")
 	}
 
-	// 3. Valid POST creates entry and redirects to /journals
+	// 2b. Server rejects duplicate tags (case-insensitive) with 422
+	dupForm := url.Values{
+		"media_url": {"https://x.com/user/status/12345"},
+		"tags":      {"log, LOG"},
+		"body":      {"# Test body"},
+		"published": {"1"},
+	}
+	dupReq := httptest.NewRequest(http.MethodPost, "/journals", strings.NewReader(dupForm.Encode()))
+	dupReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	dupReq.AddCookie(cookie)
+	dupRec := httptest.NewRecorder()
+	server.ServeHTTP(dupRec, dupReq)
+	if dupRec.Code != http.StatusUnprocessableEntity || !strings.Contains(dupRec.Body.String(), "duplicate tag") {
+		t.Fatalf("expected 422 duplicate tag error, got code=%d", dupRec.Code)
+	}
+
+	// 3. Valid POST creates entry, normalizes tags to Title Case, and redirects to /journals
 	goodForm := url.Values{
 		"media_url":  {"https://x.com/user/status/12345"},
 		"tags":       {"go, dev"},
@@ -569,9 +585,20 @@ func TestJournalPersistenceAndManagement(t *testing.T) {
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 entry in DB, got %d", len(entries))
 	}
+	if entries[0].Tag1 != "Go" || entries[0].Tag2 != "Dev" {
+		t.Errorf("expected Title Case tags [Go, Dev], got [%s, %s]", entries[0].Tag1, entries[0].Tag2)
+	}
 	entryID := entries[0].ID
 
-	// 4. Public /journals displays collage preview with link to full entry
+	// 3b. Editor populates data-existing-tags for autocomplete
+	newEditorReq := httptest.NewRequest(http.MethodGet, "/journals/new", nil)
+	newEditorRec := httptest.NewRecorder()
+	server.ServeHTTP(newEditorRec, newEditorReq)
+	if !strings.Contains(newEditorRec.Body.String(), `data-existing-tags="Dev,Go"`) {
+		t.Errorf("expected data-existing-tags=\"Dev,Go\" in /journals/new for autocomplete")
+	}
+
+	// 4. Public /journals displays collage preview with link to full entry, search, and tag filter
 	pubReq := httptest.NewRequest(http.MethodGet, "/journals", nil)
 	pubRec := httptest.NewRecorder()
 	server.ServeHTTP(pubRec, pubReq)
@@ -581,6 +608,27 @@ func TestJournalPersistenceAndManagement(t *testing.T) {
 	}
 	if !strings.Contains(pubBody, "is-collage-grid") || !strings.Contains(pubBody, fmt.Sprintf("/journals/%d", entryID)) {
 		t.Errorf("expected collage grid and clickable link to /journals/%d", entryID)
+	}
+
+	searchHitReq := httptest.NewRequest(http.MethodGet, "/journals?q=Persisted", nil)
+	searchHitRec := httptest.NewRecorder()
+	server.ServeHTTP(searchHitRec, searchHitReq)
+	if !strings.Contains(searchHitRec.Body.String(), "Valid Journal Entry") {
+		t.Errorf("expected search query ?q=Persisted to find entry")
+	}
+
+	searchMissReq := httptest.NewRequest(http.MethodGet, "/journals?q=NonexistentKeyword", nil)
+	searchMissRec := httptest.NewRecorder()
+	server.ServeHTTP(searchMissRec, searchMissReq)
+	if strings.Contains(searchMissRec.Body.String(), "Valid Journal Entry") || !strings.Contains(searchMissRec.Body.String(), "No matching entries found.") {
+		t.Errorf("expected search miss to show 'No matching entries found.'")
+	}
+
+	tagFilterReq := httptest.NewRequest(http.MethodGet, "/journals?tag=Go", nil)
+	tagFilterRec := httptest.NewRecorder()
+	server.ServeHTTP(tagFilterRec, tagFilterReq)
+	if !strings.Contains(tagFilterRec.Body.String(), "Valid Journal Entry") {
+		t.Errorf("expected tag filter ?tag=Go to find entry")
 	}
 
 	// 5. Unpublish single entry hides it from public /journals and /journals/{id}

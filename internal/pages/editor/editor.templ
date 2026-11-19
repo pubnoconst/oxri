@@ -10,7 +10,7 @@ templ Page(isAuth bool) {
 }
 
 templ FormPage(isAuth bool, data FormData) {
-	@shared.Layout(data.PageTitle(), "/page-css/journals-new.css?v=2") {
+	@shared.Layout(data.PageTitle(), "/page-css/journals-new.css?v=3") {
 		<main class="journal-editor-page">
 			<header class="journal-editor-header">
 				@shared.BackLink("/journals", "Journals")
@@ -67,10 +67,13 @@ templ FormPage(isAuth bool, data FormData) {
 								id="journal-tags"
 								name="tags"
 								type="text"
-								placeholder="log, dev, note"
+								autocomplete="off"
+								placeholder="Log, Dev, Note"
 								value={ data.Tags }
+								data-existing-tags={ data.ExistingTagsCSV() }
 							/>
-							<p class="field-hint">Up to 3 comma-separated tags, max 4 characters each.</p>
+							<div id="tag-suggestions" class="tag-suggestions" role="listbox" aria-label="Tag suggestions"></div>
+							<p class="field-hint">Up to 3 unique Title Case tags, max 4 characters each.</p>
 							<p id="tags-error" class="field-error" aria-live="polite"></p>
 						</div>
 						<div class="editor-field editor-content-field">
@@ -123,6 +126,6 @@ templ FormPage(isAuth bool, data FormData) {
 		<script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.17/dist/purify.min.js"></script>
 		<script src="https://platform.twitter.com/widgets.js" charset="utf-8" async></script>
 		<script src="/assets/js/journal-media.js?v=1"></script>
-		<script src="/assets/js/journal-editor.js?v=6"></script>
+		<script src="/assets/js/journal-editor.js?v=7"></script>
 	}
 }

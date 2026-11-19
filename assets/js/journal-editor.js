@@ -1,5 +1,6 @@
 /*
- * Journal editor preview and schema constraint validation.
+ * Journal editor preview, Title Case tag auto-capitalization, autocomplete,
+ * and schema constraint validation.
  * Reuses window.ResImperiiMedia for shared media preview rendering.
  */
 (() => {
@@ -15,6 +16,7 @@
   const mediaError = document.getElementById("media-error");
   const tagsCount = document.getElementById("tags-count");
   const tagsError = document.getElementById("tags-error");
+  const tagSuggestions = document.getElementById("tag-suggestions");
   const bodyError = document.getElementById("body-error");
   const submitBtn = document.getElementById("publish-submit-btn");
   const form = document.getElementById("journal-editor-form");
@@ -32,9 +34,37 @@
   const { safeUrl, createMedia } = window.ResImperiiMedia;
   const markdown = window.markdownit({ html: false, linkify: false, breaks: false });
 
+  const existingTags = (tagsInput.getAttribute("data-existing-tags") || "")
+    .split(",")
+    .map((t) => toTitleCase(t.trim()))
+    .filter(Boolean);
+
   let isMediaValid = false;
   let isTagsValid = true;
   let isBodyValid = false;
+
+  function toTitleCase(str) {
+    const trimmed = str.trim();
+    if (!trimmed) return "";
+    const chars = Array.from(trimmed);
+    return chars[0].toUpperCase() + chars.slice(1).join("").toLowerCase();
+  }
+
+  // Capitalize each comma-separated token in place while preserving leading/trailing
+  // spaces so typing commas and spaces feels completely natural.
+  function autoCapitalizeInputValue(rawVal) {
+    return rawVal
+      .split(",")
+      .map((seg) => {
+        const match = seg.match(/^(\s*)(\S+)([\s\S]*)$/);
+        if (!match) return seg;
+        const [, lead, word, tail] = match;
+        const chars = Array.from(word);
+        const titled = chars[0].toUpperCase() + chars.slice(1).join("").toLowerCase();
+        return lead + titled + tail;
+      })
+      .join(",");
+  }
 
   function syncSubmitButton() {
     if (!submitBtn) return;
@@ -96,16 +126,89 @@
     syncSubmitButton();
   }
 
+  function applySuggestion(selectedTag) {
+    const segments = tagsInput.value.split(",");
+    segments[segments.length - 1] = (segments.length > 1 ? " " : "") + selectedTag;
+    const filledCount = segments.map((s) => s.trim()).filter(Boolean).length;
+    tagsInput.value = filledCount < MAX_TAG_COUNT
+      ? segments.join(",") + ", "
+      : segments.join(",");
+    tagsInput.focus();
+    updateTags();
+  }
+
+  function renderSuggestions(chips) {
+    if (!tagSuggestions) return;
+    tagSuggestions.replaceChildren();
+    if (existingTags.length === 0) return;
+
+    const segments = tagsInput.value.split(",");
+    const activeToken = toTitleCase(segments[segments.length - 1] || "");
+    const committedSet = new Set(
+      segments
+        .slice(0, -1)
+        .map((s) => toTitleCase(s))
+        .filter(Boolean)
+    );
+
+    if (committedSet.size >= MAX_TAG_COUNT) return;
+
+    const matches = existingTags.filter((tag) => {
+      if (committedSet.has(tag)) return false;
+      if (!activeToken) return true;
+      return tag.startsWith(activeToken) && tag !== activeToken;
+    });
+
+    if (matches.length === 0) return;
+
+    const label = document.createElement("span");
+    label.className = "tag-suggestion-label";
+    label.textContent = "Suggestions:";
+    tagSuggestions.append(label);
+
+    matches.slice(0, 8).forEach((tag) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tag-suggestion-pill";
+      btn.setAttribute("role", "option");
+      btn.textContent = tag;
+      btn.addEventListener("click", () => applySuggestion(tag));
+      tagSuggestions.append(btn);
+    });
+  }
+
   function updateTags() {
+    // Auto-capitalize while preserving cursor position
+    const start = tagsInput.selectionStart;
+    const end = tagsInput.selectionEnd;
+    const capitalizedVal = autoCapitalizeInputValue(tagsInput.value);
+    if (tagsInput.value !== capitalizedVal) {
+      tagsInput.value = capitalizedVal;
+      if (typeof start === "number" && typeof end === "number") {
+        tagsInput.setSelectionRange(start, end);
+      }
+    }
+
     const chips = tagsInput.value
       .split(",")
-      .map((tag) => tag.trim())
+      .map((tag) => toTitleCase(tag))
       .filter(Boolean);
 
     if (tagsCount) {
       tagsCount.textContent = `${chips.length} / ${MAX_TAG_COUNT}`;
       tagsCount.classList.toggle("is-invalid", chips.length > MAX_TAG_COUNT);
     }
+
+    const seen = new Set();
+    const duplicateSet = new Set();
+    let firstDuplicate = "";
+    chips.forEach((t) => {
+      if (seen.has(t)) {
+        duplicateSet.add(t);
+        if (!firstDuplicate) firstDuplicate = t;
+      }
+      seen.add(t);
+    });
 
     let errText = "";
     if (chips.length > MAX_TAG_COUNT) {
@@ -114,19 +217,26 @@
       const tooLong = chips.find((t) => Array.from(t).length > MAX_TAG_LEN);
       if (tooLong) {
         errText = `Tag "${tooLong}" exceeds ${MAX_TAG_LEN} characters.`;
+      } else if (firstDuplicate) {
+        errText = `Duplicate tag "${firstDuplicate}" (tags must be unique).`;
       }
     }
 
     isTagsValid = errText === "";
     if (tagsError) tagsError.textContent = errText;
 
+    const seenInRender = new Set();
     tagsPreview.replaceChildren(...chips.map((tag) => {
       const chip = document.createElement("span");
       const over = Array.from(tag).length > MAX_TAG_LEN;
-      chip.className = over ? "journal-tag-chip is-invalid" : "journal-tag-chip";
+      const isDup = seenInRender.has(tag);
+      seenInRender.add(tag);
+      chip.className = (over || isDup) ? "journal-tag-chip is-invalid" : "journal-tag-chip";
       chip.textContent = tag;
       return chip;
     }));
+
+    renderSuggestions(chips);
     syncSubmitButton();
   }
 
@@ -139,6 +249,18 @@
     renderedContent.innerHTML = window.DOMPurify.sanitize(markdown.render(raw));
     syncSubmitButton();
   }
+
+  tagsInput.addEventListener("keydown", (e) => {
+    if (e.key === "Tab" && tagSuggestions) {
+      const segments = tagsInput.value.split(",");
+      const activeToken = (segments[segments.length - 1] || "").trim();
+      const firstPill = tagSuggestions.querySelector(".tag-suggestion-pill");
+      if (activeToken && firstPill) {
+        e.preventDefault();
+        applySuggestion(firstPill.textContent);
+      }
+    }
+  });
 
   contentInput.addEventListener("input", updateContent);
   mediaInput.addEventListener("input", updateMedia);

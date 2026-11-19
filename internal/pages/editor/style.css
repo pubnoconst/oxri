@@ -118,6 +118,46 @@
   display: none;
 }
 
+.tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+
+.tag-suggestions:empty {
+  display: none;
+}
+
+.tag-suggestion-label {
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  opacity: 0.48;
+  margin-right: 0.15rem;
+}
+
+.tag-suggestion-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.14rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 20%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--page-ink);
+  font-family: system-ui, sans-serif;
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.tag-suggestion-pill:hover,
+.tag-suggestion-pill:focus-visible {
+  border-color: color-mix(in srgb, var(--page-ink) 45%, transparent);
+  background: color-mix(in srgb, var(--page-ink) 8%, transparent);
+}
+
 .editor-options {
   display: flex;
   flex-wrap: wrap;

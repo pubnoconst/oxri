@@ -67,17 +67,36 @@ func NewServer(assetsDir string, authSvc *auth.Service, store *db.Store) http.Ha
 	// Journals Public & Composition Routes
 	r.Get("/journals", func(w http.ResponseWriter, req *http.Request) {
 		isAuth := auth.IsAuthenticated(req.Context())
+		q := strings.TrimSpace(req.URL.Query().Get("q"))
+		var selectedTags []string
+		for _, rawTag := range req.URL.Query()["tag"] {
+			if norm := db.FormatTagTitleCase(rawTag); norm != "" {
+				selectedTags = append(selectedTags, norm)
+			}
+		}
+
 		var entries []db.Journal
+		var allTags []string
 		if store != nil {
 			var err error
-			entries, err = store.List(req.Context(), isAuth)
+			entries, err = store.ListFiltered(req.Context(), db.ListFilter{
+				IncludeUnpublished: isAuth,
+				Query:              q,
+				Tags:               selectedTags,
+			})
 			if err != nil {
 				RenderError(w, req, http.StatusInternalServerError)
 				return
 			}
+			allTags, _ = store.DistinctTags(req.Context(), isAuth)
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = journals.Page(isAuth, journals.RenderEntries(entries)).Render(req.Context(), w)
+		_ = journals.CatalogPage(isAuth, journals.CatalogView{
+			Entries:      journals.RenderEntries(entries),
+			AllTags:      allTags,
+			Query:        q,
+			SelectedTags: selectedTags,
+		}).Render(req.Context(), w)
 	})
 	r.Get("/page-css/journals.css", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")
@@ -88,7 +107,15 @@ func NewServer(assetsDir string, authSvc *auth.Service, store *db.Store) http.Ha
 	r.Get("/journals/new", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		isAuth := auth.IsAuthenticated(req.Context())
-		_ = editor.Page(isAuth).Render(req.Context(), w)
+		var existingTags []string
+		if store != nil {
+			existingTags, _ = store.DistinctTags(req.Context(), true)
+		}
+		_ = editor.FormPage(isAuth, editor.FormData{
+			Published:    true,
+			Body:         editor.DefaultBody,
+			ExistingTags: existingTags,
+		}).Render(req.Context(), w)
 	})
 	r.Get("/journal-editor", func(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/journals/new", http.StatusMovedPermanently)
@@ -144,6 +171,7 @@ func NewServer(assetsDir string, authSvc *auth.Service, store *db.Store) http.Ha
 			if _, err := store.Create(req.Context(), in); err != nil {
 				if errors.Is(err, db.ErrInvalidInput) {
 					formData.ErrorMsg = err.Error()
+					formData.ExistingTags, _ = store.DistinctTags(req.Context(), true)
 					w.Header().Set("Content-Type", "text/html; charset=utf-8")
 					w.WriteHeader(http.StatusUnprocessableEntity)
 					_ = editor.FormPage(true, formData).Render(req.Context(), w)
@@ -174,15 +202,17 @@ func NewServer(assetsDir string, authSvc *auth.Service, store *db.Store) http.Ha
 				RenderError(w, req, http.StatusInternalServerError)
 				return
 			}
+			existingTags, _ := store.DistinctTags(req.Context(), true)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			_ = editor.FormPage(true, editor.FormData{
-				IsEdit:     true,
-				EntryID:    entry.ID,
-				MediaURL:   entry.MediaURL,
-				Tags:       entry.TagsString(),
-				Body:       entry.Body,
-				Bookmarked: entry.Bookmarked,
-				Published:  entry.Published,
+				IsEdit:       true,
+				EntryID:      entry.ID,
+				MediaURL:     entry.MediaURL,
+				Tags:         entry.TagsString(),
+				Body:         entry.Body,
+				Bookmarked:   entry.Bookmarked,
+				Published:    entry.Published,
+				ExistingTags: existingTags,
 			}).Render(req.Context(), w)
 		})
 
@@ -202,6 +232,7 @@ func NewServer(assetsDir string, authSvc *auth.Service, store *db.Store) http.Ha
 			if err := store.Update(req.Context(), id, in); err != nil {
 				if errors.Is(err, db.ErrInvalidInput) {
 					formData.ErrorMsg = err.Error()
+					formData.ExistingTags, _ = store.DistinctTags(req.Context(), true)
 					w.Header().Set("Content-Type", "text/html; charset=utf-8")
 					w.WriteHeader(http.StatusUnprocessableEntity)
 					_ = editor.FormPage(true, formData).Render(req.Context(), w)

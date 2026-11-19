@@ -53,6 +53,8 @@ func TestValidateInput(t *testing.T) {
 		{"media url over 128 chars", func(in *JournalInput) { in.MediaURL = "https://example.com/" + strings.Repeat("a", 115) }},
 		{"more than 3 tags", func(in *JournalInput) { in.Tags = []string{"a", "b", "c", "d"} }},
 		{"tag over 4 chars", func(in *JournalInput) { in.Tags = []string{"notes"} }},
+		{"duplicate tags exact", func(in *JournalInput) { in.Tags = []string{"Log", "Log"} }},
+		{"duplicate tags case-insensitive", func(in *JournalInput) { in.Tags = []string{"log", "LOG"} }},
 		{"empty body", func(in *JournalInput) { in.Body = "   \n\t " }},
 	}
 
@@ -197,8 +199,37 @@ func TestStoreCRUDAndBatchLifecycle(t *testing.T) {
 		t.Fatalf("Update failed: %v", err)
 	}
 	updated, err := store.Get(ctx, e2.ID, false)
-	if err != nil || !updated.Published || updated.Tag1 != "edit" || updated.Body != "Updated second entry" {
+	if err != nil || !updated.Published || updated.Tag1 != "Edit" || updated.Body != "Updated second entry" {
 		t.Errorf("Update verification failed: %+v, err=%v", updated, err)
+	}
+
+	// 5b. DistinctTags & ListFiltered (search + tag filter)
+	tags, err := store.DistinctTags(ctx, false)
+	if err != nil {
+		t.Fatalf("DistinctTags failed: %v", err)
+	}
+	if len(tags) < 3 {
+		t.Errorf("expected at least 3 distinct tags, got %v", tags)
+	}
+
+	searchRes, err := store.ListFiltered(ctx, ListFilter{IncludeUnpublished: false, Query: "Updated"})
+	if err != nil || len(searchRes) != 1 || searchRes[0].ID != e2.ID {
+		t.Errorf("expected search for 'Updated' to return e2, got %+v, err=%v", searchRes, err)
+	}
+
+	tagRes, err := store.ListFiltered(ctx, ListFilter{IncludeUnpublished: false, Tags: []string{"log", "dev"}})
+	if err != nil || len(tagRes) != 1 || tagRes[0].ID != e3.ID {
+		t.Errorf("expected tag filter [Log, Dev] to return e3, got %+v, err=%v", tagRes, err)
+	}
+
+	// 5c. Verify DB-level CHECK constraints reject non-Title-Case or duplicate tags
+	_, rawErr1 := store.db.ExecContext(ctx, `INSERT INTO journals (id, created_at, media_url, tag1, body) VALUES (999, 999, 'https://example.com/a', 'lowercase', 'body');`)
+	if rawErr1 == nil {
+		t.Errorf("expected SQLite CHECK constraint to reject non-Title-Case tag")
+	}
+	_, rawErr2 := store.db.ExecContext(ctx, `INSERT INTO journals (id, created_at, media_url, tag1, tag2, body) VALUES (998, 998, 'https://example.com/a', 'Log', 'Log', 'body');`)
+	if rawErr2 == nil {
+		t.Errorf("expected SQLite CHECK constraint to reject duplicate tag1 and tag2")
 	}
 
 	// 6. ToggleBookmark

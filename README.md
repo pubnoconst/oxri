@@ -104,18 +104,20 @@ go run github.com/magefile/mage run
 - `/book-i` renders the Markdown in `rawcontent/book-i.md`, the canonical Book I
   source tracked in this private repository. Raw HTML in the source is excluded
   from rendered output.
-- `/journals` renders a compact multi-column preview collage of published journal
-  entries from Turso/SQLite (showing compact media embeds, tags, and a 280-character
-  excerpt; clicking any card navigates to `/journals/{id}`). When authenticated as
-  the author, unpublished drafts are also shown alongside Edit, Bookmark,
-  Publish/Unpublish, Delete, and multi-select batch management controls.
+- `/journals` renders a fluid multi-column preview collage of published journal
+  entries from Turso/SQLite (showing compact media embeds, Title Case tags, and a
+  280-character excerpt; clicking any card navigates to `/journals/{id}`), paired
+  with keyword search (`?q=...`) and multi-tag filtering (`?tag=...`). When
+  authenticated as the author, unpublished drafts are also shown alongside Edit,
+  Bookmark, Publish/Unpublish, Delete, and multi-select batch management controls.
 - `/journals/{id}` renders the full-page journal entry with full Markdown prose
   and uncropped tactile media (unpublished entries return 404 unless authenticated).
 - `/journals/new` (and `/journals/{id}/edit` when editing) provides a two-pane
   composition environment with schema-enforced live validation (required media
-  link 1–128 chars, up to 3 tags <= 4 chars each, required Markdown body) and
-  scroll-synchronized preview (supporting YouTube, Vimeo, audio/video/images,
-  and X / Twitter post embeds).
+  link 1–128 chars, up to 3 unique Title Case tags <= 4 chars each with live
+  tag autocomplete suggestions, required Markdown body) and scroll-synchronized
+  preview (supporting YouTube, Vimeo, audio/video/images, and X / Twitter post
+  embeds).
 - Standardized buttons: interactive actions use semantic classes (`.btn-encouraged`
   for primary actions like publishing, `.btn-neutral` for utility/secondary
   actions, and `.btn-destructive` for deletions).

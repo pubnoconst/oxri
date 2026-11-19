@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"html"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -31,6 +32,57 @@ type RenderedEntry struct {
 	Excerpt       string
 	FormattedDate string
 	Tags          []string
+}
+
+// CatalogView holds rendered entries alongside search query and active tag filters.
+type CatalogView struct {
+	Entries      []RenderedEntry
+	AllTags      []string
+	Query        string
+	SelectedTags []string
+}
+
+func (v CatalogView) HasFilters() bool {
+	return strings.TrimSpace(v.Query) != "" || len(v.SelectedTags) > 0
+}
+
+func (v CatalogView) IsTagSelected(tag string) bool {
+	formatted := db.FormatTagTitleCase(tag)
+	for _, t := range v.SelectedTags {
+		if db.FormatTagTitleCase(t) == formatted {
+			return true
+		}
+	}
+	return false
+}
+
+// ToggleTagURL returns a /journals URL that toggles `tag` in the selected filter set
+// while preserving the current search query `q`.
+func (v CatalogView) ToggleTagURL(tag string) string {
+	target := db.FormatTagTitleCase(tag)
+	vals := url.Values{}
+	if strings.TrimSpace(v.Query) != "" {
+		vals.Set("q", strings.TrimSpace(v.Query))
+	}
+	found := false
+	for _, existing := range v.SelectedTags {
+		norm := db.FormatTagTitleCase(existing)
+		if norm == target {
+			found = true
+			continue
+		}
+		if norm != "" {
+			vals.Add("tag", norm)
+		}
+	}
+	if !found && target != "" {
+		vals.Add("tag", target)
+	}
+	encoded := vals.Encode()
+	if encoded == "" {
+		return "/journals"
+	}
+	return "/journals?" + encoded
 }
 
 // RenderMarkdown converts Markdown prose into sanitized HTML (raw HTML omitted by goldmark).

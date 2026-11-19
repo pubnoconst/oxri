@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/tursodatabase/libsql-client-go/libsql"
@@ -22,8 +23,8 @@ const (
 )
 
 var (
-	ErrNotFound         = errors.New("journal entry not found")
-	ErrInvalidInput     = errors.New("invalid journal input")
+	ErrNotFound     = errors.New("journal entry not found")
+	ErrInvalidInput = errors.New("invalid journal input")
 )
 
 // Journal represents a persisted journal entry in the `journals` table.
@@ -68,7 +69,28 @@ type JournalInput struct {
 	Published  bool
 }
 
-// ParseTags splits a comma-separated tag string into trimmed non-empty tags.
+// ListFilter specifies optional search and tag criteria when listing journal entries.
+type ListFilter struct {
+	IncludeUnpublished bool
+	Query              string
+	Tags               []string
+}
+
+// FormatTagTitleCase normalizes a tag string to Title Case (first rune uppercase, rest lowercase).
+func FormatTagTitleCase(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+	runes := []rune(trimmed)
+	first := string(unicode.ToUpper(runes[0]))
+	if len(runes) == 1 {
+		return first
+	}
+	return first + strings.ToLower(string(runes[1:]))
+}
+
+// ParseTags splits a comma-separated tag string into trimmed, Title-Cased non-empty tags.
 func ParseTags(raw string) []string {
 	if strings.TrimSpace(raw) == "" {
 		return nil
@@ -76,15 +98,18 @@ func ParseTags(raw string) []string {
 	parts := strings.Split(raw, ",")
 	var tags []string
 	for _, p := range parts {
-		trimmed := strings.TrimSpace(p)
-		if trimmed != "" {
-			tags = append(tags, trimmed)
+		formatted := FormatTagTitleCase(p)
+		if formatted != "" {
+			tags = append(tags, formatted)
 		}
 	}
 	return tags
 }
 
-// ValidateInput enforces all database schema constraints before persistence.
+// ValidateInput enforces all database schema constraints before persistence:
+// - media_url: required http/https URL, 1..128 chars
+// - tags: max 3 tags, each 1..4 chars, normalized to Title Case, unique per entry
+// - body: required non-empty Markdown prose
 func ValidateInput(in JournalInput) (JournalInput, error) {
 	in.MediaURL = strings.TrimSpace(in.MediaURL)
 	if in.MediaURL == "" {
@@ -102,14 +127,19 @@ func ValidateInput(in JournalInput) (JournalInput, error) {
 		return in, fmt.Errorf("%w: at most %d tags are allowed", ErrInvalidInput, MaxTagCount)
 	}
 	cleanedTags := make([]string, 0, len(in.Tags))
+	seen := make(map[string]bool, len(in.Tags))
 	for _, tag := range in.Tags {
-		t := strings.TrimSpace(tag)
+		t := FormatTagTitleCase(tag)
 		if t == "" {
 			continue
 		}
 		if utf8.RuneCountInString(t) > MaxTagLength {
 			return in, fmt.Errorf("%w: tag %q exceeds %d characters", ErrInvalidInput, t, MaxTagLength)
 		}
+		if seen[t] {
+			return in, fmt.Errorf("%w: duplicate tag %q (tags must be unique)", ErrInvalidInput, t)
+		}
+		seen[t] = true
 		cleanedTags = append(cleanedTags, t)
 	}
 	in.Tags = cleanedTags
@@ -177,32 +207,37 @@ func (s *Store) Close() error {
 	return s.db.Close()
 }
 
-// EnsureSchema creates the journals table if missing and adds the `published` column
-// if upgrading an existing database schema.
-func (s *Store) EnsureSchema(ctx context.Context) error {
-	const createTableSQL = `
-CREATE TABLE IF NOT EXISTS journals (
+const journalsTableDDL = `
+CREATE TABLE IF NOT EXISTS %s (
   id INTEGER PRIMARY KEY,
   created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
   media_url TEXT NOT NULL CHECK(length(media_url) <= 128 AND length(media_url) > 0),
-  tag1 TEXT CHECK(tag1 IS NULL OR length(tag1) <= 4),
-  tag2 TEXT CHECK(tag2 IS NULL OR length(tag2) <= 4),
-  tag3 TEXT CHECK(tag3 IS NULL OR length(tag3) <= 4),
+  tag1 TEXT CHECK(tag1 IS NULL OR (length(tag1) >= 1 AND length(tag1) <= 4 AND tag1 = upper(substr(tag1, 1, 1)) || lower(substr(tag1, 2)))),
+  tag2 TEXT CHECK(tag2 IS NULL OR (length(tag2) >= 1 AND length(tag2) <= 4 AND tag2 = upper(substr(tag2, 1, 1)) || lower(substr(tag2, 2)))),
+  tag3 TEXT CHECK(tag3 IS NULL OR (length(tag3) >= 1 AND length(tag3) <= 4 AND tag3 = upper(substr(tag3, 1, 1)) || lower(substr(tag3, 2)))),
   body TEXT NOT NULL,
   bookmarked INTEGER NOT NULL DEFAULT 0 CHECK(bookmarked IN (0,1)),
-  published INTEGER NOT NULL DEFAULT 1 CHECK(published IN (0,1))
+  published INTEGER NOT NULL DEFAULT 1 CHECK(published IN (0,1)),
+  CHECK(
+    (tag1 IS NULL OR tag2 IS NULL OR tag1 != tag2) AND
+    (tag1 IS NULL OR tag3 IS NULL OR tag1 != tag3) AND
+    (tag2 IS NULL OR tag3 IS NULL OR tag2 != tag3)
+  )
 );`
-	if _, err := s.db.ExecContext(ctx, createTableSQL); err != nil {
+
+// EnsureSchema creates the journals table if missing and upgrades older schemas
+// to include the `published` column, Title Case tag checks, and per-entry tag uniqueness checks.
+func (s *Store) EnsureSchema(ctx context.Context) error {
+	createSQL := fmt.Sprintf(journalsTableDDL, "journals")
+	if _, err := s.db.ExecContext(ctx, createSQL); err != nil {
 		return err
 	}
 
-	// Inspect columns via PRAGMA table_info(journals) to check if `published` exists.
+	// 1. Check if `published` column exists via PRAGMA table_info(journals)
 	rows, err := s.db.QueryContext(ctx, `PRAGMA table_info(journals);`)
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
-
 	hasPublished := false
 	for rows.Next() {
 		var cid int
@@ -211,6 +246,7 @@ CREATE TABLE IF NOT EXISTS journals (
 		var dfltValue sql.NullString
 		var pk int
 		if err := rows.Scan(&cid, &name, &colType, &notNull, &dfltValue, &pk); err != nil {
+			rows.Close()
 			return err
 		}
 		if name == "published" {
@@ -219,8 +255,10 @@ CREATE TABLE IF NOT EXISTS journals (
 		}
 	}
 	if err := rows.Err(); err != nil {
+		rows.Close()
 		return err
 	}
+	rows.Close()
 
 	if !hasPublished {
 		const alterSQL = `ALTER TABLE journals ADD COLUMN published INTEGER NOT NULL DEFAULT 1 CHECK(published IN (0,1));`
@@ -229,6 +267,68 @@ CREATE TABLE IF NOT EXISTS journals (
 		}
 	}
 
+	// 2. Check if the table DDL enforces Title Case and per-entry tag uniqueness
+	var tableSQL string
+	err = s.db.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'journals';`).Scan(&tableSQL)
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(tableSQL, "tag1 != tag2") {
+		if err := s.rebuildJournalsWithTagConstraints(ctx); err != nil {
+			return fmt.Errorf("failed to migrate journals tag constraints: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *Store) rebuildJournalsWithTagConstraints(ctx context.Context) error {
+	if _, err := s.db.ExecContext(ctx, `DROP TABLE IF EXISTS journals_new;`); err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, fmt.Sprintf(journalsTableDDL, "journals_new")); err != nil {
+		return err
+	}
+
+	// Copy rows while normalizing tags to Title Case and clearing any duplicate tag slots
+	const copySQL = `
+INSERT INTO journals_new (id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published)
+SELECT
+  id,
+  created_at,
+  media_url,
+  CASE
+    WHEN tag1 IS NULL OR trim(tag1) = '' THEN NULL
+    ELSE upper(substr(trim(tag1), 1, 1)) || lower(substr(trim(tag1), 2))
+  END,
+  CASE
+    WHEN tag2 IS NULL OR trim(tag2) = '' THEN NULL
+    WHEN (upper(substr(trim(tag2), 1, 1)) || lower(substr(trim(tag2), 2))) =
+         (upper(substr(trim(COALESCE(tag1, '')), 1, 1)) || lower(substr(trim(COALESCE(tag1, '')), 2))) THEN NULL
+    ELSE upper(substr(trim(tag2), 1, 1)) || lower(substr(trim(tag2), 2))
+  END,
+  CASE
+    WHEN tag3 IS NULL OR trim(tag3) = '' THEN NULL
+    WHEN (upper(substr(trim(tag3), 1, 1)) || lower(substr(trim(tag3), 2))) IN (
+      upper(substr(trim(COALESCE(tag1, '')), 1, 1)) || lower(substr(trim(COALESCE(tag1, '')), 2)),
+      upper(substr(trim(COALESCE(tag2, '')), 1, 1)) || lower(substr(trim(COALESCE(tag2, '')), 2))
+    ) THEN NULL
+    ELSE upper(substr(trim(tag3), 1, 1)) || lower(substr(trim(tag3), 2))
+  END,
+  body,
+  bookmarked,
+  published
+FROM journals;`
+	if _, err := s.db.ExecContext(ctx, copySQL); err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `DROP TABLE journals;`); err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `ALTER TABLE journals_new RENAME TO journals;`); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -293,13 +393,41 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
 // List returns journal entries ordered newest first. When includeUnpublished is false,
 // only rows with published = 1 are returned.
 func (s *Store) List(ctx context.Context, includeUnpublished bool) ([]Journal, error) {
+	return s.ListFiltered(ctx, ListFilter{IncludeUnpublished: includeUnpublished})
+}
+
+// ListFiltered returns journal entries matching optional search query and tag filters.
+func (s *Store) ListFiltered(ctx context.Context, filter ListFilter) ([]Journal, error) {
+	var clauses []string
+	var args []any
+
+	if !filter.IncludeUnpublished {
+		clauses = append(clauses, "published = 1")
+	}
+
+	qText := strings.TrimSpace(filter.Query)
+	if qText != "" {
+		likePattern := "%" + strings.ToLower(qText) + "%"
+		clauses = append(clauses, "(LOWER(body) LIKE ? OR LOWER(COALESCE(tag1, '')) LIKE ? OR LOWER(COALESCE(tag2, '')) LIKE ? OR LOWER(COALESCE(tag3, '')) LIKE ?)")
+		args = append(args, likePattern, likePattern, likePattern, likePattern)
+	}
+
+	for _, rawTag := range filter.Tags {
+		t := FormatTagTitleCase(rawTag)
+		if t == "" {
+			continue
+		}
+		clauses = append(clauses, "(tag1 = ? OR tag2 = ? OR tag3 = ?)")
+		args = append(args, t, t, t)
+	}
+
 	q := `SELECT id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published FROM journals`
-	if !includeUnpublished {
-		q += ` WHERE published = 1`
+	if len(clauses) > 0 {
+		q += ` WHERE ` + strings.Join(clauses, " AND ")
 	}
 	q += ` ORDER BY created_at DESC, id DESC;`
 
-	rows, err := s.db.QueryContext(ctx, q)
+	rows, err := s.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -314,6 +442,41 @@ func (s *Store) List(ctx context.Context, includeUnpublished bool) ([]Journal, e
 		entries = append(entries, j)
 	}
 	return entries, rows.Err()
+}
+
+// DistinctTags returns all unique non-empty tags currently stored across tag1, tag2, and tag3,
+// sorted alphabetically.
+func (s *Store) DistinctTags(ctx context.Context, includeUnpublished bool) ([]string, error) {
+	whereClause := ""
+	if !includeUnpublished {
+		whereClause = " AND published = 1"
+	}
+	q := fmt.Sprintf(`
+SELECT DISTINCT tag FROM (
+  SELECT tag1 AS tag FROM journals WHERE tag1 IS NOT NULL AND tag1 != ''%s
+  UNION
+  SELECT tag2 AS tag FROM journals WHERE tag2 IS NOT NULL AND tag2 != ''%s
+  UNION
+  SELECT tag3 AS tag FROM journals WHERE tag3 IS NOT NULL AND tag3 != ''%s
+) ORDER BY tag ASC;`, whereClause, whereClause, whereClause)
+
+	rows, err := s.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []string
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return nil, err
+		}
+		if t != "" {
+			tags = append(tags, t)
+		}
+	}
+	return tags, rows.Err()
 }
 
 // Get fetches a single entry by ID. Returns ErrNotFound if absent or hidden.

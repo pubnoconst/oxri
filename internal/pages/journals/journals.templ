@@ -6,7 +6,13 @@ import (
 )
 
 templ Page(isAuth bool, entries []RenderedEntry) {
-	@shared.Layout("Journals - RES IMPERII", "/page-css/journals.css?v=4") {
+	@CatalogPage(isAuth, CatalogView{
+		Entries: entries,
+	})
+}
+
+templ CatalogPage(isAuth bool, view CatalogView) {
+	@shared.Layout("Journals - RES IMPERII", "/page-css/journals.css?v=5") {
 		<main class="journals-page">
 			<header class="journals-header">
 				@shared.BackLink("/", "Back")
@@ -23,7 +29,43 @@ templ Page(isAuth bool, entries []RenderedEntry) {
 				</div>
 			</header>
 
-			if isAuth && len(entries) > 0 {
+			if len(view.Entries) > 0 || len(view.AllTags) > 0 || view.HasFilters() {
+				<section class="journals-filter-bar" aria-label="Search and filter journals">
+					<form class="journals-search-form" method="GET" action="/journals">
+						for _, t := range view.SelectedTags {
+							<input type="hidden" name="tag" value={ t }/>
+						}
+						<input
+							type="search"
+							name="q"
+							class="journals-search-input"
+							placeholder="Search entries…"
+							value={ view.Query }
+							aria-label="Search journal entries"
+						/>
+						<button type="submit" class="btn btn-neutral btn-sm">Search</button>
+						if view.HasFilters() {
+							<a href="/journals" class="filter-clear-link">Clear</a>
+						}
+					</form>
+					if len(view.AllTags) > 0 {
+						<div class="journals-tag-filters" role="group" aria-label="Filter by tag">
+							<span class="tag-filter-label">Tags:</span>
+							for _, tag := range view.AllTags {
+								<a
+									href={ templ.SafeURL(view.ToggleTagURL(tag)) }
+									class={ "tag-filter-pill", templ.KV("is-active", view.IsTagSelected(tag)) }
+									aria-pressed={ fmt.Sprintf("%t", view.IsTagSelected(tag)) }
+								>
+									{ tag }
+								</a>
+							}
+						</div>
+					}
+				</section>
+			}
+
+			if isAuth && len(view.Entries) > 0 {
 				<form id="batch-form" class="journals-batch-bar" method="POST" action="/journals/batch">
 					<div class="batch-select-group">
 						<label class="batch-select-all">
@@ -43,11 +85,15 @@ templ Page(isAuth bool, entries []RenderedEntry) {
 				</form>
 			}
 
-			if len(entries) == 0 {
-				<p class="journals-empty">No entries yet.</p>
+			if len(view.Entries) == 0 {
+				if view.HasFilters() {
+					<p class="journals-empty">No matching entries found.</p>
+				} else {
+					<p class="journals-empty">No entries yet.</p>
+				}
 			} else {
 				<div class="journals-feed is-collage-grid">
-					for _, item := range entries {
+					for _, item := range view.Entries {
 						@EntryCard(isAuth, item, true)
 					}
 				</div>
@@ -62,7 +108,7 @@ templ Page(isAuth bool, entries []RenderedEntry) {
 }
 
 templ EntryPage(isAuth bool, item RenderedEntry) {
-	@shared.Layout("Journal Entry - RES IMPERII", "/page-css/journals.css?v=4") {
+	@shared.Layout("Journal Entry - RES IMPERII", "/page-css/journals.css?v=5") {
 		<main class="journals-page journals-single-page">
 			<header class="journals-header">
 				@shared.BackLink("/journals", "Journals")

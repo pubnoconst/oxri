@@ -2,16 +2,6 @@
 
 Upcoming work:
 
-- **Tag uniqueness**: enforce unique tags per journal entry across client-side UI
-  validation (`journal-editor.js`) and server-side validation (`db.ValidateInput`)
-  so duplicate tags cannot be submitted in `tag1`, `tag2`, `tag3`.
-- **Journals search**: add keyword search across journal entry content and tags on
-  `/journals`.
-- **Filter by tag(s)**: allow filtering `/journals` by one or more active tags
-  (and bookmark status).
-- **Fluid catalog layout**: make `/journals` collage layout fluid so low journal
-  counts expand to fill the row naturally (`auto-fit` / balanced flex/grid sizing)
-  without awkward centering or leaving a lone entry hanging on the right.
 - **Storage budget & auto-eviction (D-20261120-003)**: operate up to 90% of
   Turso's 5 GB free tier (4.5 GB). When exceeded, prompt the author to either
   delete entries manually first or auto-delete the earliest unpublished entries
