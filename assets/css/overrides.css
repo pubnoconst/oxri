@@ -327,3 +327,101 @@ html {
     transition: none;
   }
 }
+
+/*
+ * Shared Tactile Media Mounting (.journal-preview-media)
+ * ------------------------------------------------------
+ * Used across the journal editor preview, catalog collage, and single-entry permalink
+ * so photos, videos, audio, and X/Twitter embeds rest naturally on the paper canvas.
+ */
+.journal-preview-media {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+.journal-preview-media img {
+  display: block;
+  max-width: 100%;
+  max-height: 26rem;
+  width: auto;
+  height: auto;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 12%, transparent);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--page-ink) 8%, transparent);
+  object-fit: contain;
+}
+
+.journal-preview-media video,
+.journal-preview-media > iframe {
+  display: block;
+  width: 100%;
+  max-height: 24rem;
+  aspect-ratio: 16 / 9;
+  border: 1px solid color-mix(in srgb, var(--page-ink) 12%, transparent);
+  border-radius: 0.55rem;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--page-ink) 8%, transparent);
+}
+
+.journal-preview-media audio {
+  width: min(90%, 30rem);
+  margin: 0.4rem 0;
+  border-radius: 999px;
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--page-ink) 6%, transparent);
+}
+
+.journal-preview-media .tweet-embed-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  background: transparent;
+  padding: 0.25rem 0;
+  filter: drop-shadow(0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent));
+}
+
+.journal-preview-media .tweet-embed-container iframe,
+.journal-preview-media .twitter-tweet {
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  max-width: 520px !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.tweet-fallback-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 1.15rem 1.35rem;
+  width: min(100%, 28rem);
+  border: 1px solid color-mix(in srgb, var(--page-ink) 15%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--page-ink) 3%, transparent);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--page-ink) 5%, transparent);
+  text-align: center;
+}
+
+.tweet-fallback-badge {
+  font-family: system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  opacity: 0.55;
+  text-transform: uppercase;
+}
+
+.tweet-fallback-card a {
+  color: inherit;
+  font-size: 0.92rem;
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+  overflow-wrap: anywhere;
+}

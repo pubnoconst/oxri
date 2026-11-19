@@ -406,6 +406,29 @@ func TestTimeoutHandling(t *testing.T) {
 	}
 }
 
+func TestCrossOriginProtection(t *testing.T) {
+	server, _ := newTestServerWithAuth(t)
+
+	// 1. Cross-site Sec-Fetch-Site on POST is blocked with 403
+	req1 := httptest.NewRequest(http.MethodPost, "/journals", nil)
+	req1.Header.Set("Sec-Fetch-Site", "cross-site")
+	rec1 := httptest.NewRecorder()
+	server.ServeHTTP(rec1, req1)
+	if rec1.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden for cross-site Sec-Fetch-Site POST, got %d", rec1.Code)
+	}
+
+	// 2. Mismatched Origin on POST is blocked with 403
+	req2 := httptest.NewRequest(http.MethodPost, "/journals", nil)
+	req2.Host = "127.0.0.1:8080"
+	req2.Header.Set("Origin", "https://evil.example.com")
+	rec2 := httptest.NewRecorder()
+	server.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden for mismatched Origin POST, got %d", rec2.Code)
+	}
+}
+
 func TestPilotUserSettingsPage(t *testing.T) {
 	server, svc := newTestServerWithAuth(t)
 

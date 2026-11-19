@@ -6,8 +6,6 @@ Upcoming work:
   Turso's 5 GB free tier (4.5 GB). When exceeded, prompt the author to either
   delete entries manually first or auto-delete the earliest unpublished entries
   (`published = 0` ordered by `created_at ASC, id ASC`).
-- Add private server-side logging for error reference codes and failures, then
-  verify that error responses never expose exception details or stack traces.
 - Configure hosting and reverse-proxy error pages and timeouts to match the
   app's safe responses; verify provider-generated failures contain no traces.
 - Production deployment & passkey bootstrap (D-20261117-008, D-20261117-013):

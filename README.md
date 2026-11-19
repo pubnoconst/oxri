@@ -15,6 +15,8 @@ assets/
     overrides.css
   js/
     journal-editor.js
+    journal-media.js
+    journals-catalog.js
     navigation-feedback.js
     theme-toggle.js
   favicon.png
@@ -24,12 +26,20 @@ cmd/
 internal/
   app/
     server.go
+    handlers_auth.go
+    handlers_journals.go
+    handlers_pilot.go
     middleware.go
     server_test.go
   auth/
     auth.go
     auth_test.go
     middleware.go
+  db/
+    db.go
+    db_test.go
+    env.go
+    sanitize.go
   pages/
     shared/
       layout.templ
@@ -42,13 +52,20 @@ internal/
       style.css
     journals/
       journals.templ
+      journals.go
+      journals_test.go
       style.css
     editor/
       editor.templ
+      editor.go
       style.css
     login/
       login.templ
       login.go
+      style.css
+    pilot/
+      settings.templ
+      pilot.go
       style.css
     errorpage/
       error.templ
@@ -62,11 +79,15 @@ go.mod
 go.sum
 ```
 
-Each page's Templ view and page-only stylesheet sit together in
-`internal/pages/<page>/`. Page modules embed `style.css` at compile time with
-`//go:embed` and serve it through an explicit, versioned `/page-css/...` route.
-This keeps page styling easy to find without exposing source files through the
-static file server.
+**No monoliths — small, focused modules:** Keep files small and scoped to a
+single responsibility. `internal/app/server.go` is strictly a declarative route
+wiring table; domain route handlers live in dedicated modules
+(`handlers_journals.go`, `handlers_auth.go`, `handlers_pilot.go`), persistence
+and character-set sanitization live in `internal/db/`, and each page's Templ
+view and page-only stylesheet sit together in `internal/pages/<page>/`. Page
+modules embed `style.css` at compile time with `//go:embed` and serve it through
+an explicit, versioned `/page-css/...` route. This keeps page styling easy to
+find without exposing source files through the static file server.
 
 Shared public files live in `assets/`: Bulma and shared project overrides are
 under `assets/css/`, browser scripts are under `assets/js/`, and the favicon is

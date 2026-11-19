@@ -84,7 +84,16 @@ func main() {
 	}
 	fmt.Printf("Authorized SSH key: %s\n", authSvc.AuthorizedKeyComment())
 
-	if err := http.ListenAndServe(addr, handler); err != nil && err != http.ErrServerClosed {
+	httpServer := &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       35 * time.Second,
+		WriteTimeout:      35 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintf(os.Stderr, "HTTP server failed: %v\n", err)
 		os.Exit(1)
 	}
