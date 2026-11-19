@@ -117,6 +117,25 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261120-001 - Turso persistence, schema migration, UI constraints, and journal CRUD:
+  - Ignore `*.env` files in `.gitignore` and load `db.env` / `.env` environment
+    files on startup (`internal/db`). Document `TURSO_DATABASE_URL` and
+    `TURSO_AUTH_TOKEN` in `.env.example`.
+  - Connect to Turso using `github.com/tursodatabase/libsql-client-go/libsql`, with
+    pure-Go `modernc.org/sqlite` as a local `file:` and `:memory:` fallback for
+    offline development and unit tests.
+  - Extend the `journals` table safely via idempotent startup migration (`EnsureSchema`)
+    by adding `published INTEGER NOT NULL DEFAULT 1 CHECK(published IN (0,1))` so
+    entries can be unpublished without deletion.
+  - Enforce database schema constraints in both client-side UI (`/journals/new`,
+    `/journals/{id}/edit`) and server-side validation:
+    - `media_url`: required valid `http`/`https` URL, 1–128 characters.
+    - `tag1`, `tag2`, `tag3`: max 3 comma-separated tags, each <= 4 characters.
+    - `body`: required non-empty Markdown content.
+  - Implement public catalog reading (`/journals`, `/journals/{id}`) showing
+    published entries, and protected author management (`/journals/new`,
+    `/journals/{id}/edit`, single/selected/all publish, unpublish, bookmark,
+    and delete actions).
 - D-20261117-013 - Protected pilot route namespace and user settings dashboard:
   - Designate `/pilot` as the dedicated protected namespace for experimental author
     features, security prototypes, and sandbox environments in Res Imperii.
