@@ -457,3 +457,14 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   3. Filter by tag(s).
   4. Fluid catalog layout (`auto-fit` / balanced row filling for low entry counts, avoiding centering or lone trailing cards).
 - Recorded `D-20261120-003` (commit `1daf85d`): replaced the old 1 GiB storage cap with up to 90% of Turso's 5 GB free tier (4.5 GB), with an overflow policy prompting the author to either manually delete entries first or auto-evict the earliest unpublished entries (`published = 0` ordered by `created_at ASC, id ASC`).
+
+## 2026-11-20 - Title Case tag schema, uniqueness, autocomplete, search/filter, and fluid catalog
+
+- Decision: `D-20261120-004`, recorded in commit `83e65ba` (`Decide Title Case tag schema, uniqueness, autocomplete, search, and fluid catalog D-20261120-004`).
+- Implementation: commit `91d9911` (`Implement Title Case tag schema, uniqueness, autocomplete, search, and fluid catalog D-20261120-004`).
+- Upgraded the live Turso `journals` table and `db.EnsureSchema` table-rebuild migration to enforce Title Case (`tagN = upper(substr(tagN, 1, 1)) || lower(substr(tagN, 2))`) and per-entry tag uniqueness (`tag1 != tag2`, `tag1 != tag3`, `tag2 != tag3`) via SQLite `CHECK` constraints.
+- Added `FormatTagTitleCase`, duplicate tag rejection in `ValidateInput`, `DistinctTags`, and `ListFiltered` (keyword search + multi-tag filter) in `internal/db/db.go`.
+- Added live in-place Title Case auto-capitalization, duplicate tag detection/blocking, and interactive tag autocomplete pills (`#tag-suggestions`, selectable via click or `Tab`) in `assets/js/journal-editor.js` and `internal/pages/editor/editor.templ`.
+- Added keyword search (`?q=...`) and toggleable tag filter pills (`?tag=...`) to `/journals` (`internal/pages/journals/journals.templ`, `journals.go`).
+- Switched `.journals-feed.is-collage-grid` to a fluid flexbox layout (`display: flex; flex-wrap: wrap;` with `.journal-card.is-collage { flex: 1 1 19.5rem; }`) so low journal counts and trailing row items expand to fill the row naturally without centering or leaving lone narrow cards.
+- Updated unit and integration tests in `internal/db/db_test.go` and `internal/app/server_test.go`. All tests pass via `mage test` and binary builds via `mage build`.
