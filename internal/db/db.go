@@ -119,7 +119,7 @@ func ValidateInput(in JournalInput) (JournalInput, error) {
 		return in, fmt.Errorf("%w: media link must be at most %d characters", ErrInvalidInput, MaxMediaURLLength)
 	}
 	if badRune, ok := ValidateMediaURLChars(in.MediaURL); !ok {
-		return in, fmt.Errorf("%w: media link contains disallowed character %q (only printable ASCII URL characters permitted; no emojis)", ErrInvalidInput, badRune)
+		return in, fmt.Errorf("%w: media link contains disallowed character U+%04X (only printable ASCII URL characters permitted; no emojis)", ErrInvalidInput, badRune)
 	}
 	u, err := url.ParseRequestURI(in.MediaURL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
@@ -140,7 +140,7 @@ func ValidateInput(in JournalInput) (JournalInput, error) {
 			return in, fmt.Errorf("%w: tag %q exceeds %d characters", ErrInvalidInput, t, MaxTagLength)
 		}
 		if badRune, ok := ValidateTagChars(t); !ok {
-			return in, fmt.Errorf("%w: tag %q contains disallowed character %q (only English/Latin, Greek, and digits permitted; no emojis)", ErrInvalidInput, t, badRune)
+			return in, fmt.Errorf("%w: tag contains disallowed character U+%04X (only English/Latin, Greek, and digits permitted; no emojis)", ErrInvalidInput, badRune)
 		}
 		if seen[t] {
 			return in, fmt.Errorf("%w: duplicate tag %q (tags must be unique)", ErrInvalidInput, t)
@@ -154,7 +154,7 @@ func ValidateInput(in JournalInput) (JournalInput, error) {
 		return in, fmt.Errorf("%w: journal content cannot be empty", ErrInvalidInput)
 	}
 	if badRune, ok := ValidateProseChars(in.Body); !ok {
-		return in, fmt.Errorf("%w: journal content contains disallowed character %q (only English, Latin, Greek, digits, and standard punctuation permitted; no emojis)", ErrInvalidInput, badRune)
+		return in, fmt.Errorf("%w: journal content contains disallowed character U+%04X (only English, Latin, Greek, digits, and standard punctuation permitted; no emojis)", ErrInvalidInput, badRune)
 	}
 
 	return in, nil

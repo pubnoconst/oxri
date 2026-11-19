@@ -3,7 +3,7 @@
  * Journal editor preview, Title Case tag auto-capitalization, autocomplete,
  * strict character-set whitelisting (English alphanumeric, Latin, Greek; no emojis),
  * and schema constraint validation.
- * Reuses window.ResImperiiMedia for shared media preview rendering.
+ * Disallowed characters are NEVER rendered in the preview pane or echoed in error messages.
  */
 (() => {
   const contentInput = document.getElementById("journal-content");
@@ -41,6 +41,11 @@
     0x2013, 0x2014, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2026,
     0x037E, 0x0384, 0x0385, 0x0387, 0x1FFD, 0x1FFE,
   ]);
+
+  function formatCodePoint(ch) {
+    const cp = ch.codePointAt(0) || 0;
+    return "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
+  }
 
   function findInvalidMediaChar(str) {
     for (const ch of Array.from(str)) {
@@ -151,7 +156,7 @@
       mediaPreview.classList.add("is-empty");
       mediaPreview.textContent = "Media link contains disallowed characters.";
       isMediaValid = false;
-      if (mediaError) mediaError.textContent = `Disallowed character "${badChar}": only printable ASCII URL characters are permitted (no emojis).`;
+      if (mediaError) mediaError.textContent = `Disallowed character (${formatCodePoint(badChar)}): only printable ASCII URL characters are permitted (no emojis).`;
       syncSubmitButton();
       return;
     }
@@ -254,12 +259,12 @@
 
     const seen = new Set();
     let firstDuplicate = "";
-    let badTagInfo = null;
+    let badTagChar = null;
     chips.forEach((t) => {
-      if (!badTagInfo) {
+      if (badTagChar === null) {
         const badCh = findInvalidTagChar(t);
         if (badCh !== null) {
-          badTagInfo = { tag: t, char: badCh };
+          badTagChar = badCh;
         }
       }
       if (seen.has(t)) {
@@ -271,8 +276,8 @@
     let errText = "";
     if (chips.length > MAX_TAG_COUNT) {
       errText = `Maximum ${MAX_TAG_COUNT} tags allowed (currently ${chips.length}).`;
-    } else if (badTagInfo) {
-      errText = `Tag "${badTagInfo.tag}" contains disallowed character "${badTagInfo.char}" (only English/Latin, Greek, and digits permitted; no emojis).`;
+    } else if (badTagChar !== null) {
+      errText = `Tag contains disallowed character (${formatCodePoint(badTagChar)}): only English/Latin, Greek, and digits permitted (no emojis).`;
     } else {
       const tooLong = chips.find((t) => Array.from(t).length > MAX_TAG_LEN);
       if (tooLong) {
@@ -285,17 +290,21 @@
     isTagsValid = errText === "";
     if (tagsError) tagsError.textContent = errText;
 
+    // Never preview illegal characters in tag chips
     const seenInRender = new Set();
-    tagsPreview.replaceChildren(...chips.map((tag) => {
+    const previewChipNodes = [];
+    chips.forEach((tag) => {
+      const cleanTag = toTitleCase(Array.from(tag).filter((ch) => TAG_CHAR_RE.test(ch)).join(""));
+      if (!cleanTag) return;
       const chip = document.createElement("span");
-      const over = Array.from(tag).length > MAX_TAG_LEN;
-      const isDup = seenInRender.has(tag);
-      const hasBadChar = findInvalidTagChar(tag) !== null;
-      seenInRender.add(tag);
-      chip.className = (over || isDup || hasBadChar) ? "journal-tag-chip is-invalid" : "journal-tag-chip";
-      chip.textContent = tag;
-      return chip;
-    }));
+      const over = Array.from(cleanTag).length > MAX_TAG_LEN;
+      const isDup = seenInRender.has(cleanTag);
+      seenInRender.add(cleanTag);
+      chip.className = (over || isDup) ? "journal-tag-chip is-invalid" : "journal-tag-chip";
+      chip.textContent = cleanTag;
+      previewChipNodes.push(chip);
+    });
+    tagsPreview.replaceChildren(...previewChipNodes);
 
     renderSuggestions();
     syncSubmitButton();
@@ -311,14 +320,16 @@
       if (badChar !== null) {
         isBodyValid = false;
         if (bodyError) {
-          bodyError.textContent = `Disallowed character "${badChar}": only English, Latin, Greek, numbers, and standard punctuation are permitted (no emojis).`;
+          bodyError.textContent = `Disallowed character (${formatCodePoint(badChar)}): only English, Latin, Greek, numbers, and standard punctuation are permitted (no emojis).`;
         }
       } else {
         isBodyValid = true;
         if (bodyError) bodyError.textContent = "";
       }
     }
-    renderedContent.innerHTML = window.DOMPurify.sanitize(markdown.render(raw));
+    // Strip any disallowed characters before rendering into the Preview pane
+    const cleanForPreview = Array.from(raw).filter(isAllowedProseChar).join("");
+    renderedContent.innerHTML = window.DOMPurify.sanitize(markdown.render(cleanForPreview));
     syncSubmitButton();
   }
 

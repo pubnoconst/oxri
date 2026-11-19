@@ -191,7 +191,7 @@ func TestJournalEditorPage(t *testing.T) {
 	if !strings.Contains(body, "journal-media.js?v=1") {
 		t.Errorf("missing journal-media.js script tag in editor")
 	}
-	if !strings.Contains(body, "journal-editor.js?v=8") {
+	if !strings.Contains(body, "journal-editor.js?v=9") {
 		t.Errorf("missing versioned journal-editor.js script tag")
 	}
 	if !strings.Contains(body, `maxlength="128"`) {

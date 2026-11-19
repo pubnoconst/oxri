@@ -138,6 +138,9 @@ Recent decisions
       standard ASCII/typographic prose & Markdown punctuation. Explicitly block
       all emojis, variation selectors, control characters, zero-width/bidi
       spoofing characters, and non-Latin/non-Greek scripts.
+    - Never render or echo disallowed characters in the live preview pane or
+      validation notices (strip disallowed characters before previewing and
+      report offending characters by Unicode codepoint `U+XXXX`).
 - D-20261120-004 - Title Case tag schema constraint, per-entry tag uniqueness, tag autocomplete, search/filter, and fluid catalog layout:
   - Upgrade the `journals` table schema via idempotent table-rebuild migration to
     enforce Title Case (`tagN = upper(substr(tagN, 1, 1)) || lower(substr(tagN, 2))`)
