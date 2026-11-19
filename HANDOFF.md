@@ -468,3 +468,14 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Added keyword search (`?q=...`) and toggleable tag filter pills (`?tag=...`) to `/journals` (`internal/pages/journals/journals.templ`, `journals.go`).
 - Switched `.journals-feed.is-collage-grid` to a fluid flexbox layout (`display: flex; flex-wrap: wrap;` with `.journal-card.is-collage { flex: 1 1 19.5rem; }`) so low journal counts and trailing row items expand to fill the row naturally without centering or leaving lone narrow cards.
 - Updated unit and integration tests in `internal/db/db_test.go` and `internal/app/server_test.go`. All tests pass via `mage test` and binary builds via `mage build`.
+
+## 2026-11-20 - "ALL INPUTS ARE EVIL" input sanitization and Latin/Greek/alphanumeric character-set whitelist
+
+- Decision: `D-20261120-005`, recorded in commit `56cd67c` (`Decide ALL INPUTS ARE EVIL sanitization and Latin/Greek whitelist D-20261120-005`).
+- Implementation: commit `14c4379` (`Implement ALL INPUTS ARE EVIL sanitization and Latin/Greek whitelist D-20261120-005`).
+- Documented the `"ALL INPUTS ARE EVIL"` axiom in `DECISIONS.md` and `README.md`.
+- Implemented strict character-set whitelisting at both the server layer (`internal/db/sanitize.go`, wired into `db.ValidateInput`, `db.ListFiltered`, and `internal/app/server.go`) and the UI layer (`assets/js/journal-editor.js` bumped to `?v=8`):
+  - Tags (`tag1..tag3`): only English/Latin (`unicode.Latin` / `\p{Script=Latin}`), Greek (`unicode.Greek` / `\p{Script=Greek}`), and ASCII digits (`0–9`). No emojis, spaces, or punctuation.
+  - Media URL (`media_url`): only printable ASCII URL characters (`0x21–0x7E`). No emojis or Unicode homographs.
+  - Journal prose (`body`) and search queries (`q`): only English/Latin letters, Greek letters, ASCII digits, standard whitespace (`space, \n, \r, \t`), and whitelisted ASCII/typographic prose & Markdown punctuation. Explicitly rejects emojis, variation selectors, control characters, zero-width/bidi spoofing characters, and non-Latin/non-Greek scripts.
+- Added unit and integration test cases in `internal/db/db_test.go` and `internal/app/server_test.go` verifying Latin/Greek acceptance and emoji/non-whitelisted-script rejection. All tests pass via `mage test`.
