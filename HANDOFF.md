@@ -456,3 +456,4 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   2. Journals keyword search.
   3. Filter by tag(s).
   4. Fluid catalog layout (`auto-fit` / balanced row filling for low entry counts, avoiding centering or lone trailing cards).
+- Recorded `D-20261120-003` (commit `1daf85d`): replaced the old 1 GiB storage cap with up to 90% of Turso's 5 GB free tier (4.5 GB), with an overflow policy prompting the author to either manually delete entries first or auto-evict the earliest unpublished entries (`published = 0` ordered by `created_at ASC, id ASC`).

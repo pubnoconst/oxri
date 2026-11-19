@@ -156,7 +156,9 @@ Environment variables (see `.env.example`):
 - `TURSO_DATABASE_URL`: Turso/libSQL database URL (`libsql://...` or local `file:...` fallback; reads `db.env` or `.env`).
 - `TURSO_AUTH_TOKEN`: Turso database JWT token (stored in untracked `db.env`).
 
-Turso is the intended hosted content database. The product limit is 1 GiB.
+Turso is the intended hosted content database. The operating budget is up to 90%
+of Turso's 5 GB free tier (4.5 GB); exceeding that threshold prompts the author
+to delete entries or auto-evict the earliest unpublished entries.
 
 ## Project journals
 

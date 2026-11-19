@@ -12,7 +12,10 @@ Upcoming work:
 - **Fluid catalog layout**: make `/journals` collage layout fluid so low journal
   counts expand to fill the row naturally (`auto-fit` / balanced flex/grid sizing)
   without awkward centering or leaving a lone entry hanging on the right.
-- Add storage limit monitoring for the Turso database (1 GiB product limit).
+- **Storage budget & auto-eviction (D-20261120-003)**: operate up to 90% of
+  Turso's 5 GB free tier (4.5 GB). When exceeded, prompt the author to either
+  delete entries manually first or auto-delete the earliest unpublished entries
+  (`published = 0` ordered by `created_at ASC, id ASC`).
 - Add private server-side logging for error reference codes and failures, then
   verify that error responses never expose exception details or stack traces.
 - Configure hosting and reverse-proxy error pages and timeouts to match the
