@@ -442,3 +442,12 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   - Public visitors see only `published = 1` entries (returns 404 on unpublished permalinks).
   - Logged-in admin sees all entries with status badges, Edit, Bookmark toggle, Publish/Unpublish toggle, Delete, and multi-select batch toolbar (`Publish selected`, `Unpublish selected`, `Delete selected`, `Unpublish all`, `Delete all`).
 - Added unit and integration tests across `internal/db/db_test.go` and `internal/app/server_test.go` (`TestJournalPersistenceAndManagement`). All 18 tests pass via `mage test` and binary builds via `mage build`.
+
+## 2026-11-20 - Collage-style journal catalog and settings separation
+
+- Decision: `D-20261120-002`, recorded in commit `cef7af0` (`Decide collage-style journal catalog and settings separation D-20261120-002`).
+- Implementation: commit `0b539b7` (`Implement collage-style journal catalog and settings separation D-20261120-002`).
+- Removed the `Settings` link (`/pilot/user/settings`) from `/journals`, keeping user settings scoped to the landing page auth navigation stack.
+- Transformed `/journals` into a compact multi-column preview collage (`grid-template-columns: repeat(auto-fill, minmax(min(100%, 19.5rem), 1fr))`) displaying tactile compact media previews, tag chips, and up to 280-character plain-text excerpts (`Excerpt280`).
+- Implemented accessible stretched-card links (`entry-card-link::after`) so clicking anywhere on a collage card opens its full-page reading view (`/journals/{id}`), while preserving elevated `z-index` for interactive embeds, selection checkboxes, and author controls.
+- Added `TestExcerpt280` in `internal/pages/journals/journals_test.go` and updated catalog assertions in `internal/app/server_test.go`. All 19 tests pass via `mage test` and binary builds via `mage build`.
