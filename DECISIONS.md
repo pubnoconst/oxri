@@ -117,6 +117,15 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261120-002 - Collage-style compact journal catalog and navigation separation:
+  - Remove `Settings` (`/pilot/user/settings`) navigation link from `/journals`,
+    keeping user settings isolated on the landing page auth navigation stack.
+  - Transform `/journals` from a full-prose feed into a responsive multi-column
+    preview collage displaying compact tactile media previews, up to 280-character
+    plain-text excerpts, and tag chips.
+  - Link each collage card directly to its full-page entry view (`/journals/{id}`)
+    via an accessible stretched link while keeping interactive embeds, checkboxes,
+    and admin actions directly clickable.
 - D-20261120-001 - Turso persistence, schema migration, UI constraints, and journal CRUD:
   - Ignore `*.env` files in `.gitignore` and load `db.env` / `.env` environment
     files on startup (`internal/db`). Document `TURSO_DATABASE_URL` and
