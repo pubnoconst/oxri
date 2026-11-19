@@ -491,3 +491,15 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Hardened the HTTP server with explicit `ReadHeaderTimeout`, `ReadTimeout`, `WriteTimeout`, `IdleTimeout` in `cmd/server/main.go`, a 1 MiB request body cap (`MaxBodyBytesMiddleware`), and cross-origin `POST` protection (`CrossOriginMiddleware` checking `Sec-Fetch-Site` and `Origin`).
 - Deduplicated shared tactile media mounting rules (`.journal-preview-media`, `.tweet-embed-container`, `.tweet-fallback-card`) into `assets/css/overrides.css` (`?v=24`).
 - Added `TestCrossOriginProtection` in `internal/app/server_test.go`. All tests pass via `mage test` and binary builds via `mage build`.
+
+## 2026-11-20 - Unified CSS design tokens across all pages
+
+- Decision: `D-20261120-007`, recorded in commit `9b3cf1c` (`Decide unified CSS design tokens across all pages D-20261120-007`).
+- Implementation: commit `be28a21` (`Implement unified CSS design tokens across all page stylesheets D-20261120-007`).
+- Defined canonical CSS custom properties in `assets/css/overrides.css` (`?v=25`) covering:
+  - Typography: `--font-serif` (`EB Garamond`), `--font-sans`, `--font-mono`, and heading scales (`--heading-h1`, `--heading-h2`, `--heading-h3`) with regular `400` font-weight across all headings and titles.
+  - Color scheme & surfaces: `--page`, `--page-ink`, `--surface-card`, `--surface-subtle`, `--border-subtle`, `--border-card`, `--border-input`, `--border-focus`, `--shadow-card`, and Ayu-aligned semantic accents (`--accent-active`, `--accent-warn`, `--accent-danger`).
+  - Border radii: `--radius-card` (`0.5rem`), `--radius-control` (`0.35rem`), `--radius-pill` (`999px`).
+  - Spacing scale: `--space-page-y`, `--space-page-x`, `--space-header-top`, `--space-header-bottom`, `--space-card-pad`, `--space-card-pad-sm`.
+- Refactored all page stylesheets (`booki`, `login`, `pilot`, `editor`, `journals`, `errorpage`) and bumped cache versions so every route shares identical colors, fonts, radii, padding, and margins.
+- Updated `README.md`. All tests pass via `mage test` and binary builds via `mage build`.
