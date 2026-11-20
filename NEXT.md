@@ -2,10 +2,6 @@
 
 Upcoming work:
 
-- **Storage budget & auto-eviction (D-20261120-003)**: operate up to 90% of
-  Turso's 5 GB free tier (4.5 GB). When exceeded, prompt the author to either
-  delete entries manually first or auto-delete the earliest unpublished entries
-  (`published = 0` ordered by `created_at ASC, id ASC`).
 - Configure hosting and reverse-proxy error pages and timeouts to match the
   app's safe responses; verify provider-generated failures contain no traces.
 - Production deployment & passkey bootstrap (D-20261117-008, D-20261117-013):

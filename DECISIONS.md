@@ -131,6 +131,25 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261121-001 - On-demand /journals/vacate-space/ workflow, per-entry byte estimation, live selection progress bar, prioritized auto-eviction, and client form resubmission:
+  - Supersede background storage monitoring from `D-20261120-003` with an on-demand
+    quota check during entry creation (`POST /journals`) and update (`POST /journals/{id}`).
+  - When adding or updating an entry would exceed the self-imposed Turso storage limit
+    (default 4.5 GB / 90% of the 5 GB free tier, configurable via `TURSO_MAX_STORAGE_BYTES`
+    or `Store.SetMaxStorageBytes`), stash the pending form submission and redirect (`303 See Other`)
+    to `/journals/vacate-space/`.
+  - Estimate the byte footprint of the incoming entry (`EstimateInputBytes`), the exact
+    byte deficit required (`RequiredBytes`), and the byte footprint of every existing
+    journal entry (`Journal.EstimatedBytes`), displaying each entry's estimated size on
+    `/journals/vacate-space/`.
+  - Render an interactive progress bar on `/journals/vacate-space/` that tracks selected
+    journal bytes against required bytes as the author checks entries to delete.
+  - Offer a one-click automatic eviction action (`AutoVacateBytes`) that indiscriminately
+    deletes unpublished entries first (`published = 0`, oldest first) and then
+    un-bookmarked entries (`published = 1 AND bookmarked = 0`, oldest first) until
+    sufficient space is vacated.
+  - Once sufficient space has been vacated, the client automatically resubmits the
+    stashed journal entry form (`POST /journals` or `POST /journals/{id}`).
 - D-20261120-010 - Login redirect allowlisting, Secure cookie flag, auth rate-limiting, and transactional versioned schema migrations:
   - Sanitize and validate the `next` login redirect target (`sanitizeNextPath` in
     `internal/app/handlers_auth.go`) to prevent open-redirect attacks: require a
