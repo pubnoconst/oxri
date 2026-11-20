@@ -503,3 +503,11 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   - Spacing scale: `--space-page-y`, `--space-page-x`, `--space-header-top`, `--space-header-bottom`, `--space-card-pad`, `--space-card-pad-sm`.
 - Refactored all page stylesheets (`booki`, `login`, `pilot`, `editor`, `journals`, `errorpage`) and bumped cache versions so every route shares identical colors, fonts, radii, padding, and margins.
 - Updated `README.md`. All tests pass via `mage test` and binary builds via `mage build`.
+
+## 2026-11-20 - Remote Turso-only database policy (no local disk database fallback)
+
+- Decision: `D-20261120-008`, recorded in commit `47c2f69` (`Decide remote Turso-only database policy D-20261120-008`).
+- Implementation: commit `632c853` (`Remove local file database fallback and enforce remote Turso URL D-20261120-008`).
+- Removed the local disk SQLite fallback (`file:res_imperii.db`) from `internal/db/db.go` and `cmd/server/main.go`.
+- `db.Open` now strictly rejects empty or `file:` database URLs, requiring a remote Turso/libSQL URL (`TURSO_DATABASE_URL` from `db.env` or `.env`).
+- Updated `.env.example`, `README.md`, and unit tests in `internal/db/db_test.go`. All tests pass via `mage test` and binary builds via `mage build`.
