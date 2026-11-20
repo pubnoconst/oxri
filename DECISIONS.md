@@ -131,6 +131,21 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261120-010 - Login redirect allowlisting, Secure cookie flag, auth rate-limiting, and transactional versioned schema migrations:
+  - Sanitize and validate the `next` login redirect target (`sanitizeNextPath` in
+    `internal/app/handlers_auth.go`) to prevent open-redirect attacks: require a
+    single leading `/`, reject `//`, `\`, control characters, schemes, and external
+    hosts, and restrict destinations to known application path prefixes (`/`,
+    `/book-i`, `/journals`, `/pilot`).
+  - Set `Secure: true` on session cookies whenever served over HTTPS, behind a TLS
+    proxy (`X-Forwarded-Proto: https`), on any non-loopback host, or when
+    `COOKIE_SECURE=true`.
+  - Harden in-memory SSH challenge creation and verification in `internal/auth/auth.go`
+    by capping active pending challenges (`MaxPendingLogins = 16`) and throttling
+    burst challenge creation and SSH handshake attempts.
+  - Replace ad-hoc non-transactional table rebuilds in `internal/db/db.go` with an
+    explicit `schema_migrations` version table and transactional migrations
+    (`s.db.BeginTx`).
 - D-20261120-009 - External oxri-parent directory for secret files outside the Git repository:
   - Relocate secret and key files (`db.env` and `.ssh_host_key`) out of the Git
     working tree into `oxri-parent` (`../oxri-parent/` or enclosing `../`),
