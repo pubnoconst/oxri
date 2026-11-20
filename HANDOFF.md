@@ -541,3 +541,14 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Prioritized automatic eviction (`Store.PreviewAutoVacate`, `Store.AutoVacateBytes`): Offers one-click automatic deletion that indiscriminately removes unpublished entries first (`published = 0`, oldest first) and then un-bookmarked entries (`published = 1 AND bookmarked = 0`, oldest first) while preserving bookmarked published entries.
 - Client form resubmission: Once sufficient space is vacated (`/journals/vacate-space/?vacated=1`), `#resubmit-journal-form` is marked `data-auto-resubmit="true"` and automatically submitted by `assets/js/vacate-space.js`.
 - Added unit and integration tests (`TestStorageQuotaAndAutoVacatePriority` in `internal/db/db_test.go`, `TestVacateSpaceRedirectAndResubmissionFlow` in `internal/app/server_test.go`). All tests pass via `mage test` and binary builds via `mage build`.
+
+## 2026-11-21 - Non-technical UX copy rule, pure-CSS magnifying wave loading specification, and development pause until 2026-11-27
+
+- Decision: `D-20261121-002`, recorded in `DECISIONS.md`.
+- Product direction: Added strict rule forbidding internal engineering, infrastructure terms (e.g., "Turso"), and technical jargon in user-facing copy. It is considered a UX failure if a user ever has to look something up.
+- Bounded quota calculations (`internal/db/quota.go`): Capped `RequiredBytes` so it never exceeds `availableToVacate` and returns `0` if all existing entries are already vacated.
+- Development pause: At user request, development is paused until **11/27/2026**.
+- Next tasks queued for resume on 11/27/2026:
+  1. Produce an independent `/loading` view featuring centered, smoothly pulsating copy (`"Ensuring confirmation, this should be quick."`) with pure-CSS linear magnifying-glass wave scaling on individual characters for UI testing.
+  2. Audit and rewrite `/journals/vacate-space/` text to remove technical terms.
+  3. Revert the temporary single-entry storage limit override in `cmd/server/main.go` back to standard 4.5 GB limit.

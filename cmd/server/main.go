@@ -76,6 +76,12 @@ func main() {
 	dbToken := os.Getenv("TURSO_AUTH_TOKEN")
 	initCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	store, err := db.Open(initCtx, dbURL, dbToken)
+	if err == nil {
+		if usedBytes, uErr := store.UsedStorageBytes(initCtx); uErr == nil && usedBytes > 0 {
+			// Temporarily lock the storage limit to the exact size of the current entry for UI testing.
+			store.SetMaxStorageBytes(usedBytes)
+		}
+	}
 	cancel()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize database store: %v\n", err)
@@ -93,6 +99,7 @@ func main() {
 	fmt.Printf("Res Imperii HTTP server listening on http://%s\n", addr)
 	fmt.Printf("Res Imperii SSH auth gateway listening on %s\n", authSvc.SSHAddr())
 	fmt.Printf("Database connected: %s\n", dbURL)
+	fmt.Printf("Storage budget limit: %d bytes\n", store.MaxStorageBytes())
 	fmt.Printf("Authorized SSH key: %s\n", authSvc.AuthorizedKeyComment())
 
 	httpServer := &http.Server{

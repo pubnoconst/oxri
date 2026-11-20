@@ -101,7 +101,8 @@ func (s *Store) ClearPendingSubmission() {
 }
 
 // RequiredBytesForPending calculates how many more bytes must still be vacated for the
-// stashed pending submission (or returns 0 if it now fits within MaxStorageBytes).
+// stashed pending submission (or returns 0 if it now fits within MaxStorageBytes or all
+// existing entries have already been vacated).
 func (s *Store) RequiredBytesForPending(ctx context.Context) (required int64, entryBytes int64, used int64, limit int64, err error) {
 	used, err = s.UsedStorageBytes(ctx)
 	if err != nil {
@@ -116,14 +117,22 @@ func (s *Store) RequiredBytesForPending(ctx context.Context) (required int64, en
 		return 0, 0, used, limit, nil
 	}
 	entryBytes = sub.EntryBytes
+	availableToVacate := used
 	projected := used + entryBytes
 	if sub.IsEdit && sub.EntryID > 0 {
 		if existing, getErr := s.Get(ctx, sub.EntryID, true); getErr == nil {
-			projected = (used - existing.EstimatedBytes()) + entryBytes
+			availableToVacate = used - existing.EstimatedBytes()
+			projected = availableToVacate + entryBytes
 		}
+	}
+	if availableToVacate <= 0 {
+		return 0, entryBytes, used, limit, nil
 	}
 	if projected > limit {
 		required = projected - limit
+		if required > availableToVacate {
+			required = availableToVacate
+		}
 	}
 	return required, entryBytes, used, limit, nil
 }
@@ -173,11 +182,18 @@ func (s *Store) checkQuotaForCreate(ctx context.Context, valid JournalInput) err
 	if err != nil {
 		return err
 	}
+	if used <= 0 {
+		return nil
+	}
 	limit := s.MaxStorageBytes()
 	entryBytes := EstimateInputBytes(valid)
 	if used+entryBytes > limit {
+		req := (used + entryBytes) - limit
+		if req > used {
+			req = used
+		}
 		return &QuotaExceededError{
-			RequiredBytes: (used + entryBytes) - limit,
+			RequiredBytes: req,
 			EntryBytes:    entryBytes,
 			UsedBytes:     used,
 			LimitBytes:    limit,
@@ -195,13 +211,21 @@ func (s *Store) checkQuotaForUpdate(ctx context.Context, id int64, valid Journal
 	if err != nil {
 		return err
 	}
+	oldBytes := existing.EstimatedBytes()
+	otherBytes := used - oldBytes
+	if otherBytes <= 0 {
+		return nil
+	}
 	limit := s.MaxStorageBytes()
 	newBytes := EstimateInputBytes(valid)
-	oldBytes := existing.EstimatedBytes()
-	projected := (used - oldBytes) + newBytes
+	projected := otherBytes + newBytes
 	if projected > limit {
+		req := projected - limit
+		if req > otherBytes {
+			req = otherBytes
+		}
 		return &QuotaExceededError{
-			RequiredBytes: projected - limit,
+			RequiredBytes: req,
 			EntryBytes:    newBytes,
 			UsedBytes:     used,
 			LimitBytes:    limit,

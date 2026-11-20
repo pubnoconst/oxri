@@ -22,6 +22,11 @@ See the commit-traceability decision below for how to link decisions to Git.
 
 Product direction
 -----------------
+- Do not leak internal engineering or technical jargon to the user. Speak to the
+  user in plain, natural language as if they know very little about technology.
+  It is a UX failure if a user ever has to look something up or sees internal
+  infrastructure terms (such as database names, raw byte debug counters, or
+  protocol internals).
 - ALL INPUTS ARE EVIL. Treat every user-supplied or external input (form fields,
   URLs, query parameters, tags, and prose) as untrusted at both the UI layer and
   the server layer. Enforce strict character-set whitelisting permitting only
@@ -131,6 +136,17 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261121-002 - Non-technical user-facing language rule and pure-CSS magnifying-wave loading state:
+  - Adopt a core UX rule in Product direction: never expose internal engineering,
+    infrastructure names (e.g., "Turso"), or technical jargon in user-facing copy;
+    write all prompts and notices in plain, non-technical language.
+  - Eliminate technical copy and duplicate raw-byte annotations on
+    `/journals/vacate-space/`.
+  - Introduce a standalone loading view (`/loading`) displaying the centered text
+    `"Ensuring confirmation, this should be quick."` with a smooth page ease-in,
+    gentle overall pulsation, and a pure-CSS linear character-by-character
+    magnifying-glass wave animation for standalone UI verification before wiring
+    into form transitions.
 - D-20261121-001 - On-demand /journals/vacate-space/ workflow, per-entry byte estimation, live selection progress bar, prioritized auto-eviction, and client form resubmission:
   - Supersede background storage monitoring from `D-20261120-003` with an on-demand
     quota check during entry creation (`POST /journals`) and update (`POST /journals/{id}`).
