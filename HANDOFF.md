@@ -520,3 +520,13 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Moved `ADMIN_SSH_PUBKEY` into `../oxri-parent/db.env` and removed the hardcoded `DefaultAuthorizedKey` from `internal/auth/auth.go` and `.env.example`.
 - Updated `magefile.go` (`loadExternalSecrets`) and `cmd/server/main.go` to automatically load `../oxri-parent/db.env` (or enclosing `../db.env`) and default `HOST_KEY_PATH` to `../oxri-parent/.ssh_host_key`.
 - Verified zero secret or key files remain inside the Git working tree. All tests pass via `mage test` and binary builds via `mage build`.
+
+## 2026-11-20 - Login redirect allowlist, Secure session cookies, auth rate-limiting, and transactional versioned schema migrations
+
+- Decision: `D-20261120-010`, recorded in commit `2ce6b68` (`Decide login redirect allowlist, Secure cookies, auth rate-limiting, and transactional migrations D-20261120-010`).
+- Implementation: commit `6013a66` (`Implement login redirect allowlist, Secure cookies, auth rate-limiting, and transactional migrations D-20261120-010`).
+- Open-redirect protection (`internal/app/handlers_auth.go`): Added `sanitizeNextPath(raw string) string` enforcing that `next` is a clean relative application path starting with a single `/` (rejecting `//`, `\`, `://`, control characters, external hosts/schemes) and matching the application route allowlist (`/`, `/book-i`, `/journals`, `/pilot`). Applied at both challenge creation (`/login`) and approval redirect (`/auth/status`).
+- `Secure` session cookie attribute (`internal/app/handlers_auth.go`): Added `shouldSetSecureCookie(req *http.Request) bool` so `Secure: true` is automatically enabled on session and logout cookies whenever served over TLS (`req.TLS != nil`), behind an HTTPS proxy (`X-Forwarded-Proto: https`), on any non-loopback domain, or when `COOKIE_SECURE=true`.
+- Authentication hardening (`internal/auth/auth.go`): Added `MaxPendingLogins = 16` cap (`ErrRateLimited`, returning `429 Too Many Requests` on `/login`) and a sliding-window SSH handshake attempt throttle (`MaxSSHAttemptsPerMinute = 20`) inside `StartSSH`'s `PublicKeyCallback`.
+- Transactional versioned schema migrations (`internal/db/db.go`): Added `schema_migrations` version table (`CurrentSchemaVersion = 2`, `Store.SchemaVersion(ctx)`) and wrapped all table upgrades and rebuilds inside `EnsureSchema` in an explicit database transaction (`s.db.BeginTx(ctx, nil)`) with automatic rollback on failure.
+- Added unit and integration tests (`TestLoginOpenRedirectProtectionAndSecureCookies`, `TestAuthService_RateLimiting`, `TestSchemaMigrationAddsPublishedColumn`). All tests pass via `mage test` and binary builds via `mage build`.
