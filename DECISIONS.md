@@ -131,6 +131,16 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261120-009 - External oxri-parent directory for secret files outside the Git repository:
+  - Relocate secret and key files (`db.env` and `.ssh_host_key`) out of the Git
+    working tree into `oxri-parent` (`../oxri-parent/` or enclosing `../`),
+    making it physically impossible for Git commands inside the repository to
+    stage or push secrets.
+  - Move `ADMIN_SSH_PUBKEY` into `db.env` inside `oxri-parent` and remove the
+    hardcoded `DefaultAuthorizedKey` from `internal/auth/auth.go` and `.env.example`.
+  - Update `magefile.go` and `cmd/server/main.go` to automatically load
+    `../oxri-parent/db.env` and `../db.env` and resolve `HOST_KEY_PATH` outside
+    the repository.
 - D-20261120-008 - Remote Turso-only database policy (no local disk database fallback):
   - Remove the local disk SQLite fallback (`file:res_imperii.db`) from `db.Open`
     and `cmd/server/main.go`, superseding the local `file:` fallback in `D-20261120-001`.
