@@ -1,20 +1,90 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
 
 	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/pages/login"
 )
 
+// sanitizeNextPath validates that a login redirect destination is a safe local
+// application path on our allowlist, preventing open-redirect attacks.
+func sanitizeNextPath(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" || !strings.HasPrefix(trimmed, "/") || strings.HasPrefix(trimmed, "//") {
+		return "/"
+	}
+	if strings.Contains(trimmed, "\\") || strings.Contains(trimmed, "://") {
+		return "/"
+	}
+	for _, r := range trimmed {
+		if r < 0x20 || r == 0x7F {
+			return "/"
+		}
+	}
+
+	u, err := url.Parse(trimmed)
+	if err != nil || u.Scheme != "" || u.Host != "" || u.Opaque != "" || u.User != nil {
+		return "/"
+	}
+
+	cleanPath := u.Path
+	allowed := cleanPath == "/" ||
+		cleanPath == "/book-i" ||
+		cleanPath == "/journals" ||
+		strings.HasPrefix(cleanPath, "/journals/") ||
+		cleanPath == "/pilot" ||
+		strings.HasPrefix(cleanPath, "/pilot/")
+	if !allowed {
+		return "/"
+	}
+
+	if u.RawQuery != "" {
+		return cleanPath + "?" + u.RawQuery
+	}
+	return cleanPath
+}
+
+// shouldSetSecureCookie enables the Secure attribute whenever served over HTTPS,
+// behind an HTTPS reverse proxy, on any non-loopback domain, or when COOKIE_SECURE=true.
+func shouldSetSecureCookie(req *http.Request) bool {
+	if req == nil {
+		return true
+	}
+	if req.TLS != nil {
+		return true
+	}
+	if strings.EqualFold(strings.TrimSpace(req.Header.Get("X-Forwarded-Proto")), "https") {
+		return true
+	}
+	envSec := strings.ToLower(strings.TrimSpace(os.Getenv("COOKIE_SECURE")))
+	if envSec == "1" || envSec == "true" {
+		return true
+	}
+	return !isLoopbackHost(req.Host)
+}
+
+func isLoopbackHost(hostPort string) bool {
+	h := strings.TrimSpace(hostPort)
+	if h == "" {
+		return true
+	}
+	if host, _, err := net.SplitHostPort(h); err == nil {
+		h = host
+	}
+	h = strings.Trim(h, "[]")
+	return strings.EqualFold(h, "localhost") || h == "127.0.0.1" || h == "::1"
+}
+
 func handleLogin(authSvc *auth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		next := req.URL.Query().Get("next")
-		if next == "" {
-			next = "/"
-		}
+		next := sanitizeNextPath(req.URL.Query().Get("next"))
 
 		if auth.IsAuthenticated(req.Context()) {
 			http.Redirect(w, req, next, http.StatusSeeOther)
@@ -28,6 +98,10 @@ func handleLogin(authSvc *auth.Service) http.HandlerFunc {
 
 		token, err := authSvc.CreatePendingLogin(next)
 		if err != nil {
+			if errors.Is(err, auth.ErrRateLimited) {
+				RenderErrorWithCause(w, req, http.StatusTooManyRequests, err)
+				return
+			}
 			RenderErrorWithCause(w, req, http.StatusInternalServerError, err)
 			return
 		}
@@ -60,18 +134,17 @@ func handleAuthStatus(authSvc *auth.Service) http.HandlerFunc {
 
 		sessionID, redirectURL, ok := authSvc.ConsumeApprovedLogin(token)
 		if ok {
-			if redirectURL == "" {
-				redirectURL = "/"
-			}
+			safeRedirect := sanitizeNextPath(redirectURL)
 			http.SetCookie(w, &http.Cookie{
 				Name:     auth.SessionCookieName,
 				Value:    sessionID,
 				Path:     "/",
 				HttpOnly: true,
+				Secure:   shouldSetSecureCookie(req),
 				SameSite: http.SameSiteLaxMode,
 				MaxAge:   int(auth.SessionDuration.Seconds()),
 			})
-			w.Header().Set("HX-Redirect", redirectURL)
+			w.Header().Set("HX-Redirect", safeRedirect)
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("authorized"))
 			return
@@ -104,6 +177,7 @@ func handleLogout(authSvc *auth.Service) http.HandlerFunc {
 			Value:    "",
 			Path:     "/",
 			HttpOnly: true,
+			Secure:   shouldSetSecureCookie(req),
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   -1,
 		})

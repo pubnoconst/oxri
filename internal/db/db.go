@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	MaxMediaURLLength = 128
-	MaxTagCount       = 3
-	MaxTagLength      = 4
+	MaxMediaURLLength    = 128
+	MaxTagCount          = 3
+	MaxTagLength         = 4
+	CurrentSchemaVersion = 2
 )
 
 var (
@@ -238,16 +239,52 @@ CREATE TABLE IF NOT EXISTS %s (
   )
 );`
 
+const schemaMigrationsTableDDL = `
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version INTEGER PRIMARY KEY,
+  applied_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+);`
+
+// SchemaVersion returns the highest applied migration version recorded in schema_migrations,
+// or 0 if no migrations have been recorded yet.
+func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
+	if _, err := s.db.ExecContext(ctx, schemaMigrationsTableDDL); err != nil {
+		return 0, err
+	}
+	var currentVersion int
+	if err := s.db.QueryRowContext(ctx, `SELECT COALESCE(MAX(version), 0) FROM schema_migrations;`).Scan(&currentVersion); err != nil {
+		return 0, err
+	}
+	return currentVersion, nil
+}
+
 // EnsureSchema creates the journals table if missing and upgrades older schemas
-// to include the `published` column, Title Case tag checks, and per-entry tag uniqueness checks.
+// inside an explicit database transaction, recording the applied schema version in
+// schema_migrations so table rebuilds are atomic and version-tracked.
 func (s *Store) EnsureSchema(ctx context.Context) error {
+	currentVersion, err := s.SchemaVersion(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query schema version: %w", err)
+	}
+	if currentVersion >= CurrentSchemaVersion {
+		return nil
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin schema migration transaction: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
 	createSQL := fmt.Sprintf(journalsTableDDL, "journals")
-	if _, err := s.db.ExecContext(ctx, createSQL); err != nil {
+	if _, err := tx.ExecContext(ctx, createSQL); err != nil {
 		return err
 	}
 
-	// 1. Check if `published` column exists via PRAGMA table_info(journals)
-	rows, err := s.db.QueryContext(ctx, `PRAGMA table_info(journals);`)
+	// Migration v1: Ensure `published` column exists via PRAGMA table_info(journals)
+	rows, err := tx.QueryContext(ctx, `PRAGMA table_info(journals);`)
 	if err != nil {
 		return err
 	}
@@ -275,32 +312,40 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 
 	if !hasPublished {
 		const alterSQL = `ALTER TABLE journals ADD COLUMN published INTEGER NOT NULL DEFAULT 1 CHECK(published IN (0,1));`
-		if _, err := s.db.ExecContext(ctx, alterSQL); err != nil {
+		if _, err := tx.ExecContext(ctx, alterSQL); err != nil {
 			return fmt.Errorf("failed to add published column: %w", err)
 		}
 	}
 
-	// 2. Check if the table DDL enforces Title Case and per-entry tag uniqueness
+	// Migration v2: Ensure the table DDL enforces Title Case and per-entry tag uniqueness
 	var tableSQL string
-	err = s.db.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'journals';`).Scan(&tableSQL)
+	err = tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'journals';`).Scan(&tableSQL)
 	if err != nil {
 		return err
 	}
 
 	if !strings.Contains(tableSQL, "tag1 != tag2") {
-		if err := s.rebuildJournalsWithTagConstraints(ctx); err != nil {
+		if err := rebuildJournalsWithTagConstraintsTx(ctx, tx); err != nil {
 			return fmt.Errorf("failed to migrate journals tag constraints: %w", err)
 		}
+	}
+
+	if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO schema_migrations (version) VALUES (?);`, CurrentSchemaVersion); err != nil {
+		return fmt.Errorf("failed to record schema version %d: %w", CurrentSchemaVersion, err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit schema migration transaction: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Store) rebuildJournalsWithTagConstraints(ctx context.Context) error {
-	if _, err := s.db.ExecContext(ctx, `DROP TABLE IF EXISTS journals_new;`); err != nil {
+func rebuildJournalsWithTagConstraintsTx(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, `DROP TABLE IF EXISTS journals_new;`); err != nil {
 		return err
 	}
-	if _, err := s.db.ExecContext(ctx, fmt.Sprintf(journalsTableDDL, "journals_new")); err != nil {
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf(journalsTableDDL, "journals_new")); err != nil {
 		return err
 	}
 
@@ -333,13 +378,13 @@ SELECT
   bookmarked,
   published
 FROM journals;`
-	if _, err := s.db.ExecContext(ctx, copySQL); err != nil {
+	if _, err := tx.ExecContext(ctx, copySQL); err != nil {
 		return err
 	}
-	if _, err := s.db.ExecContext(ctx, `DROP TABLE journals;`); err != nil {
+	if _, err := tx.ExecContext(ctx, `DROP TABLE journals;`); err != nil {
 		return err
 	}
-	if _, err := s.db.ExecContext(ctx, `ALTER TABLE journals_new RENAME TO journals;`); err != nil {
+	if _, err := tx.ExecContext(ctx, `ALTER TABLE journals_new RENAME TO journals;`); err != nil {
 		return err
 	}
 	return nil

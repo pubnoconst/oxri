@@ -99,10 +99,32 @@ CREATE TABLE journals (
 	if _, err := rawDB.ExecContext(ctx, legacySchema); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := rawDB.ExecContext(ctx, `INSERT INTO journals (id, created_at, media_url, tag1, tag2, tag3, body, bookmarked) VALUES (1, 1000, 'https://example.com/old.jpg', 'log', 'LOG', 'dev', 'Legacy row', 1);`); err != nil {
+		t.Fatal(err)
+	}
 
 	store := &Store{db: rawDB}
+	v0, err := store.SchemaVersion(ctx)
+	if err != nil || v0 != 0 {
+		t.Fatalf("expected initial schema version 0, got %d (err=%v)", v0, err)
+	}
+
 	if err := store.EnsureSchema(ctx); err != nil {
 		t.Fatalf("EnsureSchema failed: %v", err)
+	}
+
+	v2, err := store.SchemaVersion(ctx)
+	if err != nil || v2 != CurrentSchemaVersion {
+		t.Fatalf("expected schema version %d after migration, got %d (err=%v)", CurrentSchemaVersion, v2, err)
+	}
+
+	// Verify migrated row preserved data, normalized tags to Title Case, and cleared duplicate tag2
+	migrated, err := store.Get(ctx, 1, false)
+	if err != nil {
+		t.Fatalf("expected migrated row id=1, got err=%v", err)
+	}
+	if migrated.Tag1 != "Log" || migrated.Tag2 != "" || migrated.Tag3 != "Dev" || !migrated.Published {
+		t.Errorf("unexpected migrated row state: %+v", migrated)
 	}
 
 	// Verify idempotent re-run

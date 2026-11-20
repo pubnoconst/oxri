@@ -332,6 +332,86 @@ func TestLoginPageAndAuthPolling(t *testing.T) {
 	}
 }
 
+func TestLoginOpenRedirectProtectionAndSecureCookies(t *testing.T) {
+	// 1. Direct unit test of sanitizeNextPath allowlist and open-redirect rejections
+	cases := []struct {
+		raw      string
+		expected string
+	}{
+		{"", "/"},
+		{"/", "/"},
+		{"/journals", "/journals"},
+		{"/journals/new", "/journals/new"},
+		{"/journals?tag=Log", "/journals?tag=Log"},
+		{"/pilot/user/settings", "/pilot/user/settings"},
+		{"/book-i", "/book-i"},
+		{"https://evil.example.com", "/"},
+		{"http://evil.example.com/journals", "/"},
+		{"//evil.example.com", "/"},
+		{"//evil.example.com/journals", "/"},
+		{"/\\evil.example.com", "/"},
+		{"/journals\\..\\evil", "/"},
+		{"/journals\r\nSet-Cookie: evil=1", "/"},
+		{"/unknown-route", "/"},
+		{"javascript:alert(1)", "/"},
+	}
+	for _, tc := range cases {
+		if got := sanitizeNextPath(tc.raw); got != tc.expected {
+			t.Errorf("sanitizeNextPath(%q) = %q, expected %q", tc.raw, got, tc.expected)
+		}
+	}
+
+	// 2. End-to-end test: malicious ?next=//evil.example.com falls back to "/" and sets Secure cookie on HTTPS/domain
+	server, svc := newTestServerWithAuth(t)
+	req := httptest.NewRequest(http.MethodGet, "/login?next=//evil.example.com/phish", nil)
+	req.Host = "resimperii.com"
+	req.Header.Set("X-Forwarded-Proto", "https")
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /login, got %d", rec.Code)
+	}
+	re := regexp.MustCompile(`token=([0-9]{6})`)
+	matches := re.FindStringSubmatch(rec.Body.String())
+	if len(matches) < 2 {
+		t.Fatalf("could not extract challenge token from login page")
+	}
+	token := matches[1]
+
+	if !svc.ApprovePendingLogin(token, "test-user") {
+		t.Fatalf("failed to approve challenge")
+	}
+
+	pollReq := httptest.NewRequest(http.MethodGet, "/auth/status?token="+token, nil)
+	pollReq.Host = "resimperii.com"
+	pollReq.Header.Set("X-Forwarded-Proto", "https")
+	pollRec := httptest.NewRecorder()
+	server.ServeHTTP(pollRec, pollReq)
+
+	if got := pollRec.Header().Get("HX-Redirect"); got != "/" {
+		t.Errorf("expected open-redirect target to be sanitized to /, got %q", got)
+	}
+
+	cookies := pollRec.Result().Cookies()
+	var sessionCookie *http.Cookie
+	for _, c := range cookies {
+		if c.Name == auth.SessionCookieName {
+			sessionCookie = c
+			break
+		}
+	}
+	if sessionCookie == nil {
+		t.Fatalf("expected session cookie on /auth/status")
+	}
+	if !sessionCookie.Secure {
+		t.Errorf("expected Secure=true on session cookie for HTTPS / non-loopback host")
+	}
+	if !sessionCookie.HttpOnly {
+		t.Errorf("expected HttpOnly=true on session cookie")
+	}
+}
+
 func TestBookIINotFound(t *testing.T) {
 	server := newTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/book-ii", nil)

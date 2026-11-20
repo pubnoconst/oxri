@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -28,7 +29,16 @@ const (
 
 	// SessionDuration is how long an authenticated HTTP session remains valid.
 	SessionDuration = 7 * 24 * time.Hour
+
+	// MaxPendingLogins caps concurrent pending challenge tokens in memory.
+	MaxPendingLogins = 16
+
+	// MaxSSHAttemptsPerMinute throttles burst SSH public-key verification attempts.
+	MaxSSHAttemptsPerMinute = 20
 )
+
+// ErrRateLimited indicates that challenge creation or authentication attempts exceeded rate limits.
+var ErrRateLimited = errors.New("too many authentication requests; please wait briefly")
 
 // PendingLogin tracks an unauthenticated challenge waiting for SSH verification.
 type PendingLogin struct {
@@ -50,9 +60,10 @@ type UserSession struct {
 
 // Service manages loopback SSH authentication and HTTP sessions.
 type Service struct {
-	mu             sync.RWMutex
-	pendingLogins  map[string]*PendingLogin
-	activeSessions map[string]*UserSession
+	mu              sync.RWMutex
+	pendingLogins   map[string]*PendingLogin
+	activeSessions  map[string]*UserSession
+	sshAttemptTimes []time.Time
 
 	authorizedKey        ssh.PublicKey
 	authorizedKeyComment string
@@ -93,12 +104,15 @@ func NewService(authorizedKeyStr, hostKeyPath, sshAddr string) (*Service, error)
 	}, nil
 }
 
-// CreatePendingLogin generates a new 6-digit challenge token.
+// CreatePendingLogin generates a new 6-digit challenge token, enforcing a cap on active challenges.
 func (s *Service) CreatePendingLogin(redirectURL string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.cleanupExpiredLocked()
+	if len(s.pendingLogins) >= MaxPendingLogins {
+		return "", ErrRateLimited
+	}
 
 	if redirectURL == "" {
 		redirectURL = "/"
@@ -244,10 +258,33 @@ func (s *Service) SSHAddr() string {
 	return s.sshAddr
 }
 
+// allowSSHAttempt records and throttles SSH handshake attempts within a 1-minute sliding window.
+func (s *Service) allowSSHAttempt() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	cutoff := time.Now().Add(-1 * time.Minute)
+	kept := s.sshAttemptTimes[:0]
+	for _, t := range s.sshAttemptTimes {
+		if t.After(cutoff) {
+			kept = append(kept, t)
+		}
+	}
+	s.sshAttemptTimes = kept
+	if len(s.sshAttemptTimes) >= MaxSSHAttemptsPerMinute {
+		return false
+	}
+	s.sshAttemptTimes = append(s.sshAttemptTimes, time.Now())
+	return true
+}
+
 // StartSSH starts the embedded SSH server on the configured address.
 func (s *Service) StartSSH() error {
 	sshConfig := &ssh.ServerConfig{
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
+			if !s.allowSSHAttempt() {
+				return nil, ErrRateLimited
+			}
 			if bytes.Equal(key.Marshal(), s.authorizedKey.Marshal()) {
 				return &ssh.Permissions{
 					Extensions: map[string]string{

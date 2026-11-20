@@ -266,3 +266,45 @@ func TestAuthService_SSHAdminUsernameAutoApproval(t *testing.T) {
 		t.Fatalf("expected pending token to be auto-approved for admin, got approved=%v", approved)
 	}
 }
+
+func TestAuthService_RateLimiting(t *testing.T) {
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("ed25519.GenerateKey: %v", err)
+	}
+	sshPub, err := ssh.NewPublicKey(pub)
+	if err != nil {
+		t.Fatalf("ssh.NewPublicKey: %v", err)
+	}
+	authKeyStr := string(ssh.MarshalAuthorizedKey(sshPub))
+
+	tmpDir := t.TempDir()
+	hostKeyPath := filepath.Join(tmpDir, "host_key")
+
+	svc, err := NewService(authKeyStr, hostKeyPath, "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("NewService: %v", err)
+	}
+
+	// Fill pending login queue up to MaxPendingLogins
+	for i := 0; i < MaxPendingLogins; i++ {
+		if _, err := svc.CreatePendingLogin("/journals"); err != nil {
+			t.Fatalf("CreatePendingLogin %d failed: %v", i, err)
+		}
+	}
+
+	// Next pending login attempt must return ErrRateLimited
+	if _, err := svc.CreatePendingLogin("/journals"); err != ErrRateLimited {
+		t.Fatalf("expected ErrRateLimited when exceeding MaxPendingLogins, got %v", err)
+	}
+
+	// Verify SSH attempt sliding-window throttle
+	for i := 0; i < MaxSSHAttemptsPerMinute; i++ {
+		if !svc.allowSSHAttempt() {
+			t.Fatalf("expected SSH attempt %d to be allowed", i)
+		}
+	}
+	if svc.allowSSHAttempt() {
+		t.Fatalf("expected SSH attempt %d to be throttled", MaxSSHAttemptsPerMinute+1)
+	}
+}
