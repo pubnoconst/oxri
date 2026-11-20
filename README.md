@@ -132,7 +132,7 @@ go run github.com/magefile/mage run
   source tracked in this private repository. Raw HTML in the source is excluded
   from rendered output.
 - `/journals` renders a fluid multi-column preview collage of published journal
-  entries from Turso/SQLite (showing compact media embeds, Title Case tags, and a
+  entries from Turso (showing compact media embeds, Title Case tags, and a
   280-character excerpt; clicking any card navigates to `/journals/{id}`), paired
   with keyword search (`?q=...`) and multi-tag filtering (`?tag=...`). When
   authenticated as the author, unpublished drafts are also shown alongside Edit,
@@ -201,7 +201,7 @@ Environment variables (see `.env.example`):
 - `SSH_ADDR`: SSH listening address (default `127.0.0.1:2222`).
 - `ADMIN_SSH_PUBKEY`: Authorized SSH public key (defaults to author's Ed25519 key).
 - `HOST_KEY_PATH`: Path to persist auto-generated host key (defaults to `.ssh_host_key`).
-- `TURSO_DATABASE_URL`: Turso/libSQL database URL (`libsql://...` or local `file:...` fallback; reads `db.env` or `.env`).
+- `TURSO_DATABASE_URL`: Remote Turso/libSQL database URL (`libsql://...`; required, read from `db.env` or `.env` — local disk databases are never used).
 - `TURSO_AUTH_TOKEN`: Turso database JWT token (stored in untracked `db.env`).
 
 Turso is the intended hosted content database. The operating budget is up to 90%

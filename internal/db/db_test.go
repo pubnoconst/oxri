@@ -127,6 +127,15 @@ CREATE TABLE journals (
 
 func TestStoreCRUDAndBatchLifecycle(t *testing.T) {
 	ctx := context.Background()
+
+	// Verify empty and file: URLs are rejected (no local disk databases allowed)
+	if _, err := Open(ctx, "", ""); err == nil {
+		t.Fatalf("expected Open with empty dbURL to fail")
+	}
+	if _, err := Open(ctx, "file:local.db", ""); err == nil {
+		t.Fatalf("expected Open with file: dbURL to fail")
+	}
+
 	store, err := Open(ctx, ":memory:", "")
 	if err != nil {
 		t.Fatalf("Open memory db failed: %v", err)

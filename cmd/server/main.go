@@ -77,11 +77,7 @@ func main() {
 
 	fmt.Printf("Res Imperii HTTP server listening on http://%s\n", addr)
 	fmt.Printf("Res Imperii SSH auth gateway listening on %s\n", authSvc.SSHAddr())
-	if dbURL == "" {
-		fmt.Println("Database connected: file:res_imperii.db")
-	} else {
-		fmt.Printf("Database connected: %s\n", dbURL)
-	}
+	fmt.Printf("Database connected: %s\n", dbURL)
 	fmt.Printf("Authorized SSH key: %s\n", authSvc.AuthorizedKeyComment())
 
 	httpServer := &http.Server{

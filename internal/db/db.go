@@ -160,26 +160,30 @@ func ValidateInput(in JournalInput) (JournalInput, error) {
 	return in, nil
 }
 
-// Store wraps SQL operations against Turso / libSQL or local SQLite.
+// Store wraps SQL operations against a remote Turso / libSQL database.
 type Store struct {
 	db     *sql.DB
 	idMu   sync.Mutex
 	lastID int64
 }
 
-// Open connects to a Turso/libSQL URL (when libsql:// or https://) or a local SQLite path
-// (file:... or :memory:), verifies connectivity, and runs schema migrations.
+// Open connects to a remote Turso/libSQL URL (libsql:// or https://), verifies
+// connectivity, and runs schema migrations. Local file databases are disabled;
+// only ":memory:" is accepted for ephemeral unit testing.
 func Open(ctx context.Context, dbURL, authToken string) (*Store, error) {
 	dbURL = strings.TrimSpace(dbURL)
 	if dbURL == "" {
-		dbURL = "file:res_imperii.db"
+		return nil, errors.New("TURSO_DATABASE_URL is required (local databases are disabled)")
+	}
+	if strings.HasPrefix(strings.ToLower(dbURL), "file:") {
+		return nil, errors.New("local file databases are disabled; use a remote Turso libsql:// or https:// URL")
 	}
 
 	var sqlDB *sql.DB
-	if dbURL == ":memory:" || strings.HasPrefix(dbURL, "file:") {
+	if dbURL == ":memory:" {
 		db, err := sql.Open("sqlite", dbURL)
 		if err != nil {
-			return nil, fmt.Errorf("failed to open sqlite database: %w", err)
+			return nil, fmt.Errorf("failed to open in-memory test database: %w", err)
 		}
 		sqlDB = db
 	} else {
