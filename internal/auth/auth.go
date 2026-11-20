@@ -20,9 +20,6 @@ import (
 )
 
 const (
-	// DefaultAuthorizedKey is the author's public key (overridable via ADMIN_SSH_PUBKEY).
-	DefaultAuthorizedKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILGeK+yBmZxTOmOW/qnIO9ErziQ7i3KyeBpnt3Ns0sc8"
-
 	// SessionCookieName is the HTTP cookie holding the authenticated session token.
 	SessionCookieName = "res_imperii_session"
 
@@ -69,8 +66,8 @@ type Service struct {
 // NewService initializes the authentication service with an authorized public key
 // and host signer (loaded from hostKeyPath or auto-generated).
 func NewService(authorizedKeyStr, hostKeyPath, sshAddr string) (*Service, error) {
-	if authorizedKeyStr == "" {
-		authorizedKeyStr = DefaultAuthorizedKey
+	if strings.TrimSpace(authorizedKeyStr) == "" {
+		return nil, fmt.Errorf("ADMIN_SSH_PUBKEY is required")
 	}
 	if sshAddr == "" {
 		sshAddr = "127.0.0.1:2222"

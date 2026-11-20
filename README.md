@@ -196,13 +196,13 @@ Res Imperii uses loopback SSH public-key authentication for single-admin operati
 5. Upon verification, the server marks the session approved and exits the SSH connection.
 6. The browser automatically receives an HTTP-only session cookie (`res_imperii_session`) and redirects to `/journals`.
 
-Environment variables (see `.env.example`):
+Environment variables (stored outside the Git repository in `../oxri-parent/db.env`; see `.env.example`):
 - `SSH_PORT`: SSH listening port (default `2222`).
 - `SSH_ADDR`: SSH listening address (default `127.0.0.1:2222`).
-- `ADMIN_SSH_PUBKEY`: Authorized SSH public key (defaults to author's Ed25519 key).
-- `HOST_KEY_PATH`: Path to persist auto-generated host key (defaults to `.ssh_host_key`).
-- `TURSO_DATABASE_URL`: Remote Turso/libSQL database URL (`libsql://...`; required, read from `db.env` or `.env` — local disk databases are never used).
-- `TURSO_AUTH_TOKEN`: Turso database JWT token (stored in untracked `db.env`).
+- `ADMIN_SSH_PUBKEY`: Authorized SSH public key (required; loaded from `../oxri-parent/db.env`).
+- `HOST_KEY_PATH`: Path to persist auto-generated host key (defaults to `../oxri-parent/.ssh_host_key`).
+- `TURSO_DATABASE_URL`: Remote Turso/libSQL database URL (`libsql://...`; required, loaded from `../oxri-parent/db.env` — local disk databases are never used).
+- `TURSO_AUTH_TOKEN`: Turso database JWT token (loaded from `../oxri-parent/db.env`).
 
 Turso is the intended hosted content database. The operating budget is up to 90%
 of Turso's 5 GB free tier (4.5 GB); exceeding that threshold prompts the author

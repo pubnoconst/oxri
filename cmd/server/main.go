@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/oxri/oxri-go/internal/app"
@@ -14,8 +15,22 @@ import (
 	"github.com/oxri/oxri-go/internal/db"
 )
 
+func resolveDefaultHostKeyPath() string {
+	parentDir := filepath.Join("..", "oxri-parent")
+	if info, err := os.Stat(parentDir); err == nil && info.IsDir() {
+		return filepath.Join(parentDir, ".ssh_host_key")
+	}
+	return filepath.Join("..", ".ssh_host_key")
+}
+
 func main() {
-	if err := db.LoadEnvFiles("db.env", ".env"); err != nil {
+	envFiles := []string{
+		filepath.Join("..", "oxri-parent", "db.env"),
+		filepath.Join("..", "oxri-parent", ".env"),
+		filepath.Join("..", "db.env"),
+		filepath.Join("..", ".env"),
+	}
+	if err := db.LoadEnvFiles(envFiles...); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning loading env files: %v\n", err)
 	}
 
@@ -40,7 +55,7 @@ func main() {
 	adminPubKey := os.Getenv("ADMIN_SSH_PUBKEY")
 	hostKeyPath := os.Getenv("HOST_KEY_PATH")
 	if hostKeyPath == "" {
-		hostKeyPath = ".ssh_host_key"
+		hostKeyPath = resolveDefaultHostKeyPath()
 	}
 
 	authSvc, err := auth.NewService(adminPubKey, hostKeyPath, sshAddr)

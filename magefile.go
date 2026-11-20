@@ -13,10 +13,50 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+	"github.com/oxri/oxri-go/internal/db"
 )
 
 // Default target to run when no argument is given.
 var Default = Run
+
+// resolveSecretsDir locates the external oxri-parent directory outside the Git repository.
+func resolveSecretsDir() string {
+	candidates := []string{
+		filepath.Join("..", "oxri-parent"),
+		"..",
+	}
+	for _, dir := range candidates {
+		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+			if _, err := os.Stat(filepath.Join(dir, "db.env")); err == nil {
+				return dir
+			}
+			if _, err := os.Stat(filepath.Join(dir, ".env")); err == nil {
+				return dir
+			}
+		}
+	}
+	return filepath.Join("..", "oxri-parent")
+}
+
+// loadExternalSecrets loads db.env / .env and HOST_KEY_PATH from the external oxri-parent directory.
+func loadExternalSecrets() error {
+	secretsDir := resolveSecretsDir()
+	envFiles := []string{
+		filepath.Join(secretsDir, "db.env"),
+		filepath.Join(secretsDir, ".env"),
+		filepath.Join("..", "oxri-parent", "db.env"),
+		filepath.Join("..", "oxri-parent", ".env"),
+		filepath.Join("..", "db.env"),
+		filepath.Join("..", ".env"),
+	}
+	if err := db.LoadEnvFiles(envFiles...); err != nil {
+		return err
+	}
+	if os.Getenv("HOST_KEY_PATH") == "" {
+		_ = os.Setenv("HOST_KEY_PATH", filepath.Join(secretsDir, ".ssh_host_key"))
+	}
+	return nil
+}
 
 // Generate runs templ to compile all .templ files into Go code.
 func Generate() error {
@@ -50,10 +90,13 @@ func Build() error {
 	return sh.Run("go", "build", "-o", binName, "./cmd/server")
 }
 
-// Run emulates 'cargo run': compiles templates and launches the server.
+// Run emulates 'cargo run': compiles templates, loads external secrets from oxri-parent, and launches the server.
 func Run() error {
 	mg.Deps(Generate)
-	fmt.Println("==> Starting Res Imperii server...")
+	if err := loadExternalSecrets(); err != nil {
+		return fmt.Errorf("failed to load external secrets from oxri-parent: %w", err)
+	}
+	fmt.Printf("==> Starting Res Imperii server (secrets dir: %s)...\n", resolveSecretsDir())
 	return sh.RunV("go", "run", "./cmd/server")
 }
 
