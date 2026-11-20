@@ -131,6 +131,11 @@ Implementation conventions
 
 Recent decisions
 ----------------
+- D-20261120-008 - Remote Turso-only database policy (no local disk database fallback):
+  - Remove the local disk SQLite fallback (`file:res_imperii.db`) from `db.Open`
+    and `cmd/server/main.go`, superseding the local `file:` fallback in `D-20261120-001`.
+  - Require a valid remote Turso/libSQL URL (`TURSO_DATABASE_URL` starting with
+    `libsql://` or `https://`) on server startup; reject empty or `file:` URLs.
 - D-20261120-007 - Unified CSS design tokens for colors, typography, radii, padding, and margins across all pages:
   - Define canonical CSS custom properties in `assets/css/overrides.css` (`:root`)
     for surfaces (`--surface-card`, `--surface-subtle`), borders (`--border-subtle`,
