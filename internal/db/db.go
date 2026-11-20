@@ -163,9 +163,11 @@ func ValidateInput(in JournalInput) (JournalInput, error) {
 
 // Store wraps SQL operations against a remote Turso / libSQL database.
 type Store struct {
-	db     *sql.DB
-	idMu   sync.Mutex
-	lastID int64
+	db              *sql.DB
+	idMu            sync.Mutex
+	lastID          int64
+	maxStorageBytes int64
+	pendingSub      *PendingSubmission
 }
 
 // Open connects to a remote Turso/libSQL URL (libsql:// or https://), verifies
@@ -421,6 +423,9 @@ func (s *Store) Create(ctx context.Context, in JournalInput) (*Journal, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := s.checkQuotaForCreate(ctx, valid); err != nil {
+		return nil, err
+	}
 
 	id := s.nextID()
 	createdAtMs := id
@@ -434,6 +439,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	if _, err := s.db.ExecContext(ctx, q, id, createdAtMs, valid.MediaURL, t1, t2, t3, valid.Body, boolToInt(valid.Bookmarked), boolToInt(valid.Published)); err != nil {
 		return nil, err
 	}
+	s.ClearPendingSubmission()
 
 	return &Journal{
 		ID:         id,
@@ -565,6 +571,9 @@ func (s *Store) Update(ctx context.Context, id int64, in JournalInput) error {
 	if err != nil {
 		return err
 	}
+	if err := s.checkQuotaForUpdate(ctx, id, valid); err != nil {
+		return err
+	}
 
 	t1 := nullableTag(valid.Tags, 0)
 	t2 := nullableTag(valid.Tags, 1)
@@ -582,6 +591,7 @@ WHERE id = ?;`
 	if err == nil && affected == 0 {
 		return ErrNotFound
 	}
+	s.ClearPendingSubmission()
 	return nil
 }
 

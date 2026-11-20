@@ -1,0 +1,232 @@
+package journals
+
+import (
+	"fmt"
+	"github.com/oxri/oxri-go/internal/pages/shared"
+)
+
+func progressMax(req int64) int64 {
+	if req <= 0 {
+		return 1
+	}
+	return req
+}
+
+func progressInitialVal(req int64) int64 {
+	if req <= 0 {
+		return 1
+	}
+	return 0
+}
+
+templ VacateSpacePage(view VacateSpaceView) {
+	@shared.Layout("Vacate Space - RES IMPERII", "/page-css/journals.css?v=8") {
+		<main class="journals-page vacate-space-page">
+			<header class="journals-header">
+				@shared.BackLink("/journals", "Journals")
+				<div class="journals-title-row">
+					<h1>Vacate Space</h1>
+				</div>
+			</header>
+
+			<section
+				id="vacate-progress-section"
+				class="vacate-card vacate-summary-card"
+				aria-label="Storage budget and required space"
+				data-required-bytes={ fmt.Sprintf("%d", view.RequiredBytes) }
+				data-entry-bytes={ fmt.Sprintf("%d", view.PendingEntryBytes) }
+			>
+				<p class="vacate-lead">
+					Adding this journal entry exceeds the self-imposed Turso storage budget. Free at least
+					<strong>{ FormatBytes(view.RequiredBytes) }</strong> ({ fmt.Sprintf("%d B", view.RequiredBytes) })
+					to proceed, and your entry will be resubmitted automatically.
+				</p>
+
+				<div class="vacate-metrics">
+					<div class="vacate-metric-item">
+						<span class="vacate-metric-label">Incoming Entry Size</span>
+						<span class="vacate-metric-value" id="vacate-entry-bytes">{ FormatBytes(view.PendingEntryBytes) } ({ fmt.Sprintf("%d B", view.PendingEntryBytes) })</span>
+					</div>
+					<div class="vacate-metric-item">
+						<span class="vacate-metric-label">Required Space to Vacate</span>
+						<span class="vacate-metric-value" id="vacate-required-bytes">{ FormatBytes(view.RequiredBytes) } ({ fmt.Sprintf("%d B", view.RequiredBytes) })</span>
+					</div>
+					<div class="vacate-metric-item">
+						<span class="vacate-metric-label">Current Usage / Limit</span>
+						<span class="vacate-metric-value">{ FormatBytes(view.UsedBytes) } / { FormatBytes(view.LimitBytes) }</span>
+					</div>
+				</div>
+
+				<div class="vacate-progress-wrapper">
+					<div class="vacate-progress-header">
+						<span class="vacate-progress-title">Selected Space to Free</span>
+						<span id="vacate-progress-readout" class="vacate-progress-readout">
+							if view.RequiredBytes <= 0 {
+								Sufficient space vacated (100%)
+							} else {
+								0 B / { FormatBytes(view.RequiredBytes) } (0%)
+							}
+						</span>
+					</div>
+					<progress
+						id="vacate-progress-bar"
+						class="vacate-progress-native"
+						max={ fmt.Sprintf("%d", progressMax(view.RequiredBytes)) }
+						value={ fmt.Sprintf("%d", progressInitialVal(view.RequiredBytes)) }
+					></progress>
+					<div
+						class="vacate-progress-track"
+						role="progressbar"
+						aria-valuemin="0"
+						aria-valuemax={ fmt.Sprintf("%d", progressMax(view.RequiredBytes)) }
+						aria-valuenow={ fmt.Sprintf("%d", progressInitialVal(view.RequiredBytes)) }
+					>
+						<div
+							id="vacate-progress-fill"
+							class={ "vacate-progress-fill", templ.KV("is-complete", view.RequiredBytes <= 0) }
+							style={ fmt.Sprintf("width: %d%%;", view.InitialProgressPercent()) }
+						></div>
+					</div>
+				</div>
+
+				if view.HasPendingSubmission() {
+					<form
+						id="resubmit-journal-form"
+						class="vacate-resubmit-form"
+						method="POST"
+						action={ templ.SafeURL(view.ResubmitActionURL()) }
+						data-auto-resubmit={ fmt.Sprintf("%t", view.AutoResubmitReady) }
+					>
+						<input type="hidden" name="media_url" value={ view.PendingSub.MediaURL }/>
+						<input type="hidden" name="tags" value={ view.PendingSub.TagsRaw }/>
+						<input type="hidden" name="body" value={ view.PendingSub.Body }/>
+						if view.PendingSub.Published {
+							<input type="hidden" name="published" value="1"/>
+						}
+						if view.PendingSub.Bookmarked {
+							<input type="hidden" name="bookmarked" value="1"/>
+						}
+						<div class="vacate-resubmit-bar">
+							<span class="vacate-resubmit-hint">
+								if view.RequiredBytes <= 0 {
+									Space requirement met — resubmitting your journal entry…
+								} else {
+									Pending journal entry is staged and will resubmit automatically once space is vacated.
+								}
+							</span>
+							<button
+								type="submit"
+								id="resubmit-entry-btn"
+								class="btn btn-encouraged btn-sm"
+								disabled?={ view.RequiredBytes > 0 }
+							>
+								Resubmit Entry Now
+							</button>
+						</div>
+					</form>
+				}
+			</section>
+
+			<section class="vacate-card vacate-auto-card" aria-label="Automatic priority eviction">
+				<div class="vacate-auto-info">
+					<h2>Automatic Priority Eviction</h2>
+					<p class="vacate-auto-desc">
+						Indiscriminately delete <strong>unpublished</strong> entries first (oldest first), and then
+						<strong>un-bookmarked</strong> entries (oldest first) until the required space is freed.
+					</p>
+					if len(view.AutoPlan.CandidateIDs) > 0 {
+						<p class="vacate-auto-plan">
+							Auto-selection plan: <strong>{ fmt.Sprintf("%d", view.AutoPlan.UnpublishedCount) } unpublished</strong>
+							and <strong>{ fmt.Sprintf("%d", view.AutoPlan.UnbookmarkedCount) } un-bookmarked</strong>
+							entries — frees <strong>{ FormatBytes(view.AutoPlan.TotalFreedBytes) }</strong> ({ fmt.Sprintf("%d B", view.AutoPlan.TotalFreedBytes) }).
+						</p>
+					} else {
+						<p class="vacate-auto-plan">
+							No unpublished or un-bookmarked entries are currently eligible for automatic eviction.
+						</p>
+					}
+				</div>
+				<form method="POST" action="/journals/vacate-space/" class="vacate-auto-form">
+					<input type="hidden" name="action" value="auto_vacate"/>
+					<input type="hidden" name="required_bytes" value={ fmt.Sprintf("%d", view.RequiredBytes) }/>
+					<button
+						type="submit"
+						id="auto-vacate-btn"
+						class="btn btn-destructive"
+						disabled?={ len(view.AutoPlan.CandidateIDs) == 0 }
+					>
+						Auto-Delete Unpublished &amp; Un-bookmarked
+					</button>
+				</form>
+			</section>
+
+			<section class="vacate-card vacate-manual-card" aria-label="Manual journal selection">
+				<form id="vacate-manual-form" method="POST" action="/journals/vacate-space/">
+					<input type="hidden" name="action" value="delete_selected"/>
+					<div class="vacate-manual-header">
+						<div>
+							<h2>Select Journals Manually</h2>
+							<p class="vacate-manual-subtitle">Check individual entries below until the progress bar reaches 100%.</p>
+						</div>
+						<button
+							type="submit"
+							id="vacate-selected-btn"
+							class="btn btn-destructive"
+							disabled?={ view.RequiredBytes > 0 }
+						>
+							Delete Selected &amp; Resubmit
+						</button>
+					</div>
+
+					if len(view.Entries) == 0 {
+						<p class="journals-empty">No existing journals found.</p>
+					} else {
+						<div class="vacate-entries-list">
+							for _, item := range view.Entries {
+								<label class={ "vacate-entry-row", templ.KV("is-unpublished", !item.Entry.Published) }>
+									<input
+										type="checkbox"
+										class="vacate-entry-cb"
+										name="ids"
+										value={ fmt.Sprintf("%d", item.Entry.ID) }
+										data-bytes={ fmt.Sprintf("%d", item.EstimatedBytes) }
+										data-published={ fmt.Sprintf("%t", item.Entry.Published) }
+										data-bookmarked={ fmt.Sprintf("%t", item.Entry.Bookmarked) }
+									/>
+									<div class="vacate-entry-main">
+										<div class="vacate-entry-top">
+											<span class="entry-date">{ item.FormattedDate }</span>
+											<div class="journal-meta-badges">
+												if !item.Entry.Published {
+													<span class="entry-badge is-draft">Unpublished</span>
+												} else {
+													<span class="entry-badge">Published</span>
+												}
+												if item.Entry.Bookmarked {
+													<span class="entry-badge is-bookmarked">★ Bookmarked</span>
+												} else {
+													<span class="entry-badge">Un-bookmarked</span>
+												}
+												for _, tag := range item.Tags {
+													<span class="journal-tag-chip">{ tag }</span>
+												}
+											</div>
+										</div>
+										<p class="vacate-entry-excerpt">{ item.Excerpt }</p>
+									</div>
+									<div class="vacate-entry-size-col">
+										<span class="vacate-entry-size" data-bytes={ fmt.Sprintf("%d", item.EstimatedBytes) }>
+											{ item.FormattedSize }
+										</span>
+										<span class="vacate-entry-raw-bytes">{ fmt.Sprintf("%d B", item.EstimatedBytes) }</span>
+									</div>
+								</label>
+							}
+						</div>
+					}
+				</form>
+			</section>
+		</main>
+		<script src="/assets/js/vacate-space.js?v=1"></script>
+	}
+}

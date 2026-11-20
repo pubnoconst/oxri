@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -310,5 +311,113 @@ func TestStoreCRUDAndBatchLifecycle(t *testing.T) {
 	empty, _ := store.List(ctx, true)
 	if len(empty) != 0 {
 		t.Errorf("expected 0 entries after DeleteAll, got %d", len(empty))
+	}
+}
+
+func TestStorageQuotaAndAutoVacatePriority(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, ":memory:", "")
+	if err != nil {
+		t.Fatalf("Open memory db failed: %v", err)
+	}
+	defer store.Close()
+
+	// Create 3 entries:
+	// 1. Published + Bookmarked (must be preserved by auto-vacate)
+	eBookmarked, err := store.Create(ctx, JournalInput{
+		MediaURL:   "https://example.com/bm.png",
+		Tags:       []string{"keep"},
+		Body:       "Bookmarked published entry that must survive auto-eviction.",
+		Bookmarked: true,
+		Published:  true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. Published + Un-bookmarked (priority 2 for auto-vacate)
+	eUnbookmarked, err := store.Create(ctx, JournalInput{
+		MediaURL:   "https://example.com/unbm.png",
+		Tags:       []string{"pub"},
+		Body:       "Published un-bookmarked entry evicted second after drafts.",
+		Bookmarked: false,
+		Published:  true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 3. Unpublished (priority 1 for auto-vacate, even if bookmarked)
+	eUnpublished, err := store.Create(ctx, JournalInput{
+		MediaURL:   "https://example.com/draft.png",
+		Tags:       []string{"wip"},
+		Body:       "Unpublished draft entry evicted first by prioritized auto-vacate.",
+		Bookmarked: true,
+		Published:  false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	used, err := store.UsedStorageBytes(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedUsed := eBookmarked.EstimatedBytes() + eUnbookmarked.EstimatedBytes() + eUnpublished.EstimatedBytes()
+	if used != expectedUsed {
+		t.Fatalf("UsedStorageBytes = %d, expected sum of entry estimates %d", used, expectedUsed)
+	}
+
+	// Cap storage at current used bytes so any new entry exceeds quota
+	store.SetMaxStorageBytes(used)
+
+	newInput := JournalInput{
+		MediaURL:  "https://example.com/new.png",
+		Tags:      []string{"new"},
+		Body:      "Incoming entry that exceeds the storage cap.",
+		Published: true,
+	}
+	_, err = store.Create(ctx, newInput)
+	if !errors.Is(err, ErrQuotaExceeded) {
+		t.Fatalf("expected ErrQuotaExceeded on Create, got %v", err)
+	}
+	var qErr *QuotaExceededError
+	if !errors.As(err, &qErr) {
+		t.Fatalf("expected *QuotaExceededError, got %T", err)
+	}
+	if qErr.RequiredBytes != EstimateInputBytes(newInput) {
+		t.Errorf("RequiredBytes = %d, expected %d", qErr.RequiredBytes, EstimateInputBytes(newInput))
+	}
+
+	// Auto-vacate only enough bytes for one entry -> must delete eUnpublished first!
+	plan1, err := store.AutoVacateBytes(ctx, eUnpublished.EstimatedBytes())
+	if err != nil {
+		t.Fatalf("AutoVacateBytes step 1 failed: %v", err)
+	}
+	if plan1.UnpublishedCount != 1 || plan1.UnbookmarkedCount != 0 {
+		t.Errorf("expected 1 unpublished and 0 unbookmarked deleted first, got %+v", plan1)
+	}
+	if _, err := store.Get(ctx, eUnpublished.ID, true); err != ErrNotFound {
+		t.Errorf("expected eUnpublished to be deleted first")
+	}
+	if _, err := store.Get(ctx, eUnbookmarked.ID, true); err != nil {
+		t.Errorf("expected eUnbookmarked to still exist after step 1")
+	}
+
+	// Now newInput fits and Create succeeds!
+	if _, err := store.Create(ctx, newInput); err != nil {
+		t.Fatalf("expected Create to succeed after vacating unpublished entry, got %v", err)
+	}
+
+	// Auto-vacate again -> must delete eUnbookmarked next while preserving eBookmarked
+	plan2, err := store.AutoVacateBytes(ctx, eUnbookmarked.EstimatedBytes())
+	if err != nil {
+		t.Fatalf("AutoVacateBytes step 2 failed: %v", err)
+	}
+	if plan2.UnpublishedCount != 0 || plan2.UnbookmarkedCount != 1 {
+		t.Errorf("expected 0 unpublished and 1 unbookmarked deleted second, got %+v", plan2)
+	}
+	if _, err := store.Get(ctx, eBookmarked.ID, true); err != nil {
+		t.Errorf("expected published bookmarked entry to be preserved, got err=%v", err)
 	}
 }

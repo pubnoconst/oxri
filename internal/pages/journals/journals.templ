@@ -12,7 +12,7 @@ templ Page(isAuth bool, entries []RenderedEntry) {
 }
 
 templ CatalogPage(isAuth bool, view CatalogView) {
-	@shared.Layout("Journals - RES IMPERII", "/page-css/journals.css?v=7") {
+	@shared.Layout("Journals - RES IMPERII", "/page-css/journals.css?v=8") {
 		<main class="journals-page">
 			<header class="journals-header">
 				@shared.BackLink("/", "Back")
@@ -108,7 +108,7 @@ templ CatalogPage(isAuth bool, view CatalogView) {
 }
 
 templ EntryPage(isAuth bool, item RenderedEntry) {
-	@shared.Layout("Journal Entry - RES IMPERII", "/page-css/journals.css?v=7") {
+	@shared.Layout("Journal Entry - RES IMPERII", "/page-css/journals.css?v=8") {
 		<main class="journals-page journals-single-page">
 			<header class="journals-header">
 				@shared.BackLink("/journals", "Journals")

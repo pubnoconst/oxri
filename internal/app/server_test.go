@@ -822,3 +822,123 @@ func TestJournalPersistenceAndManagement(t *testing.T) {
 		t.Errorf("expected 0 entries after batch delete_all, got %d", len(afterAll))
 	}
 }
+
+func TestVacateSpaceRedirectAndResubmissionFlow(t *testing.T) {
+	server, svc, store := newTestServerWithAll(t)
+
+	// Authenticate admin session
+	token, _ := svc.CreatePendingLogin("/journals")
+	svc.ApprovePendingLogin(token, "test")
+	sessID, _, _ := svc.ConsumeApprovedLogin(token)
+	cookie := &http.Cookie{Name: auth.SessionCookieName, Value: sessID}
+
+	// Seed an unpublished entry and an un-bookmarked published entry
+	eDraft, err := store.Create(context.Background(), db.JournalInput{
+		MediaURL:   "https://example.com/draft.jpg",
+		Tags:       []string{"Wip"},
+		Body:       "Unpublished draft entry to be evicted first.",
+		Published:  false,
+		Bookmarked: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	eUnbookmarked, err := store.Create(context.Background(), db.JournalInput{
+		MediaURL:   "https://example.com/unbm.jpg",
+		Tags:       []string{"Log"},
+		Body:       "Published un-bookmarked entry to be evicted second if needed.",
+		Published:  true,
+		Bookmarked: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	used, err := store.UsedStorageBytes(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Set limit equal to current used bytes so adding a new entry triggers redirect to /journals/vacate-space/
+	store.SetMaxStorageBytes(used)
+
+	// 1. Submit POST /journals exceeding quota -> must redirect (303) to /journals/vacate-space/
+	newForm := url.Values{
+		"media_url":  {"https://example.com/incoming.jpg"},
+		"tags":       {"New"},
+		"body":       {"# Incoming Entry\n\nNeeds space vacated first."},
+		"published":  {"1"},
+		"bookmarked": {"1"},
+	}
+	createReq := httptest.NewRequest(http.MethodPost, "/journals", strings.NewReader(newForm.Encode()))
+	createReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	createReq.AddCookie(cookie)
+	createRec := httptest.NewRecorder()
+	server.ServeHTTP(createRec, createReq)
+
+	if createRec.Code != http.StatusSeeOther || createRec.Header().Get("Location") != "/journals/vacate-space/" {
+		t.Fatalf("expected 303 redirect to /journals/vacate-space/ when quota exceeded, got %d loc=%q", createRec.Code, createRec.Header().Get("Location"))
+	}
+
+	// 2. GET /journals/vacate-space/ renders required space, per-entry sizes, progress bar, auto-eviction option, and stashed resubmit form
+	vacateReq := httptest.NewRequest(http.MethodGet, "/journals/vacate-space/", nil)
+	vacateReq.AddCookie(cookie)
+	vacateRec := httptest.NewRecorder()
+	server.ServeHTTP(vacateRec, vacateReq)
+
+	if vacateRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on /journals/vacate-space/, got %d", vacateRec.Code)
+	}
+	vBody := vacateRec.Body.String()
+	if !strings.Contains(vBody, "Vacate Space") {
+		t.Errorf("missing Vacate Space heading")
+	}
+	if !strings.Contains(vBody, `id="vacate-progress-bar"`) || !strings.Contains(vBody, `id="vacate-progress-fill"`) {
+		t.Errorf("missing vacate progress bar elements")
+	}
+	if !strings.Contains(vBody, fmt.Sprintf(`data-bytes="%d"`, eDraft.EstimatedBytes())) {
+		t.Errorf("missing per-entry estimated bytes for draft entry (%d B)", eDraft.EstimatedBytes())
+	}
+	if !strings.Contains(vBody, fmt.Sprintf(`data-bytes="%d"`, eUnbookmarked.EstimatedBytes())) {
+		t.Errorf("missing per-entry estimated bytes for un-bookmarked entry (%d B)", eUnbookmarked.EstimatedBytes())
+	}
+	if !strings.Contains(vBody, `value="auto_vacate"`) {
+		t.Errorf("missing auto_vacate form action")
+	}
+	if !strings.Contains(vBody, `id="resubmit-journal-form"`) || !strings.Contains(vBody, "https://example.com/incoming.jpg") {
+		t.Errorf("missing stashed resubmit-journal-form with incoming entry payload")
+	}
+
+	// 3. POST /journals/vacate-space/ with action=auto_vacate evicts unpublished (prioritized) then un-bookmarked entries
+	autoForm := url.Values{
+		"action": {"auto_vacate"},
+	}
+	autoReq := httptest.NewRequest(http.MethodPost, "/journals/vacate-space/", strings.NewReader(autoForm.Encode()))
+	autoReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	autoReq.AddCookie(cookie)
+	autoRec := httptest.NewRecorder()
+	server.ServeHTTP(autoRec, autoReq)
+
+	if autoRec.Code != http.StatusSeeOther || autoRec.Header().Get("Location") != "/journals/vacate-space/?vacated=1" {
+		t.Fatalf("expected 303 redirect to /journals/vacate-space/?vacated=1, got %d loc=%q", autoRec.Code, autoRec.Header().Get("Location"))
+	}
+
+	// 4. GET /journals/vacate-space/?vacated=1 marks resubmit-journal-form with data-auto-resubmit="true"
+	readyReq := httptest.NewRequest(http.MethodGet, "/journals/vacate-space/?vacated=1", nil)
+	readyReq.AddCookie(cookie)
+	readyRec := httptest.NewRecorder()
+	server.ServeHTTP(readyRec, readyReq)
+	if !strings.Contains(readyRec.Body.String(), `data-auto-resubmit="true"`) {
+		t.Errorf("expected data-auto-resubmit=\"true\" once required space has been vacated")
+	}
+
+	// 5. Client resubmits the form (POST /journals) -> succeeds and redirects to /journals!
+	resubmitReq := httptest.NewRequest(http.MethodPost, "/journals", strings.NewReader(newForm.Encode()))
+	resubmitReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resubmitReq.AddCookie(cookie)
+	resubmitRec := httptest.NewRecorder()
+	server.ServeHTTP(resubmitRec, resubmitReq)
+
+	if resubmitRec.Code != http.StatusSeeOther || resubmitRec.Header().Get("Location") != "/journals" {
+		t.Fatalf("expected resubmitted POST /journals to succeed and redirect to /journals, got %d loc=%q", resubmitRec.Code, resubmitRec.Header().Get("Location"))
+	}
+}

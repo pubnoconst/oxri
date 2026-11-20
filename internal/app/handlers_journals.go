@@ -110,6 +110,19 @@ func handleJournalCreate(store *db.Store) http.HandlerFunc {
 				_ = editor.FormPage(true, formData).Render(req.Context(), w)
 				return
 			}
+			if errors.Is(err, db.ErrQuotaExceeded) {
+				store.SetPendingSubmission(&db.PendingSubmission{
+					IsEdit:     false,
+					MediaURL:   formData.MediaURL,
+					TagsRaw:    formData.Tags,
+					Body:       formData.Body,
+					Published:  formData.Published,
+					Bookmarked: formData.Bookmarked,
+					EntryBytes: db.EstimateInputBytes(in),
+				})
+				http.Redirect(w, req, "/journals/vacate-space/", http.StatusSeeOther)
+				return
+			}
 			RenderErrorWithCause(w, req, http.StatusInternalServerError, err)
 			return
 		}
@@ -179,10 +192,109 @@ func handleJournalUpdate(store *db.Store) http.HandlerFunc {
 				RenderError(w, req, http.StatusNotFound)
 				return
 			}
+			if errors.Is(err, db.ErrQuotaExceeded) {
+				store.SetPendingSubmission(&db.PendingSubmission{
+					IsEdit:     true,
+					EntryID:    id,
+					MediaURL:   formData.MediaURL,
+					TagsRaw:    formData.Tags,
+					Body:       formData.Body,
+					Published:  formData.Published,
+					Bookmarked: formData.Bookmarked,
+					EntryBytes: db.EstimateInputBytes(in),
+				})
+				http.Redirect(w, req, "/journals/vacate-space/", http.StatusSeeOther)
+				return
+			}
 			RenderErrorWithCause(w, req, http.StatusInternalServerError, err)
 			return
 		}
 		http.Redirect(w, req, "/journals", http.StatusSeeOther)
+	}
+}
+
+func handleJournalVacateSpacePage(store *db.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		if store == nil {
+			RenderError(w, req, http.StatusServiceUnavailable)
+			return
+		}
+		entries, err := store.List(req.Context(), true)
+		if err != nil {
+			RenderErrorWithCause(w, req, http.StatusInternalServerError, err)
+			return
+		}
+		requiredBytes, entryBytes, usedBytes, limitBytes, err := store.RequiredBytesForPending(req.Context())
+		if err != nil {
+			RenderErrorWithCause(w, req, http.StatusInternalServerError, err)
+			return
+		}
+		autoPlan, err := store.PreviewAutoVacate(req.Context(), requiredBytes)
+		if err != nil {
+			RenderErrorWithCause(w, req, http.StatusInternalServerError, err)
+			return
+		}
+		pendingSub := store.GetPendingSubmission()
+		autoResubmit := req.URL.Query().Get("vacated") == "1" && requiredBytes <= 0 && pendingSub != nil
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = journals.VacateSpacePage(journals.VacateSpaceView{
+			Entries:           journals.RenderEntries(entries),
+			RequiredBytes:     requiredBytes,
+			PendingEntryBytes: entryBytes,
+			UsedBytes:         usedBytes,
+			LimitBytes:        limitBytes,
+			AutoPlan:          autoPlan,
+			PendingSub:        pendingSub,
+			AutoResubmitReady: autoResubmit,
+		}).Render(req.Context(), w)
+	}
+}
+
+func handleJournalVacateSpaceSubmit(store *db.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		if store == nil {
+			RenderError(w, req, http.StatusServiceUnavailable)
+			return
+		}
+		_ = req.ParseForm()
+		action := req.FormValue("action")
+
+		switch action {
+		case "auto_vacate":
+			requiredBytes, _, _, _, err := store.RequiredBytesForPending(req.Context())
+			if err != nil {
+				RenderErrorWithCause(w, req, http.StatusInternalServerError, err)
+				return
+			}
+			if requiredBytes <= 0 {
+				if rawReq := req.FormValue("required_bytes"); rawReq != "" {
+					if parsed, parseErr := strconv.ParseInt(rawReq, 10, 64); parseErr == nil && parsed > 0 {
+						requiredBytes = parsed
+					}
+				}
+			}
+			if _, err := store.AutoVacateBytes(req.Context(), requiredBytes); err != nil {
+				RenderErrorWithCause(w, req, http.StatusInternalServerError, err)
+				return
+			}
+		case "delete_selected":
+			var ids []int64
+			for _, rawID := range req.Form["ids"] {
+				if id, err := strconv.ParseInt(rawID, 10, 64); err == nil && id > 0 {
+					ids = append(ids, id)
+				}
+			}
+			if err := store.Delete(req.Context(), ids); err != nil {
+				RenderErrorWithCause(w, req, http.StatusInternalServerError, err)
+				return
+			}
+		default:
+			RenderError(w, req, http.StatusBadRequest)
+			return
+		}
+
+		http.Redirect(w, req, "/journals/vacate-space/?vacated=1", http.StatusSeeOther)
 	}
 }
 

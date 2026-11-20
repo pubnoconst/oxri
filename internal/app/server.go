@@ -72,6 +72,10 @@ func NewServer(assetsDir string, authSvc *auth.Service, store *db.Store) http.Ha
 	r.Group(func(adminRouter chi.Router) {
 		useRequireAuth(adminRouter, authSvc)
 		adminRouter.Post("/journals", handleJournalCreate(store))
+		adminRouter.Get("/journals/vacate-space", handleJournalVacateSpacePage(store))
+		adminRouter.Get("/journals/vacate-space/", handleJournalVacateSpacePage(store))
+		adminRouter.Post("/journals/vacate-space", handleJournalVacateSpaceSubmit(store))
+		adminRouter.Post("/journals/vacate-space/", handleJournalVacateSpaceSubmit(store))
 		adminRouter.Get("/journals/{id}/edit", handleJournalEditForm(store))
 		adminRouter.Post("/journals/{id}", handleJournalUpdate(store))
 		adminRouter.Post("/journals/{id}/delete", handleJournalDelete(store))

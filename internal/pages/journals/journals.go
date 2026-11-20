@@ -27,11 +27,13 @@ var (
 
 // RenderedEntry pairs a persisted Journal row with pre-rendered safe HTML, excerpt, and metadata.
 type RenderedEntry struct {
-	Entry         db.Journal
-	RenderedHTML  string
-	Excerpt       string
-	FormattedDate string
-	Tags          []string
+	Entry          db.Journal
+	RenderedHTML   string
+	Excerpt        string
+	FormattedDate  string
+	Tags           []string
+	EstimatedBytes int64
+	FormattedSize  string
 }
 
 // CatalogView holds rendered entries alongside search query and active tag filters.
@@ -115,12 +117,15 @@ func RenderSingle(j db.Journal) RenderedEntry {
 		t = time.UnixMilli(j.ID)
 	}
 	rendered := RenderMarkdown(j.Body)
+	estBytes := j.EstimatedBytes()
 	return RenderedEntry{
-		Entry:         j,
-		RenderedHTML:  rendered,
-		Excerpt:       Excerpt280(rendered),
-		FormattedDate: t.Local().Format("Jan 2, 2006"),
-		Tags:          j.Tags(),
+		Entry:          j,
+		RenderedHTML:   rendered,
+		Excerpt:        Excerpt280(rendered),
+		FormattedDate:  t.Local().Format("Jan 2, 2006"),
+		Tags:           j.Tags(),
+		EstimatedBytes: estBytes,
+		FormattedSize:  FormatBytes(estBytes),
 	}
 }
 
