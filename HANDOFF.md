@@ -511,3 +511,12 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
 - Removed the local disk SQLite fallback (`file:res_imperii.db`) from `internal/db/db.go` and `cmd/server/main.go`.
 - `db.Open` now strictly rejects empty or `file:` database URLs, requiring a remote Turso/libSQL URL (`TURSO_DATABASE_URL` from `db.env` or `.env`).
 - Updated `.env.example`, `README.md`, and unit tests in `internal/db/db_test.go`. All tests pass via `mage test` and binary builds via `mage build`.
+
+## 2026-11-20 - External oxri-parent directory for secret files outside the Git repository
+
+- Decision: `D-20261120-009`, recorded in commit `a38c9af` (`Decide external oxri-parent secret directory D-20261120-009`).
+- Implementation: commit `18f3792` (`Relocate secrets to external oxri-parent directory and update magefile D-20261120-009`).
+- Created `../oxri-parent` (`c:\Users\relay\proj\oxri-parent`) outside the Git working tree and moved `db.env` and `.ssh_host_key` there.
+- Moved `ADMIN_SSH_PUBKEY` into `../oxri-parent/db.env` and removed the hardcoded `DefaultAuthorizedKey` from `internal/auth/auth.go` and `.env.example`.
+- Updated `magefile.go` (`loadExternalSecrets`) and `cmd/server/main.go` to automatically load `../oxri-parent/db.env` (or enclosing `../db.env`) and default `HOST_KEY_PATH` to `../oxri-parent/.ssh_host_key`.
+- Verified zero secret or key files remain inside the Git working tree. All tests pass via `mage test` and binary builds via `mage build`.
