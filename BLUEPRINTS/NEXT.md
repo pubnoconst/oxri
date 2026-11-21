@@ -1,14 +1,14 @@
 # Next
 
-- **Latest Commit**: `28d28e1` (`Implement client-safe error pages (4xx/5xx/panic) with QR reference codes`)
-- **Active Branch**: `v2-error-pages` (PR open for review and UI test)
+- **Latest Commit**: `675b541` (`Implement Book I reader view, Goldmark markdown parsing, and BackLink navigation`)
+- **Active Branch**: `v2-book-i` (PR open for review and UI test)
 - **Active Experiment / Undo Instructions**: None.
 
 ## Next on Mind
 
-1. **Error Pages UI Test & Review**:
+1. **Book I UI Test & Review**:
    - Keep Pull Request open for user UI testing and green light.
-   - Run server for UI test at `/nonexistent` (404) and `/_test/panic` (500).
+   - Run server for UI test at `/book-i`.
 
 2. **Phase 3: Database & Quota Subsystem (`internal/db`)**:
    - Remote Turso connection (`libsql://`) via external `../oxri-parent/db.env`.
@@ -20,5 +20,5 @@
    - Strict HTTP security headers (CSP without `unsafe-eval`, HSTS, nosniff, frame-ancestors).
    - Rate limiting and request timeout / body cap middleware.
 
-4. **Phase 5: Views with Gomponents & Handlers**:
-   - Book I reading view, Journal catalog & editor, Make Room overlay (`Confirming, please wait.`).
+4. **Phase 5: Journal System & Editor**:
+   - Journal catalog view, Journal editor, Make Room overlay (`Confirming, please wait.`).
