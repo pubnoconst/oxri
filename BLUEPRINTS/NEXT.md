@@ -1,6 +1,6 @@
 # Next
 
-- **Latest Commit**: `9d88765` (`Add BLUEPRINTS/Principia.md foundational charter`)
+- **Latest Commit**: `1396446` (`Document PR-driven dev cycle and BLUEPRINTS workflow in Principia.md`)
 - **Active Branch**: `v2`
 - **Active Experiment / Undo Instructions**: None.
 
