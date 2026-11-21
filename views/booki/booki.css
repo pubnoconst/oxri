@@ -1,0 +1,79 @@
+/* Scoped styling for Book I long-form essay reader */
+.article-page {
+  min-height: 100vh;
+  padding: var(--space-page-y) var(--space-page-x);
+  box-sizing: border-box;
+}
+
+.book-article {
+  width: min(100%, 42rem);
+  margin: 0 auto;
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  line-height: 1.75;
+}
+
+.book-content {
+  font-family: var(--font-serif);
+}
+
+.book-content > h1 {
+  margin: var(--space-header-top) 0 var(--space-header-bottom);
+  text-align: center;
+  font-size: var(--heading-h1);
+  font-weight: 400;
+  line-height: 1.1;
+  font-family: var(--font-serif);
+}
+
+.book-content h2 {
+  margin: 2.8rem 0 0.8rem;
+  font-size: clamp(1.55rem, 4vw, 1.85rem);
+  font-weight: 400;
+  line-height: 1.25;
+  font-family: var(--font-serif);
+}
+
+.book-content h3 {
+  margin: 1.8rem 0 0.55rem;
+  font-size: var(--heading-h3);
+  font-weight: 400;
+  font-family: var(--font-serif);
+}
+
+.book-content p {
+  margin: 0 0 1.2rem;
+  font-family: var(--font-serif);
+}
+
+.book-content ul,
+.book-content ol {
+  margin: 0 0 1.2rem 1.5rem;
+  font-family: var(--font-serif);
+}
+
+.book-content li {
+  padding-left: 0.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.book-content hr {
+  width: 3rem;
+  margin: 2.8rem auto;
+  border: 0;
+  border-top: 1px solid var(--border-input);
+}
+
+.book-content blockquote {
+  margin: 3rem 0 1.8rem;
+  text-align: center;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  font-style: italic;
+  font-family: var(--font-serif);
+}
+
+.book-article > .back-link:last-child {
+  margin-top: 2rem;
+  margin-bottom: 3rem;
+}
