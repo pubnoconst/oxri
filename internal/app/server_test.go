@@ -947,23 +947,13 @@ func TestVacateSpaceRedirectAndResubmissionFlow(t *testing.T) {
 	}
 }
 
-func TestLoadingStatePage(t *testing.T) {
+func TestLoadingStateRouteRemoved(t *testing.T) {
 	server := newTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/loading", nil)
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200 OK on /loading, got %d", rec.Code)
-	}
-	body := rec.Body.String()
-	if !strings.Contains(body, `aria-label="Ensuring confirmation, this should be quick."`) {
-		t.Errorf("missing confirmation phrase aria-label on /loading")
-	}
-	if !strings.Contains(body, `class="loading-char"`) {
-		t.Errorf("missing individual character spans for pure-CSS magnifying wave")
-	}
-	if !strings.Contains(body, `/page-css/loading.css`) {
-		t.Errorf("missing /page-css/loading.css stylesheet link")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 Not Found on /loading (should not be a route), got %d", rec.Code)
 	}
 }

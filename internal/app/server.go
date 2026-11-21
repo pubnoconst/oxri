@@ -49,12 +49,6 @@ func NewServer(assetsDir string, authSvc *auth.Service, store *db.Store) http.Ha
 		_ = landing.Page(isAuth).Render(req.Context(), w)
 	})
 	r.Get("/page-css/landing.css", serveCSS(landing.StyleCSS))
-
-	// Standalone Loading State (/loading)
-	r.Get("/loading", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = loading.Page(loading.DefaultPhrase).Render(req.Context(), w)
-	})
 	r.Get("/page-css/loading.css", serveCSS(loading.StyleCSS))
 
 	// Book I Article

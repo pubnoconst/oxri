@@ -6,7 +6,7 @@ import _ "embed"
 var StyleCSS string
 
 // DefaultPhrase is the non-technical confirmation message displayed during loading transitions.
-const DefaultPhrase = "Ensuring confirmation, this should be quick."
+const DefaultPhrase = "Confirming, please wait."
 
 // CharToken represents a single rendered character in the magnifying-wave phrase.
 type CharToken struct {
