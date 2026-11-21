@@ -1,0 +1,45 @@
+# Go binaries and build output
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Generated Templ templates
+*_templ.go
+
+# Test binaries and coverage
+*.test
+*.out
+
+# Magefile cache
+/.mage/
+
+# Go workspace files
+go.work
+go.work.sum
+
+# Local secrets and temporary keys
+.env
+*.env
+.env.*
+!.env.example
+.ssh_host_key*
+passkey.txt
+passkey.json
+
+# IDE and operating-system files
+.vs/
+.idea/
+.vscode/
+.openidea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.stackdump
+
+# Legacy build directories
+/target/
+/obj/
