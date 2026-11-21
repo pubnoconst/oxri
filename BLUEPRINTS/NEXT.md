@@ -1,6 +1,6 @@
 # Next
 
-- **Latest Commit**: `724f504` (`Merge pull request #2 from pubnoconst/v2-principia-dev-cycle`)
+- **Latest Commit**: `b749c58` (`Record technology stack rationale for Gomponents, HTMX, Vanilla JS, and zero-framework CSS`)
 - **Active Branch**: `v2`
 - **Active Experiment / Undo Instructions**: None.
 
