@@ -124,12 +124,14 @@ func TestErrorPages_MethodNotAllowed(t *testing.T) {
 }
 
 func TestErrorPages_PanicRecovery_NoLeak(t *testing.T) {
-	router := NewRouter(Config{AssetsDir: "../assets"})
+	testHandler := safeRecoverer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic("test panic: database connection failed or simulated exception")
+	}))
 
-	// Trigger simulated panic endpoint
-	req := httptest.NewRequest(http.MethodGet, "/_test/panic", nil)
+	// Trigger simulated panic
+	req := httptest.NewRequest(http.MethodGet, "/simulated-panic", nil)
 	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
+	testHandler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", rec.Code)

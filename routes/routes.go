@@ -52,11 +52,6 @@ func NewRouter(cfg Config) http.Handler {
 	r.Get("/", handleLanding())
 	r.Get("/book-i", handleBookI())
 
-	// 6. Test panic route (only for development/testing if needed)
-	r.Get("/_test/panic", func(w http.ResponseWriter, r *http.Request) {
-		panic("test panic: database connection failed or simulated exception")
-	})
-
 	return r
 }
 
