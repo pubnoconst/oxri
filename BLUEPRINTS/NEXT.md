@@ -1,14 +1,14 @@
 # Next
 
-- **Latest Commit**: `cb9d677` (`Initialize fresh branch inheriting only .gitignore`)
+- **Latest Commit**: `9d88765` (`Add BLUEPRINTS/Principia.md foundational charter`)
 - **Active Branch**: `v2`
-- **Active Experiment / Undo Instructions**: None (clean slate on `v2`; previous v1 history remains intact on branch `main`).
+- **Active Experiment / Undo Instructions**: None.
 
 ## Next on Mind
 
-1. **Authenticate GitHub CLI (`gh auth login`)**:
-   - Connect `gh` (`v2.105.0`) to GitHub so major features and decisions can be proposed and merged via Pull Requests.
-2. **Plan & Rewrite Res Imperii from Scratch**:
-   - Maintain small, focused modules (no monoliths in code or documentation).
-   - Keep all user-facing copy free of internal engineering or technical jargon.
-   - Build security in from commit one (strict input whitelisting, browser-bound auth challenges, security headers, self-hosted static scripts, and remote Turso persistence via `../oxri-parent/db.env`).
+1. **Scaffold Go Module & `CGO_ENABLED=0` Build System (`go.mod`, `magefile.go`)**:
+   - Initialize the Go module on Go `1.27.4+` (resolving stdlib CVEs) and a minimal `magefile.go` that enforces `CGO_ENABLED=0` across `build`, `run`, and `test`.
+2. **Design & Implement `internal/domain` ("Parse, Don't Validate")**:
+   - Implement opaque, unexported-field domain types (`MediaURL`, `Tag`, `TagSet`, `Prose`, `SafePath`, `ValidatedEntry`) enforcing *Principia* #3, #5, and #6 at compile time.
+3. **Design & Implement Hardened Authentication & Storage Modules**:
+   - Build capability-gated (`AdminCap`) remote Turso persistence (`../oxri-parent/db.env`) and browser-bound authentication with security headers and zero external CDN script dependencies.
