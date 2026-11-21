@@ -1,14 +1,14 @@
 # Next
 
-- **Latest Commit**: `85b28d7` (`Implement Phase 2 domain modeling and capability tokens`)
-- **Active Branch**: `v2-phase2-domain` (PR open for review and UI test)
+- **Latest Commit**: `28d28e1` (`Implement client-safe error pages (4xx/5xx/panic) with QR reference codes`)
+- **Active Branch**: `v2-error-pages` (PR open for review and UI test)
 - **Active Experiment / Undo Instructions**: None.
 
 ## Next on Mind
 
-1. **Phase 2 Review & UI Check**:
-   - Keep Pull Request open for user green light.
-   - Run server for UI test.
+1. **Error Pages UI Test & Review**:
+   - Keep Pull Request open for user UI testing and green light.
+   - Run server for UI test at `/nonexistent` (404) and `/_test/panic` (500).
 
 2. **Phase 3: Database & Quota Subsystem (`internal/db`)**:
    - Remote Turso connection (`libsql://`) via external `../oxri-parent/db.env`.
@@ -21,4 +21,4 @@
    - Rate limiting and request timeout / body cap middleware.
 
 4. **Phase 5: Views with Gomponents & Handlers**:
-   - Book I reading view, Journal catalog & editor, Make Room overlay (`Confirming, please wait.`), Error pages.
+   - Book I reading view, Journal catalog & editor, Make Room overlay (`Confirming, please wait.`).
