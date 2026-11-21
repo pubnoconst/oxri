@@ -20,7 +20,7 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 		h.Link(h.Rel("stylesheet"), h.Href("https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap")),
 
 		// Global Site CSS
-		h.Link(h.Rel("stylesheet"), h.Href("/assets/css/site.css?v=2")),
+		h.Link(h.Rel("stylesheet"), h.Href("/assets/css/site.css?v=3")),
 	}
 
 	if componentCSS != "" {
@@ -32,9 +32,10 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 			h.Head(headElements...),
 			h.Body(
 				g.Group(bodyChildren),
-				// Vendored HTMX and Theme Toggle (No External CDN scripts)
+				// Vendored HTMX, Theme Toggle, and Page Transition Feedback (No External CDN scripts)
 				h.Script(h.Src("/assets/js/htmx.min.js")),
 				h.Script(h.Src("/assets/js/theme-toggle.js?v=2")),
+				h.Script(h.Src("/assets/js/navigation-feedback.js?v=1")),
 			),
 		),
 	)

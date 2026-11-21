@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/oxri/oxri-go/internal/auth"
+	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/serverfns"
 	"github.com/oxri/oxri-go/views/booki"
 	"github.com/oxri/oxri-go/views/errorpage"
@@ -23,6 +24,7 @@ import (
 type Config struct {
 	AssetsDir   string
 	AuthService *auth.Service
+	Store       *db.Store
 }
 
 // NewRouter builds and returns the top-level Chi HTTP handler.

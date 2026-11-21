@@ -25,7 +25,8 @@ body {
   background-color: var(--page);
   color: var(--page-ink);
   font-family: var(--font-serif);
-  transition: background-color 200ms ease, color 200ms ease;
+  animation: 220ms ease-in-out both page-fade-in;
+  transition: background-color 200ms ease, color 200ms ease, opacity 160ms ease-in-out;
 }
 
 img, picture, video, canvas, svg {
@@ -227,12 +228,70 @@ a {
   transform: translateX(-0.12rem);
 }
 
-/* 6. Reduced-Motion Accessibility */
+/* 6. Cross-Document View Transitions & Page Ease In/Out */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition {
+  background-color: var(--page);
+}
+
+@keyframes page-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+::view-transition-old(root) {
+  animation: 160ms ease-out both page-fade-out;
+}
+
+::view-transition-new(root) {
+  animation: 220ms ease-in-out both page-fade-in;
+}
+
+:root.navigation-leaving body {
+  opacity: 0.35;
+}
+
+@keyframes navigation-pending-breathe {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.88;
+  }
+}
+
+:root.navigation-pending body {
+  animation: navigation-pending-breathe 1.6s ease-in-out infinite;
+}
+
+/* 7. Reduced-Motion Accessibility */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
   }
 }
