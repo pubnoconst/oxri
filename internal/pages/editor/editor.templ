@@ -25,7 +25,7 @@ templ FormPage(isAuth bool, data FormData) {
 						}
 					</div>
 					if isAuth {
-						<p class="editor-notice">Author authenticated</p>
+						<p class="editor-notice">Signed in</p>
 					} else {
 						<p class="editor-notice">Draft preview · <a href="/login?next=/journals/new" style="color: inherit; text-decoration: underline;">Sign in</a></p>
 					}
@@ -73,7 +73,7 @@ templ FormPage(isAuth bool, data FormData) {
 								data-existing-tags={ data.ExistingTagsCSV() }
 							/>
 							<div id="tag-suggestions" class="tag-suggestions" role="listbox" aria-label="Tag suggestions"></div>
-							<p class="field-hint">Up to 3 unique Title Case tags, max 4 characters each (Latin/Greek/digits only; no emojis).</p>
+							<p class="field-hint">Up to 3 unique tags, up to 4 characters each (letters and numbers only; no emojis).</p>
 							<p id="tags-error" class="field-error" aria-live="polite"></p>
 						</div>
 						<div class="editor-field editor-content-field">
@@ -116,7 +116,7 @@ templ FormPage(isAuth bool, data FormData) {
 						</button>
 						<a href="/journals" class="btn btn-neutral">Cancel</a>
 					} else {
-						<p class="publish-note">Publishing requires author authentication.</p>
+						<p class="publish-note">Sign in to publish an entry.</p>
 						<button type="button" id="publish-submit-btn" data-is-auth="false" class="btn btn-encouraged" disabled>Publish entry</button>
 					}
 				</div>

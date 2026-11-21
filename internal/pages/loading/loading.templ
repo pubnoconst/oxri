@@ -1,0 +1,26 @@
+package loading
+
+import (
+	"fmt"
+	"github.com/oxri/oxri-go/internal/pages/shared"
+)
+
+templ Page(phrase string) {
+	@shared.Layout("RES IMPERII", "/page-css/loading.css?v=1") {
+		@Stage(phrase)
+	}
+}
+
+templ Stage(phrase string) {
+	<main class="loading-page" aria-live="polite" aria-busy="true">
+		<p class="loading-phrase" aria-label={ phrase }>
+			for _, ch := range SplitPhrase(phrase) {
+				<span
+					class={ "loading-char", templ.KV("is-space", ch.IsSpace) }
+					style={ fmt.Sprintf("--i: %d;", ch.Index) }
+					aria-hidden="true"
+				>{ ch.Text }</span>
+			}
+		</p>
+	</main>
+}

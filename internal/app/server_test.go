@@ -593,6 +593,7 @@ func TestPageStylesheets(t *testing.T) {
 		"/page-css/journal-editor.css",
 		"/page-css/pilot-settings.css",
 		"/page-css/login.css",
+		"/page-css/loading.css",
 		"/page-css/error.css",
 	}
 
@@ -889,8 +890,11 @@ func TestVacateSpaceRedirectAndResubmissionFlow(t *testing.T) {
 		t.Fatalf("expected 200 OK on /journals/vacate-space/, got %d", vacateRec.Code)
 	}
 	vBody := vacateRec.Body.String()
-	if !strings.Contains(vBody, "Vacate Space") {
-		t.Errorf("missing Vacate Space heading")
+	if !strings.Contains(vBody, "Make Room") {
+		t.Errorf("missing Make Room heading")
+	}
+	if strings.Contains(strings.ToLower(vBody), "turso") {
+		t.Errorf("vacate space page must not leak internal infrastructure name 'Turso'")
 	}
 	if !strings.Contains(vBody, `id="vacate-progress-bar"`) || !strings.Contains(vBody, `id="vacate-progress-fill"`) {
 		t.Errorf("missing vacate progress bar elements")
@@ -940,5 +944,26 @@ func TestVacateSpaceRedirectAndResubmissionFlow(t *testing.T) {
 
 	if resubmitRec.Code != http.StatusSeeOther || resubmitRec.Header().Get("Location") != "/journals" {
 		t.Fatalf("expected resubmitted POST /journals to succeed and redirect to /journals, got %d loc=%q", resubmitRec.Code, resubmitRec.Header().Get("Location"))
+	}
+}
+
+func TestLoadingStatePage(t *testing.T) {
+	server := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/loading", nil)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on /loading, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `aria-label="Ensuring confirmation, this should be quick."`) {
+		t.Errorf("missing confirmation phrase aria-label on /loading")
+	}
+	if !strings.Contains(body, `class="loading-char"`) {
+		t.Errorf("missing individual character spans for pure-CSS magnifying wave")
+	}
+	if !strings.Contains(body, `/page-css/loading.css`) {
+		t.Errorf("missing /page-css/loading.css stylesheet link")
 	}
 }

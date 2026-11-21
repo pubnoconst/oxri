@@ -552,3 +552,11 @@ in `DECISIONS.md`; avoid copying their full contents into this timeline.
   1. Produce an independent `/loading` view featuring centered, smoothly pulsating copy (`"Ensuring confirmation, this should be quick."`) with pure-CSS linear magnifying-glass wave scaling on individual characters for UI testing.
   2. Audit and rewrite `/journals/vacate-space/` text to remove technical terms.
   3. Revert the temporary single-entry storage limit override in `cmd/server/main.go` back to standard 4.5 GB limit.
+
+## 2026-11-21 - Restore 4.5 GB storage limit, sanitize user-facing copy, and build standalone `/loading` view
+
+- Decision: `D-20261121-002`.
+- Restored the standard 4.5 GB storage budget (`TURSO_MAX_STORAGE_BYTES=4500000000` verified in `../oxri-parent/db.env` and documented in `.env.example`) by removing the temporary single-entry storage limit override from `cmd/server/main.go`.
+- Sanitized user-facing copy in `internal/pages/journals/vacate.templ`, `assets/js/vacate-space.js` (`?v=2`), and `internal/pages/editor/editor.templ` to remove internal engineering terms ("Turso", "storage budget", duplicate raw byte counts, "author authentication").
+- Created standalone pure-CSS loading state module (`internal/pages/loading/loading.go`, `loading.templ`, `style.css`) mounted at `GET /loading` and `GET /page-css/loading.css`, rendering `"Ensuring confirmation, this should be quick."` with smooth ease-in, gentle pulsation, and a linear character-by-character magnifying-glass wave animation.
+- Added `TestLoadingStatePage` and updated `TestVacateSpaceRedirectAndResubmissionFlow` in `internal/app/server_test.go`. All tests pass via `mage test` and binary builds via `mage build`.

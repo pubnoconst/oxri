@@ -68,13 +68,11 @@
     }
     if (progressReadout) {
       if (requiredBytes <= 0 && selectedCount === 0) {
-        progressReadout.textContent = "Sufficient space vacated (100%)";
+        progressReadout.textContent = "Enough space freed (100%)";
       } else {
         progressReadout.textContent =
           formatBytes(selectedBytes) +
-          " (" +
-          selectedBytes +
-          " B) / " +
+          " of " +
           formatBytes(requiredBytes) +
           " (" +
           pct +

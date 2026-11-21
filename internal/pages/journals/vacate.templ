@@ -20,51 +20,51 @@ func progressInitialVal(req int64) int64 {
 }
 
 templ VacateSpacePage(view VacateSpaceView) {
-	@shared.Layout("Vacate Space - RES IMPERII", "/page-css/journals.css?v=8") {
+	@shared.Layout("Make Room - RES IMPERII", "/page-css/journals.css?v=8") {
 		<main class="journals-page vacate-space-page">
 			<header class="journals-header">
 				@shared.BackLink("/journals", "Journals")
 				<div class="journals-title-row">
-					<h1>Vacate Space</h1>
+					<h1>Make Room</h1>
 				</div>
 			</header>
 
 			<section
 				id="vacate-progress-section"
 				class="vacate-card vacate-summary-card"
-				aria-label="Storage budget and required space"
+				aria-label="Space needed"
 				data-required-bytes={ fmt.Sprintf("%d", view.RequiredBytes) }
 				data-entry-bytes={ fmt.Sprintf("%d", view.PendingEntryBytes) }
 			>
 				<p class="vacate-lead">
-					Adding this journal entry exceeds the self-imposed Turso storage budget. Free at least
-					<strong>{ FormatBytes(view.RequiredBytes) }</strong> ({ fmt.Sprintf("%d B", view.RequiredBytes) })
-					to proceed, and your entry will be resubmitted automatically.
+					Your journal archive is full. Remove a few older entries to free up at least
+					<strong>{ FormatBytes(view.RequiredBytes) }</strong>,
+					and your new entry will be saved automatically.
 				</p>
 
 				<div class="vacate-metrics">
 					<div class="vacate-metric-item">
-						<span class="vacate-metric-label">Incoming Entry Size</span>
-						<span class="vacate-metric-value" id="vacate-entry-bytes">{ FormatBytes(view.PendingEntryBytes) } ({ fmt.Sprintf("%d B", view.PendingEntryBytes) })</span>
+						<span class="vacate-metric-label">This entry</span>
+						<span class="vacate-metric-value" id="vacate-entry-bytes">{ FormatBytes(view.PendingEntryBytes) }</span>
 					</div>
 					<div class="vacate-metric-item">
-						<span class="vacate-metric-label">Required Space to Vacate</span>
-						<span class="vacate-metric-value" id="vacate-required-bytes">{ FormatBytes(view.RequiredBytes) } ({ fmt.Sprintf("%d B", view.RequiredBytes) })</span>
+						<span class="vacate-metric-label">Space needed</span>
+						<span class="vacate-metric-value" id="vacate-required-bytes">{ FormatBytes(view.RequiredBytes) }</span>
 					</div>
 					<div class="vacate-metric-item">
-						<span class="vacate-metric-label">Current Usage / Limit</span>
-						<span class="vacate-metric-value">{ FormatBytes(view.UsedBytes) } / { FormatBytes(view.LimitBytes) }</span>
+						<span class="vacate-metric-label">Archive used</span>
+						<span class="vacate-metric-value">{ FormatBytes(view.UsedBytes) } of { FormatBytes(view.LimitBytes) }</span>
 					</div>
 				</div>
 
 				<div class="vacate-progress-wrapper">
 					<div class="vacate-progress-header">
-						<span class="vacate-progress-title">Selected Space to Free</span>
+						<span class="vacate-progress-title">Space selected</span>
 						<span id="vacate-progress-readout" class="vacate-progress-readout">
 							if view.RequiredBytes <= 0 {
-								Sufficient space vacated (100%)
+								Enough space freed (100%)
 							} else {
-								0 B / { FormatBytes(view.RequiredBytes) } (0%)
+								0 B of { FormatBytes(view.RequiredBytes) } (0%)
 							}
 						</span>
 					</div>
@@ -109,9 +109,9 @@ templ VacateSpacePage(view VacateSpaceView) {
 						<div class="vacate-resubmit-bar">
 							<span class="vacate-resubmit-hint">
 								if view.RequiredBytes <= 0 {
-									Space requirement met — resubmitting your journal entry…
+									Enough space is available — saving your entry now…
 								} else {
-									Pending journal entry is staged and will resubmit automatically once space is vacated.
+									Your new entry is ready and will be saved automatically once you make room.
 								}
 							</span>
 							<button
@@ -120,29 +120,29 @@ templ VacateSpacePage(view VacateSpaceView) {
 								class="btn btn-encouraged btn-sm"
 								disabled?={ view.RequiredBytes > 0 }
 							>
-								Resubmit Entry Now
+								Save Entry Now
 							</button>
 						</div>
 					</form>
 				}
 			</section>
 
-			<section class="vacate-card vacate-auto-card" aria-label="Automatic priority eviction">
+			<section class="vacate-card vacate-auto-card" aria-label="Make room automatically">
 				<div class="vacate-auto-info">
-					<h2>Automatic Priority Eviction</h2>
+					<h2>Make Room Automatically</h2>
 					<p class="vacate-auto-desc">
-						Indiscriminately delete <strong>unpublished</strong> entries first (oldest first), and then
-						<strong>un-bookmarked</strong> entries (oldest first) until the required space is freed.
+						Remove older <strong>unpublished</strong> drafts first, and then older entries you haven't
+						<strong>bookmarked</strong>, until there is enough room.
 					</p>
 					if len(view.AutoPlan.CandidateIDs) > 0 {
 						<p class="vacate-auto-plan">
-							Auto-selection plan: <strong>{ fmt.Sprintf("%d", view.AutoPlan.UnpublishedCount) } unpublished</strong>
+							This will remove <strong>{ fmt.Sprintf("%d", view.AutoPlan.UnpublishedCount) } unpublished</strong>
 							and <strong>{ fmt.Sprintf("%d", view.AutoPlan.UnbookmarkedCount) } un-bookmarked</strong>
-							entries — frees <strong>{ FormatBytes(view.AutoPlan.TotalFreedBytes) }</strong> ({ fmt.Sprintf("%d B", view.AutoPlan.TotalFreedBytes) }).
+							entries, freeing <strong>{ FormatBytes(view.AutoPlan.TotalFreedBytes) }</strong>.
 						</p>
 					} else {
 						<p class="vacate-auto-plan">
-							No unpublished or un-bookmarked entries are currently eligible for automatic eviction.
+							No unpublished or un-bookmarked entries are available to remove automatically.
 						</p>
 					}
 				</div>
@@ -155,18 +155,18 @@ templ VacateSpacePage(view VacateSpaceView) {
 						class="btn btn-destructive"
 						disabled?={ len(view.AutoPlan.CandidateIDs) == 0 }
 					>
-						Auto-Delete Unpublished &amp; Un-bookmarked
+						Clear Space Automatically
 					</button>
 				</form>
 			</section>
 
-			<section class="vacate-card vacate-manual-card" aria-label="Manual journal selection">
+			<section class="vacate-card vacate-manual-card" aria-label="Choose entries to remove">
 				<form id="vacate-manual-form" method="POST" action="/journals/vacate-space/">
 					<input type="hidden" name="action" value="delete_selected"/>
 					<div class="vacate-manual-header">
 						<div>
-							<h2>Select Journals Manually</h2>
-							<p class="vacate-manual-subtitle">Check individual entries below until the progress bar reaches 100%.</p>
+							<h2>Choose Entries to Remove</h2>
+							<p class="vacate-manual-subtitle">Select entries below until the bar reaches 100%.</p>
 						</div>
 						<button
 							type="submit"
@@ -174,7 +174,7 @@ templ VacateSpacePage(view VacateSpaceView) {
 							class="btn btn-destructive"
 							disabled?={ view.RequiredBytes > 0 }
 						>
-							Delete Selected &amp; Resubmit
+							Remove Selected &amp; Save
 						</button>
 					</div>
 
@@ -218,7 +218,6 @@ templ VacateSpacePage(view VacateSpaceView) {
 										<span class="vacate-entry-size" data-bytes={ fmt.Sprintf("%d", item.EstimatedBytes) }>
 											{ item.FormattedSize }
 										</span>
-										<span class="vacate-entry-raw-bytes">{ fmt.Sprintf("%d B", item.EstimatedBytes) }</span>
 									</div>
 								</label>
 							}
@@ -227,6 +226,6 @@ templ VacateSpacePage(view VacateSpaceView) {
 				</form>
 			</section>
 		</main>
-		<script src="/assets/js/vacate-space.js?v=1"></script>
+		<script src="/assets/js/vacate-space.js?v=2"></script>
 	}
 }
