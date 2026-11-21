@@ -2,6 +2,7 @@ package journals
 
 import (
 	"fmt"
+	"github.com/oxri/oxri-go/internal/pages/loading"
 	"github.com/oxri/oxri-go/internal/pages/shared"
 )
 
@@ -95,6 +96,7 @@ templ VacateSpacePage(view VacateSpaceView) {
 						class="vacate-resubmit-form"
 						method="POST"
 						action={ templ.SafeURL(view.ResubmitActionURL()) }
+						data-confirm-loading="true"
 						data-auto-resubmit={ fmt.Sprintf("%t", view.AutoResubmitReady) }
 					>
 						<input type="hidden" name="media_url" value={ view.PendingSub.MediaURL }/>
@@ -146,7 +148,7 @@ templ VacateSpacePage(view VacateSpaceView) {
 						</p>
 					}
 				</div>
-				<form method="POST" action="/journals/vacate-space/" class="vacate-auto-form">
+				<form method="POST" action="/journals/vacate-space/" class="vacate-auto-form" data-confirm-loading="true">
 					<input type="hidden" name="action" value="auto_vacate"/>
 					<input type="hidden" name="required_bytes" value={ fmt.Sprintf("%d", view.RequiredBytes) }/>
 					<button
@@ -161,7 +163,7 @@ templ VacateSpacePage(view VacateSpaceView) {
 			</section>
 
 			<section class="vacate-card vacate-manual-card" aria-label="Choose entries to remove">
-				<form id="vacate-manual-form" method="POST" action="/journals/vacate-space/">
+				<form id="vacate-manual-form" method="POST" action="/journals/vacate-space/" data-confirm-loading="true">
 					<input type="hidden" name="action" value="delete_selected"/>
 					<div class="vacate-manual-header">
 						<div>
@@ -226,6 +228,8 @@ templ VacateSpacePage(view VacateSpaceView) {
 				</form>
 			</section>
 		</main>
-		<script src="/assets/js/vacate-space.js?v=2"></script>
+		@loading.Overlay(loading.DefaultPhrase, view.AutoResubmitReady)
+		<script src="/assets/js/loading-transition.js?v=1"></script>
+		<script src="/assets/js/vacate-space.js?v=3"></script>
 	}
 }

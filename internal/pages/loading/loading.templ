@@ -24,3 +24,24 @@ templ Stage(phrase string) {
 		</p>
 	</main>
 }
+
+templ Overlay(phrase string, initiallyVisible bool) {
+	<link rel="stylesheet" href="/page-css/loading.css?v=3"/>
+	<div
+		id="confirm-loading-overlay"
+		class={ "loading-overlay", templ.KV("is-visible", initiallyVisible) }
+		hidden?={ !initiallyVisible }
+		aria-live="polite"
+		aria-busy="true"
+	>
+		<p class="loading-phrase" aria-label={ phrase }>
+			for _, ch := range SplitPhrase(phrase) {
+				<span
+					class={ "loading-char", templ.KV("is-space", ch.IsSpace) }
+					style={ fmt.Sprintf("--i: %d;", ch.Index) }
+					aria-hidden="true"
+				>{ ch.Text }</span>
+			}
+		</p>
+	</div>
+}

@@ -96,6 +96,9 @@
     resubmitForm.getAttribute("data-auto-resubmit") === "true" &&
     requiredBytes <= 0
   ) {
+    if (window.ResImperiiLoading && typeof window.ResImperiiLoading.show === "function") {
+      window.ResImperiiLoading.show();
+    }
     resubmitForm.submit();
   }
 })();
