@@ -1,19 +1,16 @@
 # Next
 
-- **Latest Commit**: `5a2211c` (`Implement loopback SSH challenge authentication, browser binding, and pilot settings view`)
-- **Active Branch**: `v2-auth-ssh-profile` (PR open for review and UI test)
+- **Latest Commit**: `e2b96d1` (`feat: add smooth page transitions (ease in/out) and connect remote Turso database`)
+- **Active Branch**: `v2-transitions-and-db` (PR open for review and UI test)
 - **Active Experiment / Undo Instructions**: None.
 
 ## Next on Mind
 
-1. **Authentication & Profile UI Test & Review**:
+1. **Page Transitions & Remote Turso DB Review**:
    - Keep Pull Request open for user UI testing and green light.
-   - Run server for UI test at `/login` and `/pilot/user/settings`.
+   - Verify remote Turso connection at startup and smooth page ease-in/out transitions across routes.
 
-2. **Phase 3: Database & Quota Subsystem (`internal/db`)**:
-   - Remote Turso connection (`libsql://`) via external `../oxri-parent/db.env`.
-   - Transactional versioned schema migrations (`schema_migrations`).
-   - Self-imposed 4.5 GB storage limit & prioritized auto-eviction (`AutoVacate`).
-
-3. **Phase 5: Journal System & Editor**:
-   - Journal catalog view, Journal editor, Make Room overlay (`Confirming, please wait.`).
+2. **Journal System, Editor & Make Room Flow (`views/journals`, `views/editor`, `views/vacate`, `serverfns/journals.go`)**:
+   - Journal catalog view (`/journals`) with tag filter, search query, and single-entry permalink (`/journals/{id}`).
+   - Journal editor (`/journals/new`, `/journals/{id}/edit`) with live tactile media preview (`assets/js/journal-media.js`) and Markdown preview.
+   - Make Room / Vacate Space view (`/journals/vacate-space`) with prioritized Auto-Vacate and `Confirming, please wait.` loading overlay.
