@@ -1,0 +1,108 @@
+/*
+ * Res Imperii — Landing Page Component Styles
+ * Component path: /views/landing/landing.css
+ */
+
+.landing {
+  min-height: 100vh;
+  padding: 0 2rem;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/*
+ * Place the compact menu on the right side and above the viewport midpoint.
+ * Padding positions the complete content group; text remains right-aligned.
+ */
+.landing-nav {
+  width: min(22rem, 100%);
+  margin-left: auto;
+  margin-right: clamp(0rem, 14vw, 14rem);
+  padding-top: 30vh;
+  text-align: right;
+}
+
+/* Give the title a restrained hierarchy without adding decoration. */
+.landing-title {
+  margin-bottom: 1.5rem;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* Minimal book menu list */
+.landing-books {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Separate book links with a small, even vertical rhythm */
+.landing-books li + li {
+  margin-top: 0.35rem;
+}
+
+/* Links inherit the theme color; only interactive links receive a small scale */
+.landing-nav a {
+  display: inline-block;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 160ms ease;
+  transform-origin: right center;
+}
+
+/* Keep hover and keyboard-focus feedback visible but deliberately subtle */
+.landing-nav a:hover,
+.landing-nav a:focus-visible {
+  transform: scale(1.04);
+}
+
+/* A low-contrast divider separates the books from the journal link */
+.landing-rule {
+  height: 1px;
+  margin: 1.25rem 0 0.9rem;
+  border: 0;
+  background: currentColor;
+  opacity: 0.16;
+}
+
+/* Slightly distinguish Journals from the book entries */
+.landing-journals {
+  font-size: 1.1rem;
+}
+
+/* Subtle login/logout/settings button aligned with the minimal navigation hierarchy */
+.landing-auth-wrapper {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.landing-auth {
+  font-size: 0.95rem;
+  opacity: 0.55;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.landing-auth:hover,
+.landing-auth:focus-visible {
+  opacity: 1;
+  transform: scale(1.04);
+}
+
+/* On narrow screens, use the available width and start the menu a little lower */
+@media (max-width: 600px) {
+  .landing-nav {
+    margin-right: 0;
+    padding-top: 27vh;
+  }
+}
+
+/* Honor motion preferences by removing the scale transition */
+@media (prefers-reduced-motion: reduce) {
+  .landing-nav a {
+    transition: none;
+  }
+}
