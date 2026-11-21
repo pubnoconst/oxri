@@ -75,3 +75,112 @@ func TestLandingPageAndComponentCSS(t *testing.T) {
 		t.Fatalf("expected 200 on /assets/js/htmx.min.js, got %d", htmxRec.Code)
 	}
 }
+
+func TestErrorPages_NotFound(t *testing.T) {
+	router := NewRouter(Config{AssetsDir: "../assets"})
+
+	req := httptest.NewRequest(http.MethodGet, "/non-existent-page-xyz", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rec.Code)
+	}
+
+	body := rec.Body.String()
+	for _, expected := range []string{
+		"RES IMPERII",
+		"404",
+		"This page could not be found.",
+		"Reference code",
+		"data:image/png;base64,",
+		"Return home",
+		"/views/errorpage/errorpage.css",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("missing %q in 404 HTML body", expected)
+		}
+	}
+}
+
+func TestErrorPages_MethodNotAllowed(t *testing.T) {
+	router := NewRouter(Config{AssetsDir: "../assets"})
+
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("evil payload"))
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405, got %d", rec.Code)
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "405") {
+		t.Errorf("expected 405 code in body, got: %s", body)
+	}
+	if !strings.Contains(body, "Return home") {
+		t.Errorf("expected Return home in body")
+	}
+}
+
+func TestErrorPages_PanicRecovery_NoLeak(t *testing.T) {
+	router := NewRouter(Config{AssetsDir: "../assets"})
+
+	// Trigger simulated panic endpoint
+	req := httptest.NewRequest(http.MethodGet, "/_test/panic", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", rec.Code)
+	}
+
+	body := rec.Body.String()
+
+	// Must contain client-safe presentation
+	for _, expected := range []string{
+		"RES IMPERII",
+		"500",
+		"Something went wrong. Please try again later.",
+		"Reference code",
+		"Return home",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("missing client-safe %q in 500 HTML body", expected)
+		}
+	}
+
+	// Must NEVER leak internal traces or panic reasons
+	for _, forbidden := range []string{
+		"test panic",
+		"database connection failed",
+		"goroutine",
+		"runtime/debug",
+		"main.go",
+		"routes.go",
+		"stack",
+	} {
+		if strings.Contains(strings.ToLower(body), strings.ToLower(forbidden)) {
+			t.Errorf("CRITICAL SECURITY LEAK: 500 body contains internal string %q", forbidden)
+		}
+	}
+}
+
+func TestErrorPages_CSS(t *testing.T) {
+	router := NewRouter(Config{AssetsDir: "../assets"})
+
+	req := httptest.NewRequest(http.MethodGet, "/views/errorpage/errorpage.css", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /views/errorpage/errorpage.css, got %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "text/css") {
+		t.Errorf("expected text/css, got %q", ct)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, ".error-page") || !strings.Contains(body, ".error-code") {
+		t.Errorf("missing error page css classes")
+	}
+}
