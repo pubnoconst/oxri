@@ -20,7 +20,7 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 		h.Link(h.Rel("stylesheet"), h.Href("https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap")),
 
 		// Global Site CSS
-		h.Link(h.Rel("stylesheet"), h.Href("/assets/css/site.css?v=1")),
+		h.Link(h.Rel("stylesheet"), h.Href("/assets/css/site.css?v=2")),
 	}
 
 	if componentCSS != "" {
@@ -37,5 +37,13 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 				h.Script(h.Src("/assets/js/theme-toggle.js?v=2")),
 			),
 		),
+	)
+}
+
+// BackLink renders a quiet navigation return link with a pure-CSS circular chevron.
+func BackLink(href, label string) g.Node {
+	return h.A(h.Class("back-link"), h.Href(href),
+		h.Span(h.Class("back-icon"), g.Attr("aria-hidden", "true")),
+		h.Span(h.Class("back-label"), g.Text(label)),
 	)
 }

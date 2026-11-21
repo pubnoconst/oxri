@@ -27,7 +27,7 @@ func TestLandingPageAndComponentCSS(t *testing.T) {
 		"Book III",
 		"Journals",
 		"Log in",
-		"/assets/css/site.css?v=1",
+		"/assets/css/site.css?v=2",
 		"/views/landing/landing.css?v=1",
 		"/assets/js/htmx.min.js",
 		"/assets/js/theme-toggle.js?v=2",
@@ -124,12 +124,14 @@ func TestErrorPages_MethodNotAllowed(t *testing.T) {
 }
 
 func TestErrorPages_PanicRecovery_NoLeak(t *testing.T) {
-	router := NewRouter(Config{AssetsDir: "../assets"})
+	testHandler := safeRecoverer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic("test panic: database connection failed or simulated exception")
+	}))
 
-	// Trigger simulated panic endpoint
-	req := httptest.NewRequest(http.MethodGet, "/_test/panic", nil)
+	// Trigger simulated panic
+	req := httptest.NewRequest(http.MethodGet, "/simulated-panic", nil)
 	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
+	testHandler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", rec.Code)
@@ -182,5 +184,52 @@ func TestErrorPages_CSS(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, ".error-page") || !strings.Contains(body, ".error-code") {
 		t.Errorf("missing error page css classes")
+	}
+}
+
+func TestBookIPage(t *testing.T) {
+	router := NewRouter(Config{AssetsDir: "../assets"})
+
+	req := httptest.NewRequest(http.MethodGet, "/book-i", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /book-i, got %d", rec.Code)
+	}
+
+	body := rec.Body.String()
+	for _, expected := range []string{
+		"Book I - RES IMPERII",
+		"/views/booki/booki.css",
+		"On Cause",
+		"Causal Succession",
+		"Substance, Cosmos and Substrate",
+		"back-link",
+		"back-icon",
+		"Back",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("missing expected content %q in /book-i HTML", expected)
+		}
+	}
+}
+
+func TestBookICSS(t *testing.T) {
+	router := NewRouter(Config{AssetsDir: "../assets"})
+
+	req := httptest.NewRequest(http.MethodGet, "/views/booki/booki.css", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /views/booki/booki.css, got %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "text/css") {
+		t.Errorf("expected text/css, got %q", ct)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, ".book-article") || !strings.Contains(body, ".book-content") {
+		t.Errorf("missing book-i CSS classes in stylesheet")
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/oxri/oxri-go/views/booki"
 	"github.com/oxri/oxri-go/views/errorpage"
 	"github.com/oxri/oxri-go/views/landing"
 )
@@ -37,6 +38,7 @@ func NewRouter(cfg Config) http.Handler {
 	// 3. Component CSS Routes (each component owns its own CSS route)
 	r.Get(landing.StylePath, serveCSS(landing.StyleCSS))
 	r.Get(errorpage.StylePath, serveCSS(errorpage.StyleCSS))
+	r.Get(booki.StylePath, serveCSS(booki.StyleCSS))
 
 	// 4. Static Assets (/assets/*)
 	assetsDir := cfg.AssetsDir
@@ -48,11 +50,7 @@ func NewRouter(cfg Config) http.Handler {
 
 	// 5. Page Routes
 	r.Get("/", handleLanding())
-
-	// 6. Test panic route (only for development/testing if needed)
-	r.Get("/_test/panic", func(w http.ResponseWriter, r *http.Request) {
-		panic("test panic: database connection failed or simulated exception")
-	})
+	r.Get("/book-i", handleBookI())
 
 	return r
 }
@@ -84,6 +82,13 @@ func handleLanding() http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		isAuth := false // Auth capability check will be plugged in Phase 4
 		_ = landing.Page(isAuth).Render(w)
+	}
+}
+
+func handleBookI() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = booki.Page().Render(w)
 	}
 }
 

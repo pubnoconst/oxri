@@ -185,7 +185,49 @@ a {
   font-size: 0.8rem;
 }
 
-/* 5. Reduced-Motion Accessibility */
+/* 5. Shared Navigation: BackLink */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: inherit;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.6;
+  text-decoration: none;
+  opacity: 0.72;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.back-icon {
+  position: relative;
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 1rem;
+  border-radius: 50%;
+  background: var(--page-ink);
+}
+
+.back-icon::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.38rem;
+  height: 0.38rem;
+  border-bottom: 1.5px solid var(--page);
+  border-left: 1.5px solid var(--page);
+  content: "";
+  transform: translate(-35%, -50%) rotate(45deg);
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  opacity: 1;
+  transform: translateX(-0.12rem);
+}
+
+/* 6. Reduced-Motion Accessibility */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
