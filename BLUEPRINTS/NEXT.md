@@ -1,6 +1,6 @@
 # Next
 
-- **Latest Commit**: `b749c58` (`Record technology stack rationale for Gomponents, HTMX, Vanilla JS, and zero-framework CSS`)
+- **Latest Commit**: `19b2630` (`Codify modularization, type-system correctness, and commit-traced documentation in Principia #8`)
 - **Active Branch**: `v2`
 - **Active Experiment / Undo Instructions**: None.
 
