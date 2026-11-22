@@ -68,7 +68,12 @@ func NewRouter(cfg Config) http.Handler {
 	}
 	r.Handle("/assets/*", noDirListingAssetHandler(assetsDir))
 
-	// 5. Public Page Routes
+	// 5. Public Page & Health Routes
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 	r.Get("/", handleLanding(cfg.AuthService))
 	r.Get("/book-i", handleBookI())
 	r.Get("/loading", handleLoadingPage())

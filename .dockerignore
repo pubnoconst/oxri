@@ -1,0 +1,9 @@
+.git
+.github
+bin/
+BLUEPRINTS/
+*.env
+*.png
+*_test.go
+README.md
+magefile.go
