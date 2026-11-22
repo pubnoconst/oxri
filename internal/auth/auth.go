@@ -344,10 +344,18 @@ func (s *Service) handleSSHConn(netConn net.Conn, config *ssh.ServerConfig) {
 }
 
 func (s *Service) handleSessionChannel(ch ssh.Channel, reqs <-chan *ssh.Request, user string) {
-	defer func() { _ = ch.Close() }()
+	defer func() {
+		_, _ = ch.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
+		_ = ch.Close()
+	}()
 
 	for req := range reqs {
 		switch req.Type {
+		case "pty-req", "env", "window-change":
+			// Silently acknowledge client terminal metadata requests as a no-op
+			// so OpenSSH never prints "PTY allocation request failed on channel 0".
+			_ = req.Reply(true, nil)
+
 		case "exec":
 			var payload struct {
 				Command string
@@ -370,7 +378,6 @@ func (s *Service) handleSessionChannel(ch ssh.Channel, reqs <-chan *ssh.Request,
 			return
 
 		default:
-			// Reject pty-req, env, etc.
 			_ = req.Reply(false, nil)
 		}
 	}
