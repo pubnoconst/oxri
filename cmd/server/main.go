@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -56,26 +57,37 @@ func main() {
 	}
 
 	adminPubKey := os.Getenv("ADMIN_SSH_PUBKEY")
+	adminTOTPSecret := os.Getenv("ADMIN_TOTP_SECRET")
 	hostKeyPath := os.Getenv("SSH_HOST_KEY_PATH")
 	if hostKeyPath == "" {
 		hostKeyPath = resolveDefaultHostKeyPath()
 	}
 
 	var authSvc *auth.Service
-	if adminPubKey != "" {
+	if adminPubKey != "" || adminTOTPSecret != "" {
 		var err error
-		authSvc, err = auth.NewService(adminPubKey, hostKeyPath, sshAddr)
+		authSvc, err = auth.NewServiceWithOptions(auth.ServiceOptions{
+			AuthorizedKey: adminPubKey,
+			HostKeyPath:   hostKeyPath,
+			SSHAddr:       sshAddr,
+			TOTPSecret:    adminTOTPSecret,
+		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to initialize auth service: %v\n", err)
 		} else {
-			if err := authSvc.StartSSHListener(); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to start SSH listener on %s: %v\n", sshAddr, err)
-			} else {
-				fmt.Printf("Res Imperii SSH auth gateway listening on %s\n", sshAddr)
+			if authSvc.HasTOTP() {
+				fmt.Println("Res Imperii TOTP authentication enabled")
+			}
+			if authSvc.HasSSH() && !strings.EqualFold(os.Getenv("DISABLE_SSH_AUTH"), "true") {
+				if err := authSvc.StartSSHListener(); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: failed to start SSH listener on %s: %v\n", sshAddr, err)
+				} else {
+					fmt.Printf("Res Imperii SSH auth gateway listening on %s\n", sshAddr)
+				}
 			}
 		}
 	} else {
-		fmt.Println("Notice: ADMIN_SSH_PUBKEY not configured; running in read-only public mode.")
+		fmt.Println("Notice: Neither ADMIN_TOTP_SECRET nor ADMIN_SSH_PUBKEY configured; running in read-only public mode.")
 	}
 
 	var store *db.Store

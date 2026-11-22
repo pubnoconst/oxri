@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"regexp"
 	"strings"
 	"testing"
@@ -460,5 +461,94 @@ func TestAuthRoutes_CSS(t *testing.T) {
 		if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "text/css") {
 			t.Errorf("expected text/css on %s, got %q", path, ct)
 		}
+	}
+}
+
+func TestTOTPAuthRoutes_FullFlow(t *testing.T) {
+	secret, err := auth.GenerateTOTPSecret()
+	if err != nil {
+		t.Fatalf("GenerateTOTPSecret: %v", err)
+	}
+
+	authSvc, err := auth.NewServiceWithOptions(auth.ServiceOptions{
+		TOTPSecret: secret,
+	})
+	if err != nil {
+		t.Fatalf("NewServiceWithOptions: %v", err)
+	}
+	defer authSvc.Close()
+
+	router := NewRouter(Config{
+		AssetsDir:   "../assets",
+		AuthService: authSvc,
+	})
+
+	// 1. GET /login renders the 6-digit TOTP form
+	reqGet := httptest.NewRequest(http.MethodGet, "/login?next=/journals", nil)
+	recGet := httptest.NewRecorder()
+	router.ServeHTTP(recGet, reqGet)
+	if recGet.Code != http.StatusOK {
+		t.Fatalf("expected 200 on GET /login, got %d", recGet.Code)
+	}
+	if !strings.Contains(recGet.Body.String(), `name="code"`) {
+		t.Fatalf("expected TOTP input in /login HTML")
+	}
+
+	// 2. POST /login with wrong code returns 401
+	badForm := url.Values{"code": {"000000"}, "next": {"/journals"}}
+	reqBad := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(badForm.Encode()))
+	reqBad.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	recBad := httptest.NewRecorder()
+	router.ServeHTTP(recBad, reqBad)
+	if recBad.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 on invalid TOTP code, got %d", recBad.Code)
+	}
+
+	// 3. POST /login with valid TOTP code issues session cookie and redirects 303
+	validCode, err := auth.GenerateTOTPCode(secret, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("GenerateTOTPCode: %v", err)
+	}
+	goodForm := url.Values{"code": {validCode}, "next": {"/journals"}}
+	reqGood := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(goodForm.Encode()))
+	reqGood.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	recGood := httptest.NewRecorder()
+	router.ServeHTTP(recGood, reqGood)
+	if recGood.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 on valid TOTP code, got %d", recGood.Code)
+	}
+	if loc := recGood.Header().Get("Location"); loc != "/journals" {
+		t.Fatalf("expected redirect to /journals, got %q", loc)
+	}
+	var sessionCookie *http.Cookie
+	for _, c := range recGood.Result().Cookies() {
+		if c.Name == auth.SessionCookieName {
+			sessionCookie = c
+			break
+		}
+	}
+	if sessionCookie == nil || sessionCookie.Value == "" {
+		t.Fatalf("expected session cookie after TOTP login")
+	}
+
+	// 4. Replaying the same 6-digit code must be rejected with 401
+	reqReplay := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(goodForm.Encode()))
+	reqReplay.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	recReplay := httptest.NewRecorder()
+	router.ServeHTTP(recReplay, reqReplay)
+	if recReplay.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 on replayed TOTP code, got %d", recReplay.Code)
+	}
+
+	// 5. Authenticated /pilot/user/settings succeeds and shows TOTP
+	reqSettings := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
+	reqSettings.AddCookie(sessionCookie)
+	recSettings := httptest.NewRecorder()
+	router.ServeHTTP(recSettings, reqSettings)
+	if recSettings.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /pilot/user/settings, got %d", recSettings.Code)
+	}
+	if !strings.Contains(recSettings.Body.String(), "TOTP (RFC 6238)") {
+		t.Errorf("expected TOTP (RFC 6238) in pilot settings page")
 	}
 }

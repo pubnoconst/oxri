@@ -69,7 +69,15 @@ type UserSession struct {
 	ExpiresAt time.Time
 }
 
-// Service manages cryptographic authentication challenges and sessions.
+// ServiceOptions configures the authentication methods enabled for Service.
+type ServiceOptions struct {
+	AuthorizedKey string
+	HostKeyPath   string
+	SSHAddr       string
+	TOTPSecret    string
+}
+
+// Service manages cryptographic authentication challenges, TOTP verification, and sessions.
 type Service struct {
 	mu                   sync.RWMutex
 	pendingLogins        map[string]*PendingLogin
@@ -80,6 +88,9 @@ type Service struct {
 	hostSigner           ssh.Signer
 	sshAddr              string
 	listener             net.Listener
+	totpSecret           string
+	lastUsedTOTPStep     int64
+	totpFailures         []time.Time
 	capMinter            domain.CapMinter
 	closed               bool
 }
@@ -96,23 +107,55 @@ func acquireCapMinter() domain.CapMinter {
 	return pkgCapMinter
 }
 
-// NewService initializes the authentication service.
+// NewService initializes the authentication service with SSH public key authentication.
 func NewService(authorizedKeyStr, hostKeyPath, sshAddr string) (*Service, error) {
 	if strings.TrimSpace(authorizedKeyStr) == "" {
 		return nil, errors.New("ADMIN_SSH_PUBKEY is required")
 	}
+	return NewServiceWithOptions(ServiceOptions{
+		AuthorizedKey: authorizedKeyStr,
+		HostKeyPath:   hostKeyPath,
+		SSHAddr:       sshAddr,
+	})
+}
+
+// NewServiceWithOptions initializes the authentication service with TOTP and/or SSH authentication.
+func NewServiceWithOptions(opts ServiceOptions) (*Service, error) {
+	authKeyStr := strings.TrimSpace(opts.AuthorizedKey)
+	totpSecret := NormalizeTOTPSecret(opts.TOTPSecret)
+
+	if authKeyStr == "" && totpSecret == "" {
+		return nil, errors.New("at least one of ADMIN_TOTP_SECRET or ADMIN_SSH_PUBKEY is required")
+	}
+
+	if totpSecret != "" {
+		if _, err := decodeTOTPSecret(totpSecret); err != nil {
+			return nil, fmt.Errorf("invalid ADMIN_TOTP_SECRET: %w", err)
+		}
+	}
+
+	sshAddr := opts.SSHAddr
 	if sshAddr == "" {
 		sshAddr = "127.0.0.1:2222"
 	}
 
-	pubKey, comment, _, _, err := ssh.ParseAuthorizedKey([]byte(authorizedKeyStr))
-	if err != nil {
-		return nil, fmt.Errorf("invalid authorized public key: %w", err)
-	}
-
-	hostSigner, err := loadOrGenerateHostKey(hostKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare host key: %w", err)
+	var (
+		pubKey     ssh.PublicKey
+		comment    string
+		keyType    string
+		hostSigner ssh.Signer
+	)
+	if authKeyStr != "" {
+		var err error
+		pubKey, comment, _, _, err = ssh.ParseAuthorizedKey([]byte(authKeyStr))
+		if err != nil {
+			return nil, fmt.Errorf("invalid authorized public key: %w", err)
+		}
+		keyType = pubKey.Type()
+		hostSigner, err = loadOrGenerateHostKey(opts.HostKeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to prepare host key: %w", err)
+		}
 	}
 
 	// Mint capability creator from domain (owned exclusively by package auth)
@@ -123,11 +166,79 @@ func NewService(authorizedKeyStr, hostKeyPath, sshAddr string) (*Service, error)
 		activeSessions:       make(map[string]*UserSession),
 		authorizedKey:        pubKey,
 		authorizedKeyComment: comment,
-		authorizedKeyType:    pubKey.Type(),
+		authorizedKeyType:    keyType,
 		hostSigner:           hostSigner,
 		sshAddr:              sshAddr,
+		totpSecret:           totpSecret,
+		lastUsedTOTPStep:     -1,
 		capMinter:            minter,
 	}, nil
+}
+
+// HasTOTP reports whether RFC 6238 TOTP login is configured.
+func (s *Service) HasTOTP() bool {
+	return s != nil && s.totpSecret != ""
+}
+
+// HasSSH reports whether loopback SSH challenge login is configured.
+func (s *Service) HasSSH() bool {
+	return s != nil && s.authorizedKey != nil
+}
+
+// AuthenticateTOTP verifies a 6-digit RFC 6238 TOTP code with single-use replay protection
+// and failed-attempt lockout, returning a new 256-bit session identifier on success.
+func (s *Service) AuthenticateTOTP(code string) (string, error) {
+	if !s.HasTOTP() {
+		return "", ErrTOTPNotConfigured
+	}
+
+	now := time.Now().UTC()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.cleanupExpiredLocked()
+
+	// Prune old failure timestamps outside lockout window
+	cutoff := now.Add(-totpLockoutWindow)
+	recentFailures := s.totpFailures[:0]
+	for _, ts := range s.totpFailures {
+		if ts.After(cutoff) {
+			recentFailures = append(recentFailures, ts)
+		}
+	}
+	s.totpFailures = recentFailures
+
+	if len(s.totpFailures) >= totpMaxFailures {
+		return "", ErrTOTPLocked
+	}
+
+	matchedStep, ok := VerifyTOTP(s.totpSecret, code, now)
+	if !ok {
+		s.totpFailures = append(s.totpFailures, now)
+		return "", ErrTOTPInvalid
+	}
+
+	if matchedStep <= s.lastUsedTOTPStep {
+		return "", ErrTOTPReplayed
+	}
+
+	s.lastUsedTOTPStep = matchedStep
+	s.totpFailures = nil
+
+	sessBytes := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, sessBytes); err != nil {
+		return "", err
+	}
+	sessionID := hex.EncodeToString(sessBytes)
+
+	s.activeSessions[sessionID] = &UserSession{
+		SessionID: sessionID,
+		CreatedAt: now,
+		ExpiresAt: now.Add(SessionDuration),
+	}
+
+	return sessionID, nil
 }
 
 // CreateChallenge generates a new 6-digit challenge code and an unguessable 256-bit
@@ -139,12 +250,21 @@ func (s *Service) CreateChallenge(clientIP, redirectURL string) (token string, b
 
 	s.cleanupExpiredLocked()
 
-	// Generate 6-digit challenge code (100000 - 999999)
-	n, err := rand.Int(rand.Reader, big.NewInt(900000))
-	if err != nil {
-		return "", "", err
+	// Generate a collision-free 6-digit challenge code (100000 - 999999)
+	for attempts := 0; attempts < 32; attempts++ {
+		n, err := rand.Int(rand.Reader, big.NewInt(900000))
+		if err != nil {
+			return "", "", err
+		}
+		candidate := fmt.Sprintf("%06d", n.Int64()+100000)
+		if _, exists := s.pendingLogins[candidate]; !exists {
+			token = candidate
+			break
+		}
 	}
-	token = fmt.Sprintf("%06d", n.Int64()+100000)
+	if token == "" {
+		return "", "", errors.New("failed to allocate unique challenge token")
+	}
 
 	// Generate 256-bit random binding secret
 	bindingBytes := make([]byte, 32)
@@ -260,6 +380,9 @@ func (s *Service) SSHAddr() string {
 
 // StartSSHListener starts the loopback SSH challenge receiver.
 func (s *Service) StartSSHListener() error {
+	if s.authorizedKey == nil || s.hostSigner == nil {
+		return errors.New("SSH authentication is not configured")
+	}
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			if !bytes.Equal(key.Marshal(), s.authorizedKey.Marshal()) {

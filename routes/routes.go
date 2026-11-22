@@ -2,6 +2,7 @@
 package routes
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"runtime/debug"
@@ -91,8 +92,10 @@ func NewRouter(cfg Config) http.Handler {
 
 	// 7. Authentication Routes (with per-IP rate limiters)
 	loginLimiter := newIPRateLimiter(30, time.Minute)
+	totpSubmitLimiter := newIPRateLimiter(15, 5*time.Minute)
 	statusLimiter := newIPRateLimiter(120, time.Minute)
 	r.Get("/login", handleLogin(cfg.AuthService, loginLimiter))
+	r.Post("/login", handleLoginSubmit(cfg.AuthService, totpSubmitLimiter))
 	r.Get("/auth/status", handleAuthStatus(cfg.AuthService, statusLimiter))
 	r.HandleFunc("/logout", handleLogout(cfg.AuthService)) // Handles both GET and POST
 
@@ -148,6 +151,44 @@ func isValidSixDigitToken(token string) bool {
 	return true
 }
 
+func renderLoginView(w http.ResponseWriter, r *http.Request, authSvc *auth.Service, next, errMsg string, status int) {
+	secure := isHTTPSRequest(r)
+
+	var sshToken, sshCmd, sshPort string
+	if authSvc.HasSSH() {
+		token, bindingCookie, err := authSvc.CreateChallenge(r.RemoteAddr, next)
+		if err != nil {
+			errorpage.Render(w, http.StatusInternalServerError, "Failed to create authentication challenge.")
+			return
+		}
+		http.SetCookie(w, &http.Cookie{
+			Name:     auth.BindingCookieName,
+			Value:    bindingCookie,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   secure,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   300,
+		})
+		sshToken = token
+		sshCmd = serverfns.BuildSSHCommand(token, authSvc.SSHAddr())
+		sshPort = "2222"
+		if parts := strings.Split(authSvc.SSHAddr(), ":"); len(parts) == 2 {
+			sshPort = parts[1]
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if status != http.StatusOK {
+		w.WriteHeader(status)
+	}
+	if authSvc.HasTOTP() {
+		_ = login.TOTPPage(next, errMsg, sshToken, sshCmd, sshPort).Render(w)
+		return
+	}
+	_ = login.Page(sshToken, sshCmd, next, sshPort).Render(w)
+}
+
 func handleLogin(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		next := serverfns.SanitizeRedirect(r.URL.Query().Get("next"))
@@ -166,29 +207,55 @@ func handleLogin(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc
 			return
 		}
 
-		token, bindingCookie, err := authSvc.CreateChallenge(r.RemoteAddr, next)
-		if err != nil {
-			errorpage.Render(w, http.StatusInternalServerError, "Failed to create authentication challenge.")
+		renderLoginView(w, r, authSvc, next, "", http.StatusOK)
+	}
+}
+
+func handleLoginSubmit(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if authSvc == nil || !authSvc.HasTOTP() {
+			errorpage.Render(w, http.StatusServiceUnavailable, "TOTP authentication is not configured.")
 			return
 		}
 
-		http.SetCookie(w, &http.Cookie{
-			Name:     auth.BindingCookieName,
-			Value:    bindingCookie,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   300,
-		})
-
-		sshCmd := serverfns.BuildSSHCommand(token, authSvc.SSHAddr())
-		sshPort := "2222"
-		if parts := strings.Split(authSvc.SSHAddr(), ":"); len(parts) == 2 {
-			sshPort = parts[1]
+		_ = r.ParseForm()
+		next := serverfns.SanitizeRedirect(r.FormValue("next"))
+		if next == "/" && r.URL.Query().Get("next") != "" {
+			next = serverfns.SanitizeRedirect(r.URL.Query().Get("next"))
 		}
 
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = login.Page(token, sshCmd, next, sshPort).Render(w)
+		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
+			renderLoginView(w, r, authSvc, next, "Too many attempts. Please wait a few minutes.", http.StatusTooManyRequests)
+			return
+		}
+
+		code := strings.TrimSpace(r.FormValue("code"))
+		sessionID, err := authSvc.AuthenticateTOTP(code)
+		if err != nil {
+			status := http.StatusUnauthorized
+			msg := "Invalid or expired authentication code."
+			if errors.Is(err, auth.ErrTOTPLocked) {
+				status = http.StatusTooManyRequests
+				msg = "Too many failed attempts. Please wait a few minutes."
+			} else if errors.Is(err, auth.ErrTOTPReplayed) {
+				msg = "That code was already used. Wait for the next 6-digit code."
+			}
+			renderLoginView(w, r, authSvc, next, msg, status)
+			return
+		}
+
+		secure := isHTTPSRequest(r)
+		http.SetCookie(w, &http.Cookie{
+			Name:     auth.SessionCookieName,
+			Value:    sessionID,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   secure,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   int(auth.SessionDuration.Seconds()),
+		})
+
+		http.Redirect(w, r, next, http.StatusSeeOther)
 	}
 }
 
@@ -227,12 +294,15 @@ func handleAuthStatus(authSvc *auth.Service, limiter *ipRateLimiter) http.Handle
 			return
 		}
 
+		secure := isHTTPSRequest(r)
+
 		// Clear temporary binding cookie
 		http.SetCookie(w, &http.Cookie{
 			Name:     auth.BindingCookieName,
 			Value:    "",
 			Path:     "/",
 			HttpOnly: true,
+			Secure:   secure,
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   -1,
 		})
@@ -243,6 +313,7 @@ func handleAuthStatus(authSvc *auth.Service, limiter *ipRateLimiter) http.Handle
 			Value:    sessionID,
 			Path:     "/",
 			HttpOnly: true,
+			Secure:   secure,
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   int(auth.SessionDuration.Seconds()),
 		})
@@ -264,9 +335,16 @@ func handlePilotSettings(authSvc *auth.Service) http.HandlerFunc {
 			return
 		}
 
-		keyType := "ssh-ed25519"
-		if authSvc != nil && authSvc.KeyType() != "" {
-			keyType = authSvc.KeyType()
+		keyType := "TOTP (RFC 6238)"
+		if authSvc != nil {
+			switch {
+			case authSvc.HasTOTP() && authSvc.HasSSH():
+				keyType = "TOTP (RFC 6238) + " + authSvc.KeyType()
+			case authSvc.HasTOTP():
+				keyType = "TOTP (RFC 6238)"
+			case authSvc.KeyType() != "":
+				keyType = authSvc.KeyType()
+			}
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
