@@ -30,24 +30,23 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 	}
 	startRatio := float64(totalMs-remainingMs) / float64(totalMs)
 	barStyle := fmt.Sprintf("--cooldown-ms:%dms;--cooldown-start:%.4f;", remainingMs, startRatio)
-	rippleStyle := "--ripple-x:50%;--ripple-y:38%;--ripple-diameter:52rem;"
+	rippleStyle := "--ripple-x:50%;--ripple-y:46%;--ripple-diameter:150vmax;"
 
 	return layout.Doc(
 		"Confirming - RES IMPERII",
-		StylePath+"?v=3",
+		StylePath+"?v=4",
+		h.Div(h.Class("card-water-ripple is-pagewide"), g.Attr("style", rippleStyle), g.Attr("aria-hidden", "true"),
+			h.Span(h.Class("card-water-drop")),
+			h.Span(h.Class("card-water-wave wave-1")),
+			h.Span(h.Class("card-water-wave wave-2")),
+			h.Span(h.Class("card-water-wave wave-3")),
+		),
 		h.Main(h.Class("auth-page"),
 			h.Header(h.Class("auth-header"),
 				layout.BackLink("/login", "Back"),
 				h.H1(g.Text("AUTHENTICATION")),
 			),
 			h.Section(h.Class("auth-card auth-confirm-card"), g.Attr("aria-live", "polite"),
-				h.Div(h.Class("card-water-ripple"), g.Attr("style", rippleStyle), g.Attr("aria-hidden", "true"),
-					h.Span(h.Class("card-water-drop")),
-					h.Span(h.Class("card-water-wave wave-1")),
-					h.Span(h.Class("card-water-wave wave-2")),
-					h.Span(h.Class("card-water-wave wave-3")),
-				),
-				h.Div(h.Class("auth-confirm-spacer"), g.Attr("aria-hidden", "true")),
 				h.P(h.Class("auth-confirm-phrase"), g.Text("Confirming, wait.")),
 				h.Div(h.Class("auth-cooldown-track"), g.Attr("role", "progressbar"), g.Attr("aria-label", "Authentication confirmation progress"),
 					h.Div(h.Class("auth-cooldown-fill"), g.Attr("style", barStyle)),
@@ -105,7 +104,7 @@ func TOTPPage(nextURL, errMsg, sshToken, sshCommand, sshPort string) g.Node {
 
 	return layout.Doc(
 		"Authentication - RES IMPERII",
-		StylePath+"?v=3",
+		StylePath+"?v=4",
 		h.Main(h.Class("auth-page"),
 			h.Header(h.Class("auth-header"),
 				layout.BackLink("/", "Home"),
