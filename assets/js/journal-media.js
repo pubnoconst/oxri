@@ -22,21 +22,76 @@
   function showRippleLoader(container) {
     container.style.height = "";
     container.replaceChildren();
-    const loader = document.createElement("div");
-    loader.className = "media-ripple-loader";
-    loader.setAttribute("role", "status");
-    loader.setAttribute("aria-label", "Loading media");
 
-    const core = document.createElement("span");
-    core.className = "media-ripple-core";
-    core.setAttribute("aria-hidden", "true");
+    // Quiet empty space inside the media slot where the water drop originates
+    const spacer = document.createElement("div");
+    spacer.className = "media-ripple-spacer";
+    spacer.setAttribute("role", "status");
+    spacer.setAttribute("aria-label", "Loading media");
+    container.append(spacer);
 
-    loader.append(core);
-    container.append(loader);
-    return loader;
+    // Mount the optical water-drop ripple over the entire enclosing .journal-card
+    // so the expanding wavefront disturbs the preview text as well.
+    const hostCard = container.closest(".journal-card") || container;
+    const existingOverlay = hostCard.querySelector(":scope > .card-water-ripple");
+    if (existingOverlay) existingOverlay.remove();
+
+    const overlay = document.createElement("div");
+    overlay.className = "card-water-ripple";
+    overlay.setAttribute("aria-hidden", "true");
+
+    const drop = document.createElement("span");
+    drop.className = "card-water-drop";
+
+    const wave1 = document.createElement("span");
+    wave1.className = "card-water-wave wave-1";
+    const wave2 = document.createElement("span");
+    wave2.className = "card-water-wave wave-2";
+    const wave3 = document.createElement("span");
+    wave3.className = "card-water-wave wave-3";
+
+    overlay.append(drop, wave1, wave2, wave3);
+    hostCard.append(overlay);
+
+    const alignOrigin = () => {
+      if (!spacer.isConnected || !hostCard.isConnected) return;
+      const hostRect = hostCard.getBoundingClientRect();
+      const spacerRect = spacer.getBoundingClientRect();
+      if (hostRect.width <= 0 || hostRect.height <= 0) return;
+
+      const x = (spacerRect.left - hostRect.left) + (spacerRect.width / 2);
+      const y = (spacerRect.top - hostRect.top) + (spacerRect.height / 2);
+      const maxDist = Math.max(
+        Math.hypot(x, y),
+        Math.hypot(hostRect.width - x, y),
+        Math.hypot(x, hostRect.height - y),
+        Math.hypot(hostRect.width - x, hostRect.height - y)
+      );
+      overlay.style.setProperty("--ripple-x", `${x.toFixed(1)}px`);
+      overlay.style.setProperty("--ripple-y", `${y.toFixed(1)}px`);
+      overlay.style.setProperty("--ripple-diameter", `${Math.ceil(maxDist * 2.25)}px`);
+    };
+
+    requestAnimationFrame(alignOrigin);
+
+    return {
+      spacer,
+      overlay,
+      fadeOut() {
+        overlay.classList.add("is-fading-out");
+      },
+      removeSpacer() {
+        if (spacer.parentNode === container) spacer.remove();
+      },
+      cleanup() {
+        if (spacer.parentNode === container) spacer.remove();
+        if (overlay.parentNode) overlay.remove();
+      },
+    };
   }
 
-  function showTweetFallback(container, username, tweetId) {
+  function showTweetFallback(container, username, tweetId, rippleHandle) {
+    if (rippleHandle) rippleHandle.cleanup();
     container.style.height = "";
     container.replaceChildren();
     const card = document.createElement("div");
@@ -106,12 +161,10 @@
     maxTimer = setTimeout(finish, 950);
   }
 
-  function revealTweetFluidly(container, rippleEl, stage) {
+  function revealTweetFluidly(container, rippleHandle, stage) {
     const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) {
-      if (rippleEl && rippleEl.parentNode === container) {
-        rippleEl.remove();
-      }
+      if (rippleHandle) rippleHandle.cleanup();
       stage.classList.remove("is-staging");
       stage.classList.add("is-ready");
       container.style.height = "";
@@ -131,8 +184,9 @@
 
     container.style.height = `${startHeight}px`;
 
-    if (rippleEl && rippleEl.parentNode === container) {
-      rippleEl.classList.add("is-fading-out");
+    if (rippleHandle) {
+      rippleHandle.fadeOut();
+      rippleHandle.removeSpacer();
     }
     stage.classList.remove("is-staging");
 
@@ -148,9 +202,7 @@
     const cleanup = () => {
       if (settled) return;
       settled = true;
-      if (rippleEl && rippleEl.parentNode === container) {
-        rippleEl.remove();
-      }
+      if (rippleHandle) rippleHandle.cleanup();
       container.style.height = "";
     };
     container.addEventListener("transitionend", (e) => {
@@ -165,8 +217,8 @@
     ensureTwitterWidgetsScript();
     const theme = getActiveTheme();
 
-    // Pure-CSS contained ripple inside a quiet empty space while the embed prepares off-flow
-    const rippleEl = showRippleLoader(container);
+    // Full-card pure-CSS water-drop ripple originating from the quiet media space
+    const rippleHandle = showRippleLoader(container);
 
     const doCreate = (twttr) => {
       const stage = document.createElement("div");
@@ -181,15 +233,15 @@
       }).then((el) => {
         if (!el) {
           stage.remove();
-          showTweetFallback(container, username, tweetId);
+          showTweetFallback(container, username, tweetId, rippleHandle);
           return;
         }
         waitForStableHeight(el, () => {
-          revealTweetFluidly(container, rippleEl, stage);
+          revealTweetFluidly(container, rippleHandle, stage);
         });
       }).catch(() => {
         stage.remove();
-        showTweetFallback(container, username, tweetId);
+        showTweetFallback(container, username, tweetId, rippleHandle);
       });
     };
 
@@ -209,7 +261,7 @@
           doCreate(window.twttr);
         } else if (attempts > 30) {
           clearInterval(interval);
-          showTweetFallback(container, username, tweetId);
+          showTweetFallback(container, username, tweetId, rippleHandle);
         }
       }, 100);
     }

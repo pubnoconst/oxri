@@ -313,7 +313,7 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 
 	return layout.Doc(
 		"Journals - RES IMPERII",
-		StylePath+"?v=2",
+		StylePath+"?v=3",
 		h.Main(h.Class("journals-page"),
 			renderJournalsHeader(isAuth),
 			h.Div(
@@ -324,7 +324,7 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 				h.P(h.Class("journals-empty journals-loading-placeholder"), g.Attr("aria-live", "polite"), g.Text("Loading entries…")),
 			),
 		),
-		h.Script(h.Src("/assets/js/journal-media.js?v=5")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=6")),
 		catalogScript,
 	)
 }
@@ -338,14 +338,14 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 
 	return layout.Doc(
 		"Journals - RES IMPERII",
-		StylePath+"?v=2",
+		StylePath+"?v=3",
 		h.Main(h.Class("journals-page"),
 			renderJournalsHeader(isAuth),
 			h.Div(h.ID("journals-catalog-stage"),
 				CatalogContentFragment(isAuth, view),
 			),
 		),
-		h.Script(h.Src("/assets/js/journal-media.js?v=5")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=6")),
 		catalogScript,
 	)
 }
@@ -354,7 +354,7 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 	return layout.Doc(
 		"Journal Entry - RES IMPERII",
-		StylePath+"?v=2",
+		StylePath+"?v=3",
 		h.Main(h.Class("journals-page journals-single-page"),
 			h.Header(h.Class("journals-header"),
 				layout.BackLink("/journals", "Journals"),
@@ -363,7 +363,7 @@ func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 				EntryCard(isAuth, item, false),
 			),
 		),
-		h.Script(h.Src("/assets/js/journal-media.js?v=5")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=6")),
 	)
 }
 
