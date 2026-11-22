@@ -152,12 +152,26 @@ func (s *Service) saveWebAuthnCeremony(rpID, kind string, session *webauthn.Sess
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.cleanupExpiredLocked()
+	for len(s.pendingWebAuthn) >= maxPendingWebAuthn {
+		var oldestID string
+		var oldestExp time.Time
+		for existingID, c := range s.pendingWebAuthn {
+			if oldestID == "" || c.ExpiresAt.Before(oldestExp) {
+				oldestID = existingID
+				oldestExp = c.ExpiresAt
+			}
+		}
+		if oldestID == "" {
+			break
+		}
+		delete(s.pendingWebAuthn, oldestID)
+	}
 	s.pendingWebAuthn[id] = &pendingWebAuthnCeremony{
 		ID:        id,
 		RPID:      rpID,
 		Kind:      kind,
 		Session:   session,
-		ExpiresAt: time.Now().UTC().Add(webAuthnCeremonyTTL),
+		ExpiresAt: s.now().Add(webAuthnCeremonyTTL),
 	}
 	return id, nil
 }
@@ -172,7 +186,7 @@ func (s *Service) consumeWebAuthnCeremony(id, rpID, kind string) (*webauthn.Sess
 	}
 	delete(s.pendingWebAuthn, id)
 
-	if time.Now().UTC().After(c.ExpiresAt) || c.RPID != rpID || c.Kind != kind || c.Session == nil {
+	if s.now().After(c.ExpiresAt) || c.RPID != rpID || c.Kind != kind || c.Session == nil {
 		return nil, ErrPasskeyCeremony
 	}
 	return c.Session, nil

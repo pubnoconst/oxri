@@ -80,10 +80,26 @@
   gap: 0.35rem;
 }
 
+.landing-auth-form {
+  margin: 0;
+}
+
 .landing-auth {
   font-size: 0.95rem;
   opacity: 0.55;
   transition: opacity 160ms ease, transform 160ms ease;
+}
+
+button.landing-auth {
+  display: inline-block;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.95rem;
+  color: inherit;
+  cursor: pointer;
+  transform-origin: right center;
 }
 
 .landing-auth:hover,
@@ -102,7 +118,8 @@
 
 /* Honor motion preferences by removing the scale transition */
 @media (prefers-reduced-motion: reduce) {
-  .landing-nav a {
+  .landing-nav a,
+  button.landing-auth {
     transition: none;
   }
 }

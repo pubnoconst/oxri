@@ -35,7 +35,7 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 				// Vendored HTMX, Theme Toggle, and Page Transition Feedback (No External CDN scripts)
 				h.Script(h.Src("/assets/js/htmx.min.js")),
 				h.Script(h.Src("/assets/js/theme-toggle.js?v=2")),
-				h.Script(h.Src("/assets/js/navigation-feedback.js?v=1")),
+				h.Script(h.Src("/assets/js/navigation-feedback.js?v=2")),
 			),
 		),
 	)

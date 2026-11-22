@@ -112,7 +112,7 @@ func NewRouter(cfg Config) http.Handler {
 	r.Get("/auth/totp-status", handleTOTPStatus(cfg.AuthService, statusLimiter))
 	r.Post("/auth/passkey/begin", handlePasskeyLoginBegin(cfg.Store, cfg.AuthService, loginLimiter))
 	r.Post("/auth/passkey/finish", handlePasskeyLoginFinish(cfg.Store, cfg.AuthService, loginLimiter))
-	r.HandleFunc("/logout", handleLogout(cfg.AuthService)) // Handles both GET and POST
+	r.Post("/logout", handleLogout(cfg.AuthService))
 
 	// 8. Protected Profile / Pilot Settings & Passkey Management Routes
 	r.Get("/pilot/user/settings", handlePilotSettings(cfg.Store, cfg.AuthService))
@@ -150,7 +150,7 @@ func handleLanding(authSvc *auth.Service) http.HandlerFunc {
 	}
 }
 
-func renderLoginView(w http.ResponseWriter, r *http.Request, store *db.Store, authSvc *auth.Service, next, errMsg string, status int) {
+func renderLoginView(w http.ResponseWriter, r *http.Request, store *db.Store, authSvc *auth.Service, next, errMsg string, status int, reauth bool) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if status != http.StatusOK {
 		w.WriteHeader(status)
@@ -164,7 +164,7 @@ func renderLoginView(w http.ResponseWriter, r *http.Request, store *db.Store, au
 			}
 		}
 	}
-	_ = login.TOTPPage(next, errMsg, requirePassword, hasPasskeys).Render(w)
+	_ = login.TOTPPage(next, errMsg, requirePassword, hasPasskeys, reauth).Render(w)
 }
 
 func isValidVerifyID(id string) bool {
@@ -198,9 +198,12 @@ func loginErrorMessage(code string) string {
 func handleLogin(store *db.Store, authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		next := serverfns.SanitizeRedirect(r.URL.Query().Get("next"))
-		if _, err := serverfns.RequireAuth(authSvc, r); err == nil {
-			http.Redirect(w, r, next, http.StatusSeeOther)
-			return
+		reauth := r.URL.Query().Get("reauth") == "1"
+		if !reauth {
+			if _, err := serverfns.RequireAuth(authSvc, r); err == nil {
+				http.Redirect(w, r, next, http.StatusSeeOther)
+				return
+			}
 		}
 
 		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
@@ -214,7 +217,7 @@ func handleLogin(store *db.Store, authSvc *auth.Service, limiter *ipRateLimiter)
 		}
 
 		errMsg := loginErrorMessage(r.URL.Query().Get("err"))
-		renderLoginView(w, r, store, authSvc, next, errMsg, http.StatusOK)
+		renderLoginView(w, r, store, authSvc, next, errMsg, http.StatusOK, reauth)
 	}
 }
 
@@ -231,17 +234,18 @@ func handleLoginSubmit(store *db.Store, authSvc *auth.Service, limiter *ipRateLi
 			next = serverfns.SanitizeRedirect(r.URL.Query().Get("next"))
 		}
 
-		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
-			renderLoginView(w, r, store, authSvc, next, "Too many attempts. Please wait a few minutes.", http.StatusTooManyRequests)
+		clientIP := clientIPFromRequest(r)
+		if limiter != nil && !limiter.allow(clientIP) {
+			renderLoginView(w, r, store, authSvc, next, "Too many attempts. Please wait a few minutes.", http.StatusTooManyRequests, false)
 			return
 		}
 
 		password := r.FormValue("password")
 		code := strings.TrimSpace(r.FormValue("code"))
-		verifyID, bindingCookie, _, err := authSvc.StartTOTPVerification(password, code, next)
+		verifyID, bindingCookie, _, err := authSvc.StartTOTPVerification(clientIP, password, code, next)
 		if err != nil {
 			if errors.Is(err, auth.ErrTOTPPending) {
-				renderLoginView(w, r, store, authSvc, next, "A confirmation is already in progress. Please wait.", http.StatusTooManyRequests)
+				renderLoginView(w, r, store, authSvc, next, "A confirmation is already in progress. Please wait.", http.StatusTooManyRequests, false)
 				return
 			}
 			errorpage.Render(w, http.StatusInternalServerError, "Failed to initiate authentication confirmation.")
@@ -356,6 +360,10 @@ func handleTOTPStatus(authSvc *auth.Service, limiter *ipRateLimiter) http.Handle
 			return
 		}
 
+		if oldSess, err := r.Cookie(auth.SessionCookieName); err == nil && oldSess.Value != "" {
+			authSvc.RevokeSession(oldSess.Value)
+		}
+
 		http.SetCookie(w, &http.Cookie{
 			Name:     auth.SessionCookieName,
 			Value:    sessionID,
@@ -382,6 +390,8 @@ func handlePilotSettings(store *db.Store, authSvc *auth.Service) http.HandlerFun
 			http.Redirect(w, r, "/login?next=/pilot/user/settings", http.StatusSeeOther)
 			return
 		}
+
+		_, freshErr := serverfns.RequireFreshAuth(authSvc, r, auth.FreshAuthWindow)
 
 		methodLabel := "TOTP (RFC 6238)"
 		if authSvc != nil && authSvc.HasPassword() {
@@ -412,6 +422,7 @@ func handlePilotSettings(store *db.Store, authSvc *auth.Service) http.HandlerFun
 			MethodLabel:      methodLabel,
 			RPID:             rpID,
 			PasskeySupported: supported && store != nil,
+			FreshAuth:        freshErr == nil,
 			Passkeys:         items,
 		}).Render(w)
 	}
@@ -430,6 +441,7 @@ func handleLogout(authSvc *auth.Service) http.HandlerFunc {
 			Value:    "",
 			Path:     "/",
 			HttpOnly: true,
+			Secure:   isHTTPSRequest(r),
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   -1,
 		})

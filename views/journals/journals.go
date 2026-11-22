@@ -281,7 +281,9 @@ func CatalogContentFragment(isAuth bool, view CatalogView) g.Node {
 func renderJournalsHeader(isAuth bool) g.Node {
 	var authLink g.Node
 	if isAuth {
-		authLink = h.A(h.Class("auth-action-link"), h.Href("/logout"), g.Text("Sign out"))
+		authLink = h.Form(h.Class("auth-action-form"), h.Method("POST"), h.Action("/logout"),
+			h.Button(h.Type("submit"), h.Class("auth-action-link"), g.Text("Sign out")),
+		)
 	} else {
 		authLink = h.A(h.Class("auth-action-link"), h.Href("/login?next=/journals"), g.Text("Author sign in"))
 	}
@@ -315,7 +317,7 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 
 	return layout.Doc(
 		"Journals - RES IMPERII",
-		StylePath+"?v=3",
+		StylePath+"?v=4",
 		h.Div(h.Class("water-stage"), g.Attr("data-water-stage", ""),
 			h.Main(h.Class("journals-page"),
 				renderJournalsHeader(isAuth),
@@ -353,7 +355,7 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 
 	return layout.Doc(
 		"Journals - RES IMPERII",
-		StylePath+"?v=3",
+		StylePath+"?v=4",
 		h.Main(h.Class("journals-page"),
 			renderJournalsHeader(isAuth),
 			h.Div(h.ID("journals-catalog-stage"),
@@ -370,7 +372,7 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 	return layout.Doc(
 		"Journal Entry - RES IMPERII",
-		StylePath+"?v=3",
+		StylePath+"?v=4",
 		h.Main(h.Class("journals-page journals-single-page"),
 			h.Header(h.Class("journals-header"),
 				layout.BackLink("/journals", "Journals"),
@@ -466,7 +468,7 @@ func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 			h.Form(
 				h.Method("POST"),
 				h.Action(ActionURL(item.Entry.ID, "delete")),
-				g.Attr("onsubmit", "return confirm('Delete this journal entry permanently?');"),
+				g.Attr("data-confirm", "Delete this journal entry permanently?"),
 				h.Button(h.Type("submit"), h.Class("btn btn-destructive btn-sm"), g.Text("Delete")),
 			),
 		)

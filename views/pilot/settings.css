@@ -357,6 +357,10 @@
   font-size: 0.84rem;
 }
 
+.reauth-link {
+  margin-top: 0.75rem;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 640px) {
   .method-card {

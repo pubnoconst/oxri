@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
@@ -41,6 +42,12 @@ var (
 )
 
 var totpBase32 = base32.StdEncoding.WithPadding(base32.NoPadding)
+
+// TOTPReplayStore persists the highest accepted TOTP time step across process restarts.
+type TOTPReplayStore interface {
+	LoadLastTOTPStep(ctx context.Context) (int64, error)
+	SaveLastTOTPStep(ctx context.Context, step int64) error
+}
 
 // GenerateTOTPSecret creates a cryptographically random 160-bit Base32 TOTP seed.
 func GenerateTOTPSecret() (string, error) {

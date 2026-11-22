@@ -65,7 +65,7 @@ func TestServicePending2FA_PasswordAndTOTP(t *testing.T) {
 	}
 
 	// 1. Valid TOTP + wrong password must fail after cooldown without consuming the TOTP step
-	badID, badBind, _, err := svc.StartTOTPVerification("wrong-password-123", validCode, "/journals")
+	badID, badBind, _, err := svc.StartTOTPVerification("198.51.100.10", "wrong-password-123", validCode, "/journals")
 	if err != nil {
 		t.Fatalf("StartTOTPVerification(bad pw): %v", err)
 	}
@@ -75,7 +75,7 @@ func TestServicePending2FA_PasswordAndTOTP(t *testing.T) {
 	}
 
 	// 2. Valid password + valid TOTP succeeds after cooldown
-	goodID, goodBind, _, err := svc.StartTOTPVerification(pw, validCode, "/journals")
+	goodID, goodBind, _, err := svc.StartTOTPVerification("198.51.100.10", pw, validCode, "/journals")
 	if err != nil {
 		t.Fatalf("StartTOTPVerification(good 2fa): %v", err)
 	}

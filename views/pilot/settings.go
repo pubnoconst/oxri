@@ -29,6 +29,7 @@ type SettingsData struct {
 	MethodLabel      string
 	RPID             string
 	PasskeySupported bool
+	FreshAuth        bool
 	Passkeys         []PasskeyItem
 }
 
@@ -58,24 +59,31 @@ func SettingsPage(data SettingsData) g.Node {
 			if pk.LastUsedAt != "" {
 				metaText += " · Last used " + pk.LastUsedAt
 			}
+			var removeControl g.Node
+			if data.PasskeySupported && !data.FreshAuth {
+				removeControl = h.Button(h.Type("button"), h.Class("btn btn-destructive btn-sm"), g.Attr("disabled", ""), g.Attr("aria-disabled", "true"), g.Text("Remove"))
+			} else {
+				removeControl = h.Form(
+					h.Method("POST"),
+					h.Action("/pilot/passkeys/"+pk.ID+"/delete"),
+					g.Attr("data-confirm", "Remove this passkey?"),
+					h.Button(h.Type("submit"), h.Class("btn btn-destructive btn-sm"), g.Text("Remove")),
+				)
+			}
 			items = append(items, h.Li(h.Class("passkey-row"),
 				h.Div(h.Class("passkey-row-info"),
 					h.Span(h.Class("passkey-row-name"), g.Text(pk.Name)),
 					h.Span(h.Class("passkey-row-meta"), g.Text(metaText)),
 				),
-				h.Form(
-					h.Method("POST"),
-					h.Action("/pilot/passkeys/"+pk.ID+"/delete"),
-					g.Attr("onsubmit", "return confirm('Remove this passkey?');"),
-					h.Button(h.Type("submit"), h.Class("btn btn-destructive btn-sm"), g.Text("Remove")),
-				),
+				removeControl,
 			))
 		}
 		passkeyList = h.Ul(h.Class("passkey-list"), g.Group(items))
 	}
 
 	var footerControls g.Node
-	if data.PasskeySupported {
+	switch {
+	case data.PasskeySupported && data.FreshAuth:
 		footerControls = h.Div(h.Class("methods-footer"),
 			h.Div(h.Class("passkey-add-row"),
 				h.Input(
@@ -90,7 +98,30 @@ func SettingsPage(data SettingsData) g.Node {
 			),
 			h.P(h.ID("passkey-register-status"), h.Class("passkey-status"), g.Attr("role", "status"), g.Attr("hidden", "")),
 		)
-	} else {
+	case data.PasskeySupported && !data.FreshAuth:
+		footerControls = h.Div(h.Class("methods-footer"),
+			h.Div(h.Class("passkey-add-row"),
+				h.Input(
+					h.ID("passkey-label-input"),
+					h.Type("text"),
+					h.Class("passkey-label-input"),
+					h.Placeholder("Passkey label (e.g. Proton Pass, Laptop, Phone)"),
+					g.Attr("maxlength", "32"),
+					g.Attr("disabled", ""),
+					g.Attr("aria-label", "Passkey label"),
+				),
+				h.Button(h.Type("button"), h.Class("btn btn-encouraged"), g.Attr("disabled", ""), g.Attr("aria-disabled", "true"), g.Text("Add passkey")),
+			),
+			h.Div(h.Class("https-notice"), g.Attr("role", "note"),
+				h.Div(h.Class("notice-icon"), g.Text("ℹ")),
+				h.Div(h.Class("notice-body"),
+					h.Span(h.Class("notice-title"), g.Text("Recent verification required to manage passkeys")),
+					h.P(g.Text("For security, adding or removing passkeys requires signing in within the last 5 minutes.")),
+					h.A(h.Class("btn btn-neutral btn-sm reauth-link"), h.Href("/login?next=/pilot/user/settings&reauth=1"), g.Text("Re-verify identity")),
+				),
+			),
+		)
+	default:
 		footerControls = h.Div(h.Class("methods-footer"),
 			h.Div(h.Class("action-buttons"),
 				h.Button(h.Type("button"), h.Class("btn btn-encouraged"), g.Attr("disabled", ""), g.Attr("aria-disabled", "true"), g.Text("Add passkey")),
@@ -116,7 +147,7 @@ func SettingsPage(data SettingsData) g.Node {
 
 	return layout.Doc(
 		"Settings - RES IMPERII",
-		StylePath+"?v=2",
+		StylePath+"?v=3",
 		h.Main(h.Class("settings-page"),
 			h.Header(h.Class("settings-header"),
 				layout.BackLink("/", "Home"),

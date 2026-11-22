@@ -42,12 +42,27 @@
   gap: 1.25rem;
 }
 
+.auth-action-form {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
 .auth-action-link {
   font-size: 0.95rem;
   color: inherit;
   opacity: 0.55;
   text-decoration: none;
   transition: opacity 160ms ease;
+}
+
+button.auth-action-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
 }
 
 .auth-action-link:hover,
