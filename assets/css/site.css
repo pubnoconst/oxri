@@ -66,6 +66,8 @@ p, h1, h2, h3, h4, h5, h6 {
   --border-input: color-mix(in srgb, var(--page-ink) 20%, transparent);
   --border-focus: color-mix(in srgb, var(--page-ink) 45%, transparent);
   --shadow-card: 0 6px 20px color-mix(in srgb, var(--page-ink) 5%, transparent);
+  --ripple-sun: rgba(255, 255, 255, 0.78);
+  --ripple-trough: rgba(52, 51, 47, 0.11);
 
   /* Border Radii */
   --radius-card: 0.5rem;
@@ -93,6 +95,8 @@ p, h1, h2, h3, h4, h5, h6 {
     --accent-warn: #e6b450;
     --accent-active: #87b382;
     --accent-danger: #e06c68;
+    --ripple-sun: rgba(255, 255, 255, 0.28);
+    --ripple-trough: rgba(0, 0, 0, 0.36);
   }
 }
 
@@ -103,6 +107,8 @@ p, h1, h2, h3, h4, h5, h6 {
   --accent-warn: #c98a2c;
   --accent-active: #3b6e44;
   --accent-danger: #c74e4a;
+  --ripple-sun: rgba(255, 255, 255, 0.78);
+  --ripple-trough: rgba(52, 51, 47, 0.11);
 }
 
 :root[data-theme="dark"] {
@@ -111,6 +117,8 @@ p, h1, h2, h3, h4, h5, h6 {
   --accent-warn: #e6b450;
   --accent-active: #87b382;
   --accent-danger: #e06c68;
+  --ripple-sun: rgba(255, 255, 255, 0.28);
+  --ripple-trough: rgba(0, 0, 0, 0.36);
 }
 
 /* 3. Global Typography & Heading Standard */
@@ -285,12 +293,164 @@ a {
 }
 
 .journal-preview-media .tweet-embed-container {
+  position: relative;
   display: flex;
   justify-content: center;
   width: 100%;
   background: transparent;
   padding: 0.25rem 0;
+  overflow: hidden;
+  border-radius: 14px;
   filter: drop-shadow(0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent));
+  transition: height 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Quiet empty space where the water drop originates inside the media slot */
+.media-ripple-spacer {
+  width: 100%;
+  height: 7.5rem;
+  pointer-events: none;
+}
+
+/* Full-card pure-CSS water drop ripple: disturbs text & reflects sunlit highlights across the entire entry card */
+.card-water-ripple {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 3;
+  transition: opacity 320ms ease-out;
+}
+
+.card-water-ripple.is-fading-out {
+  opacity: 0;
+}
+
+.card-water-drop {
+  position: absolute;
+  left: var(--ripple-x, 50%);
+  top: var(--ripple-y, 32%);
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle at 38% 35%,
+    var(--ripple-sun) 0%,
+    color-mix(in srgb, var(--page-ink) 14%, transparent) 58%,
+    transparent 100%
+  );
+  animation: water-drop-pulse 2.7s ease-in-out infinite;
+}
+
+.card-water-wave {
+  position: absolute;
+  left: var(--ripple-x, 50%);
+  top: var(--ripple-y, 32%);
+  width: var(--ripple-diameter, 46rem);
+  height: var(--ripple-diameter, 46rem);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.02);
+  opacity: 0;
+  will-change: transform, opacity;
+  /* Optical refraction along the moving annular wavefront disturbs preview text beneath */
+  -webkit-backdrop-filter: blur(1.8px) brightness(1.08) contrast(1.06);
+  backdrop-filter: blur(1.8px) brightness(1.08) contrast(1.06);
+  /* Annular wave mask: isolates distortion and specular sheen strictly to the thin moving crest */
+  -webkit-mask-image: radial-gradient(
+    circle,
+    transparent 42%,
+    rgba(0, 0, 0, 0.35) 45.2%,
+    #000 47.2%,
+    rgba(0, 0, 0, 0.55) 49.4%,
+    transparent 52.8%
+  );
+  mask-image: radial-gradient(
+    circle,
+    transparent 42%,
+    rgba(0, 0, 0, 0.35) 45.2%,
+    #000 47.2%,
+    rgba(0, 0, 0, 0.55) 49.4%,
+    transparent 52.8%
+  );
+  /* Subtle sunlit specular crest + delicate shadow trough behind the wave */
+  background:
+    radial-gradient(
+      circle,
+      transparent 43.2%,
+      var(--ripple-trough) 45.5%,
+      var(--ripple-sun) 47.4%,
+      rgba(255, 255, 255, 0.18) 49.2%,
+      transparent 52.2%
+    );
+  animation: water-wave-propagate 2.7s cubic-bezier(0.12, 0.72, 0.28, 1) infinite;
+}
+
+.card-water-wave.wave-2 {
+  animation-delay: 0.9s;
+}
+
+.card-water-wave.wave-3 {
+  animation-delay: 1.8s;
+}
+
+@keyframes water-drop-pulse {
+  0%, 100% {
+    opacity: 0.32;
+    transform: translate(-50%, -50%) scale(0.82);
+  }
+  18% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+  45% {
+    opacity: 0.4;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+}
+
+@keyframes water-wave-propagate {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.02);
+  }
+  10% {
+    opacity: 0.92;
+  }
+  55% {
+    opacity: 0.48;
+  }
+  85% {
+    opacity: 0.14;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+}
+
+.tweet-embed-stage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(6px) scale(0.988);
+  transition: opacity 380ms cubic-bezier(0.22, 1, 0.36, 1), transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tweet-embed-stage.is-ready {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.tweet-embed-stage.is-staging {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .journal-preview-media .tweet-embed-container iframe,
@@ -318,6 +478,29 @@ a {
   background: var(--surface-card);
   box-shadow: var(--shadow-card);
   text-align: center;
+  transition: opacity 220ms ease;
+}
+
+.tweet-fallback-card.is-loading .tweet-fallback-badge {
+  animation: media-loading-breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes media-loading-breathe {
+  0%, 100% {
+    opacity: 0.38;
+  }
+  50% {
+    opacity: 0.78;
+  }
+}
+
+.media-fade-in {
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.media-fade-in.is-loaded {
+  opacity: 1;
 }
 
 .tweet-fallback-badge {
