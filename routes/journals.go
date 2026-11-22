@@ -149,6 +149,7 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		in, formData := parseJournalForm(r)
 		if _, err := store.Create(r.Context(), in); err != nil {
 			if errors.Is(err, db.ErrInvalidInput) {
+				sanitizeFormDataForEcho(&formData)
 				formData.ErrorMsg = err.Error()
 				formData.ExistingTags, _ = store.DistinctTags(r.Context(), true)
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -157,6 +158,7 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 				return
 			}
 			if errors.Is(err, db.ErrQuotaExceeded) {
+				sanitizeFormDataForEcho(&formData)
 				store.SetPendingSubmission(&db.PendingSubmission{
 					IsEdit:     false,
 					MediaURL:   formData.MediaURL,
@@ -233,6 +235,7 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		formData.EntryID = id
 		if err := store.Update(r.Context(), id, in); err != nil {
 			if errors.Is(err, db.ErrInvalidInput) {
+				sanitizeFormDataForEcho(&formData)
 				formData.ErrorMsg = err.Error()
 				formData.ExistingTags, _ = store.DistinctTags(r.Context(), true)
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -245,6 +248,7 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 				return
 			}
 			if errors.Is(err, db.ErrQuotaExceeded) {
+				sanitizeFormDataForEcho(&formData)
 				store.SetPendingSubmission(&db.PendingSubmission{
 					IsEdit:     true,
 					EntryID:    id,
@@ -497,6 +501,15 @@ func parseJournalForm(r *http.Request) (db.JournalInput, editor.FormData) {
 		Bookmarked: bookmarked,
 	}
 	return in, formData
+}
+
+func sanitizeFormDataForEcho(fd *editor.FormData) {
+	if fd == nil {
+		return
+	}
+	fd.MediaURL = db.SanitizeMediaURLInput(fd.MediaURL)
+	fd.Tags = db.SanitizeTagsRawInput(fd.Tags)
+	fd.Body = db.SanitizeProseInput(fd.Body)
 }
 
 func entryReturnTarget(r *http.Request, id int64) string {

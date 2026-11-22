@@ -1,6 +1,7 @@
 package db
 
 import (
+	"net"
 	"strings"
 	"unicode"
 )
@@ -9,7 +10,12 @@ import (
 // Strict character-set whitelisting enforces that only English alphanumeric,
 // Latin, and Greek characters (plus context-appropriate ASCII/typographic
 // punctuation) are accepted. Emojis, control characters, zero-width/bidi
-// spoofing characters, and non-whitelisted scripts are rejected.
+// spoofing characters, and non-whitelisted scripts are rejected on the server
+// independent of any client-side checks.
+
+const (
+	MaxProseRunes = 100_000
+)
 
 // IsAllowedMediaURLRune permits only printable ASCII characters (0x21..0x7E) in URLs.
 func IsAllowedMediaURLRune(r rune) bool {
@@ -24,6 +30,21 @@ func ValidateMediaURLChars(s string) (rune, bool) {
 		}
 	}
 	return 0, true
+}
+
+// IsPrivateOrLocalHost reports whether a URL hostname points to localhost,
+// loopback, link-local, or private internal IP space (anti-SSRF).
+func IsPrivateOrLocalHost(hostname string) bool {
+	lower := strings.ToLower(strings.TrimSpace(hostname))
+	if lower == "" || lower == "localhost" || strings.HasSuffix(lower, ".localhost") || strings.HasSuffix(lower, ".local") {
+		return true
+	}
+	if ip := net.ParseIP(lower); ip != nil {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return true
+		}
+	}
+	return false
 }
 
 // IsAllowedTagRune permits only ASCII digits (0-9) and Latin or Greek letters
@@ -98,6 +119,56 @@ func ValidateProseChars(s string) (rune, bool) {
 		}
 	}
 	return 0, true
+}
+
+// SanitizeMediaURLInput strips any character outside printable ASCII (0x21..0x7E)
+// and caps length at MaxMediaURLLength so invalid input is never echoed back to the DOM.
+func SanitizeMediaURLInput(raw string) string {
+	var b strings.Builder
+	count := 0
+	for _, r := range strings.TrimSpace(raw) {
+		if count >= MaxMediaURLLength {
+			break
+		}
+		if IsAllowedMediaURLRune(r) {
+			b.WriteRune(r)
+			count++
+		}
+	}
+	return b.String()
+}
+
+// SanitizeTagsRawInput strips any character that is not an allowed tag rune, comma, or space.
+func SanitizeTagsRawInput(raw string) string {
+	var b strings.Builder
+	count := 0
+	for _, r := range strings.TrimSpace(raw) {
+		if count >= 64 {
+			break
+		}
+		if IsAllowedTagRune(r) || r == ',' || r == ' ' {
+			b.WriteRune(r)
+			count++
+		}
+	}
+	return strings.TrimSpace(b.String())
+}
+
+// SanitizeProseInput strips any rune outside the allowed Latin/Greek/ASCII prose whitelist
+// and caps length at MaxProseRunes.
+func SanitizeProseInput(raw string) string {
+	var b strings.Builder
+	count := 0
+	for _, r := range raw {
+		if count >= MaxProseRunes {
+			break
+		}
+		if IsAllowedProseRune(r) {
+			b.WriteRune(r)
+			count++
+		}
+	}
+	return b.String()
 }
 
 // SanitizeSearchQuery strips any rune not allowed in prose/tags and caps length at 128 runes.

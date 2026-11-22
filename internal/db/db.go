@@ -126,6 +126,9 @@ func ValidateInput(in JournalInput) (JournalInput, error) {
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return in, fmt.Errorf("%w: media link must be a valid http or https URL", ErrInvalidInput)
 	}
+	if IsPrivateOrLocalHost(u.Hostname()) {
+		return in, fmt.Errorf("%w: media link host must not be localhost or a private/internal IP", ErrInvalidInput)
+	}
 
 	if len(in.Tags) > MaxTagCount {
 		return in, fmt.Errorf("%w: at most %d tags are allowed", ErrInvalidInput, MaxTagCount)
@@ -153,6 +156,9 @@ func ValidateInput(in JournalInput) (JournalInput, error) {
 
 	if strings.TrimSpace(in.Body) == "" {
 		return in, fmt.Errorf("%w: journal content cannot be empty", ErrInvalidInput)
+	}
+	if utf8.RuneCountInString(in.Body) > MaxProseRunes {
+		return in, fmt.Errorf("%w: journal content exceeds maximum allowed length (%d characters)", ErrInvalidInput, MaxProseRunes)
 	}
 	if badRune, ok := ValidateProseChars(in.Body); !ok {
 		return in, fmt.Errorf("%w: journal content contains disallowed character U+%04X (only English, Latin, Greek, digits, and standard punctuation permitted; no emojis)", ErrInvalidInput, badRune)

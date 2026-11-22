@@ -34,8 +34,11 @@ type Config struct {
 func NewRouter(cfg Config) http.Handler {
 	r := chi.NewRouter()
 
-	// 1. Resilience Middleware (Never leak stack traces or internal details to client)
+	// 1. Resilience & Security Hardening Middleware
 	r.Use(safeRecoverer)
+	r.Use(securityHeadersMiddleware)
+	r.Use(bodySizeCapMiddleware)
+	r.Use(csrfOriginMiddleware)
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	// 2. Custom 404 & 405 Handlers
@@ -56,13 +59,12 @@ func NewRouter(cfg Config) http.Handler {
 	r.Get(editor.StylePath, serveCSS(editor.StyleCSS))
 	r.Get(loading.StylePath, serveCSS(loading.StyleCSS))
 
-	// 4. Static Assets (/assets/*)
+	// 4. Static Assets (/assets/*) — Directory listings strictly disabled
 	assetsDir := cfg.AssetsDir
 	if assetsDir == "" {
 		assetsDir = "assets"
 	}
-	fileServer := http.FileServer(http.Dir(assetsDir))
-	r.Handle("/assets/*", http.StripPrefix("/assets/", fileServer))
+	r.Handle("/assets/*", noDirListingAssetHandler(assetsDir))
 
 	// 5. Public Page Routes
 	r.Get("/", handleLanding(cfg.AuthService))
@@ -86,9 +88,11 @@ func NewRouter(cfg Config) http.Handler {
 	r.Post("/journals/{id}/unpublish", handleJournalPublish(cfg.Store, cfg.AuthService, false))
 	r.Post("/journals/{id}/bookmark", handleJournalBookmark(cfg.Store, cfg.AuthService))
 
-	// 7. Authentication Routes
-	r.Get("/login", handleLogin(cfg.AuthService))
-	r.Get("/auth/status", handleAuthStatus(cfg.AuthService))
+	// 7. Authentication Routes (with per-IP rate limiters)
+	loginLimiter := newIPRateLimiter(30, time.Minute)
+	statusLimiter := newIPRateLimiter(120, time.Minute)
+	r.Get("/login", handleLogin(cfg.AuthService, loginLimiter))
+	r.Get("/auth/status", handleAuthStatus(cfg.AuthService, statusLimiter))
 	r.HandleFunc("/logout", handleLogout(cfg.AuthService)) // Handles both GET and POST
 
 	// 8. Protected Profile / Pilot Settings Routes
@@ -131,11 +135,28 @@ func handleBookI() http.HandlerFunc {
 	}
 }
 
-func handleLogin(authSvc *auth.Service) http.HandlerFunc {
+func isValidSixDigitToken(token string) bool {
+	if len(token) != 6 {
+		return false
+	}
+	for i := 0; i < 6; i++ {
+		if token[i] < '0' || token[i] > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func handleLogin(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		next := serverfns.SanitizeRedirect(r.URL.Query().Get("next"))
 		if _, err := serverfns.RequireAuth(authSvc, r); err == nil {
 			http.Redirect(w, r, next, http.StatusSeeOther)
+			return
+		}
+
+		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
+			errorpage.Render(w, http.StatusTooManyRequests, "Too many authentication requests. Please wait briefly.")
 			return
 		}
 
@@ -170,15 +191,20 @@ func handleLogin(authSvc *auth.Service) http.HandlerFunc {
 	}
 }
 
-func handleAuthStatus(authSvc *auth.Service) http.HandlerFunc {
+func handleAuthStatus(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if authSvc == nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
 
-		token := r.URL.Query().Get("token")
-		if token == "" {
+		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+
+		token := strings.TrimSpace(r.URL.Query().Get("token"))
+		if !isValidSixDigitToken(token) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
