@@ -208,7 +208,7 @@ func FormPage(isAuth bool, data FormData) g.Node {
 								g.Attr("data-existing-tags", data.ExistingTagsCSV()),
 							),
 							h.Div(h.ID("tag-suggestions"), h.Class("tag-suggestions"), g.Attr("role", "listbox"), g.Attr("aria-label", "Tag suggestions")),
-							h.P(h.Class("field-hint"), g.Text("Up to 3 unique tags, up to 4 characters each (letters and numbers only; no emojis).")),
+							h.P(h.Class("field-hint"), g.Text("Up to 3 unique tags, up to 8 ASCII characters each (A–Z and 0–9 only).")),
 							h.P(h.ID("tags-error"), h.Class("field-error"), g.Attr("aria-live", "polite")),
 						),
 						h.Div(h.Class("editor-field editor-content-field"),
@@ -246,7 +246,7 @@ func FormPage(isAuth bool, data FormData) g.Node {
 		h.Script(h.Src("/assets/js/markdown-it.min.js?v=1")),
 		h.Script(h.Src("/assets/js/purify.min.js?v=1")),
 		h.Script(h.Src("/assets/js/journal-media.js?v=2")),
-		h.Script(h.Src("/assets/js/journal-editor.js?v=9")),
+		h.Script(h.Src("/assets/js/journal-editor.js?v=10")),
 		h.Script(h.Src("/assets/js/loading-transition.js?v=1")),
 	)
 }

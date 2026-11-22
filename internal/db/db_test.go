@@ -39,11 +39,11 @@ func TestLoadEnvFiles(t *testing.T) {
 func TestValidateInput(t *testing.T) {
 	valid := JournalInput{
 		MediaURL: "https://x.com/user/status/123",
-		Tags:     []string{"log", "Rōma", "Νόος"},
+		Tags:     []string{"log", "History", "Notes123"},
 		Body:     "# RES·IMPERII\n\nEnglish 123, Latin Rōma æterna, and Greek Λόγος — no emojis.",
 	}
 	if _, err := ValidateInput(valid); err != nil {
-		t.Fatalf("expected valid Latin/Greek/alphanumeric input to pass, got: %v", err)
+		t.Fatalf("expected valid ASCII tags and Latin/Greek prose to pass, got: %v", err)
 	}
 
 	cases := []struct {
@@ -55,11 +55,13 @@ func TestValidateInput(t *testing.T) {
 		{"media url over 128 chars", func(in *JournalInput) { in.MediaURL = "https://example.com/" + strings.Repeat("a", 115) }},
 		{"emoji in media url", func(in *JournalInput) { in.MediaURL = "https://example.com/🚀" }},
 		{"more than 3 tags", func(in *JournalInput) { in.Tags = []string{"a", "b", "c", "d"} }},
-		{"tag over 4 chars", func(in *JournalInput) { in.Tags = []string{"notes"} }},
+		{"tag over 8 chars", func(in *JournalInput) { in.Tags = []string{"biography"} }},
 		{"duplicate tags exact", func(in *JournalInput) { in.Tags = []string{"Log", "Log"} }},
 		{"duplicate tags case-insensitive", func(in *JournalInput) { in.Tags = []string{"log", "LOG"} }},
 		{"emoji in tag", func(in *JournalInput) { in.Tags = []string{"😀"} }},
 		{"punctuation in tag", func(in *JournalInput) { in.Tags = []string{"a-b"} }},
+		{"non-ASCII accented Latin in tag", func(in *JournalInput) { in.Tags = []string{"Rōma"} }},
+		{"non-ASCII Greek in tag", func(in *JournalInput) { in.Tags = []string{"Νόος"} }},
 		{"non-Latin/Greek script in tag", func(in *JournalInput) { in.Tags = []string{"Тест"} }},
 		{"empty body", func(in *JournalInput) { in.Body = "   \n\t " }},
 		{"emoji in body", func(in *JournalInput) { in.Body = "Hello world 🚀" }},
@@ -461,7 +463,7 @@ func TestMultiByteUTF8LatinAndGreekByteEstimationMatchesSQLite(t *testing.T) {
 
 	entry, err := store.Create(ctx, JournalInput{
 		MediaURL:  "https://example.com/roma.png",
-		Tags:      []string{"Rōma", "Νόος"},
+		Tags:      []string{"History", "Log2026"},
 		Body:      "Rōma æterna — Λόγος καὶ ἀρετή.",
 		Published: true,
 	})

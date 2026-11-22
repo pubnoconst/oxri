@@ -12,9 +12,9 @@ CREATE TABLE IF NOT EXISTS %s (
   id INTEGER PRIMARY KEY,
   created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
   media_url TEXT NOT NULL CHECK(length(media_url) <= 128 AND length(media_url) > 0),
-  tag1 TEXT CHECK(tag1 IS NULL OR (length(tag1) >= 1 AND length(tag1) <= 4 AND tag1 = upper(substr(tag1, 1, 1)) || lower(substr(tag1, 2)))),
-  tag2 TEXT CHECK(tag2 IS NULL OR (length(tag2) >= 1 AND length(tag2) <= 4 AND tag2 = upper(substr(tag2, 1, 1)) || lower(substr(tag2, 2)))),
-  tag3 TEXT CHECK(tag3 IS NULL OR (length(tag3) >= 1 AND length(tag3) <= 4 AND tag3 = upper(substr(tag3, 1, 1)) || lower(substr(tag3, 2)))),
+  tag1 TEXT CHECK(tag1 IS NULL OR (length(tag1) >= 1 AND length(tag1) <= 8 AND tag1 = upper(substr(tag1, 1, 1)) || lower(substr(tag1, 2)))),
+  tag2 TEXT CHECK(tag2 IS NULL OR (length(tag2) >= 1 AND length(tag2) <= 8 AND tag2 = upper(substr(tag2, 1, 1)) || lower(substr(tag2, 2)))),
+  tag3 TEXT CHECK(tag3 IS NULL OR (length(tag3) >= 1 AND length(tag3) <= 8 AND tag3 = upper(substr(tag3, 1, 1)) || lower(substr(tag3, 2)))),
   body TEXT NOT NULL,
   bookmarked INTEGER NOT NULL DEFAULT 0 CHECK(bookmarked IN (0,1)),
   published INTEGER NOT NULL DEFAULT 1 CHECK(published IN (0,1)),
@@ -127,14 +127,14 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 		}
 	}
 
-	// Migration v2: Ensure the table DDL enforces Title Case and per-entry tag uniqueness
+	// Migration v2 & v5: Ensure the table DDL enforces Title Case, per-entry tag uniqueness, and max 8-char tags
 	var tableSQL string
 	err = tx.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'journals';`).Scan(&tableSQL)
 	if err != nil {
 		return err
 	}
 
-	if !strings.Contains(tableSQL, "tag1 != tag2") {
+	if !strings.Contains(tableSQL, "tag1 != tag2") || !strings.Contains(tableSQL, "length(tag1) <= 8") {
 		if err := rebuildJournalsWithTagConstraintsTx(ctx, tx); err != nil {
 			return fmt.Errorf("failed to migrate journals tag constraints: %w", err)
 		}
