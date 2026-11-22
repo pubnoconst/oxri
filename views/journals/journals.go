@@ -291,7 +291,7 @@ func renderJournalsHeader(isAuth bool) g.Node {
 		h.Div(h.Class("journals-title-row"),
 			h.H1(g.Text("Journals")),
 			h.Div(h.Class("journals-actions"),
-				h.A(h.Class("new-entry-link btn btn-neutral"), h.Href("/journals/new"), g.Text("Add New Entry")),
+				h.A(h.Class("new-entry-link btn btn-neutral"), h.Href("/journals/new"), g.Text("Add new entry")),
 				authLink,
 			),
 		),

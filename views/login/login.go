@@ -163,7 +163,7 @@ func TOTPPage(nextURL, errMsg string, requirePassword, hasPasskeys bool) g.Node 
 					h.ID("passkey-login-btn"),
 					h.Class("btn btn-encouraged auth-passkey-btn"),
 					g.Attr("data-next", nextURL),
-					g.Text("Sign in with Passkey"),
+					g.Text("Sign in with passkey"),
 				),
 				h.P(h.ID("passkey-login-status"), h.Class("auth-passkey-status"), g.Attr("role", "status"), g.Attr("hidden", "")),
 			),

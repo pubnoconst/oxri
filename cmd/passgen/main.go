@@ -102,7 +102,7 @@ func renderForm(csrfToken, envPath, errMsg string) string {
 			<input id="pw" name="password" type="password" minlength="12" maxlength="256" autocomplete="new-password" autofocus required>
 			<label for="pw2">Confirm Password</label>
 			<input id="pw2" name="confirm" type="password" minlength="12" maxlength="256" autocomplete="new-password" required>
-			<button type="submit">Generate &amp; Save Hash</button>
+			<button type="submit">Generate &amp; save hash</button>
 		</form>
 	`)
 }

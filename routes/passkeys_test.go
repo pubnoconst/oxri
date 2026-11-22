@@ -81,8 +81,8 @@ func TestPasskeyRoutesAndStorePersistence(t *testing.T) {
 	reqLogin.Host = "localhost:8080"
 	recLogin := httptest.NewRecorder()
 	router.ServeHTTP(recLogin, reqLogin)
-	if recLogin.Code != http.StatusOK || !strings.Contains(recLogin.Body.String(), "Sign in with Passkey") {
-		t.Fatalf("expected /login to offer Sign in with Passkey when credential is enrolled")
+	if recLogin.Code != http.StatusOK || !strings.Contains(recLogin.Body.String(), "Sign in with passkey") {
+		t.Fatalf("expected /login to offer Sign in with passkey when credential is enrolled")
 	}
 
 	reqSettings := httptest.NewRequest(http.MethodGet, "http://localhost:8080/pilot/user/settings", nil)

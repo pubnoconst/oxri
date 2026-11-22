@@ -184,7 +184,7 @@ func TestJournalsEditorVacateAndLoadingFlow(t *testing.T) {
 	for _, exp := range []string{
 		"Make Room",
 		"Make Room Automatically",
-		"Clear Space Automatically",
+		"Clear space automatically",
 		"Choose Entries to Remove",
 		"Confirming, please wait.",
 	} {
