@@ -19,15 +19,32 @@
     return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
 
-  function showTweetFallback(container, username, tweetId, isLoading) {
+  function showRippleLoader(container) {
+    container.style.height = "";
+    container.replaceChildren();
+    const loader = document.createElement("div");
+    loader.className = "media-ripple-loader";
+    loader.setAttribute("role", "status");
+    loader.setAttribute("aria-label", "Loading media");
+
+    const core = document.createElement("span");
+    core.className = "media-ripple-core";
+    core.setAttribute("aria-hidden", "true");
+
+    loader.append(core);
+    container.append(loader);
+    return loader;
+  }
+
+  function showTweetFallback(container, username, tweetId) {
     container.style.height = "";
     container.replaceChildren();
     const card = document.createElement("div");
-    card.className = isLoading ? "tweet-fallback-card is-loading" : "tweet-fallback-card";
+    card.className = "tweet-fallback-card";
 
     const badge = document.createElement("span");
     badge.className = "tweet-fallback-badge";
-    badge.textContent = isLoading ? "Loading post…" : "X / Twitter Post";
+    badge.textContent = "X / Twitter Post";
 
     const link = document.createElement("a");
     link.href = `https://x.com/${encodeURIComponent(username)}/status/${encodeURIComponent(tweetId)}`;
@@ -55,11 +72,45 @@
     document.head.appendChild(s);
   }
 
-  function revealTweetFluidly(container, fallbackCard, stage) {
+  // Wait until Twitter's internal iframe resize settles before revealing, preventing double-jumps.
+  function waitForStableHeight(el, onSettled) {
+    let done = false;
+    let settleTimer = null;
+    let maxTimer = null;
+    let observer = null;
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (settleTimer) clearTimeout(settleTimer);
+      if (maxTimer) clearTimeout(maxTimer);
+      if (observer) observer.disconnect();
+      onSettled();
+    };
+
+    const scheduleSettle = () => {
+      if (settleTimer) clearTimeout(settleTimer);
+      const h = el.getBoundingClientRect().height;
+      // Wait 140ms of stability once the tweet has a real rendered height
+      if (h > 40) {
+        settleTimer = setTimeout(finish, 140);
+      }
+    };
+
+    if (typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(scheduleSettle);
+      observer.observe(el);
+    }
+
+    scheduleSettle();
+    maxTimer = setTimeout(finish, 950);
+  }
+
+  function revealTweetFluidly(container, rippleEl, stage) {
     const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) {
-      if (fallbackCard && fallbackCard.parentNode === container) {
-        fallbackCard.remove();
+      if (rippleEl && rippleEl.parentNode === container) {
+        rippleEl.remove();
       }
       stage.classList.remove("is-staging");
       stage.classList.add("is-ready");
@@ -68,19 +119,22 @@
     }
 
     const startHeight = container.getBoundingClientRect().height;
-    container.style.height = `${startHeight}px`;
+    const stageHeight = stage.getBoundingClientRect().height;
+    const style = window.getComputedStyle(container);
+    const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+    const computedMax = parseFloat(style.maxHeight);
 
-    if (fallbackCard && fallbackCard.parentNode === container) {
-      fallbackCard.remove();
-    }
-    stage.classList.remove("is-staging");
-
-    // Measure target height (clamped by any CSS max-height such as 22rem in collage mode)
-    const computedMax = parseFloat(window.getComputedStyle(container).maxHeight);
-    let targetHeight = container.scrollHeight;
+    let targetHeight = Math.max(startHeight, stageHeight + padY);
     if (Number.isFinite(computedMax) && computedMax > 0) {
       targetHeight = Math.min(targetHeight, computedMax);
     }
+
+    container.style.height = `${startHeight}px`;
+
+    if (rippleEl && rippleEl.parentNode === container) {
+      rippleEl.classList.add("is-fading-out");
+    }
+    stage.classList.remove("is-staging");
 
     // Force layout flush so the height transition starts cleanly from startHeight
     void container.offsetHeight;
@@ -94,6 +148,9 @@
     const cleanup = () => {
       if (settled) return;
       settled = true;
+      if (rippleEl && rippleEl.parentNode === container) {
+        rippleEl.remove();
+      }
       container.style.height = "";
     };
     container.addEventListener("transitionend", (e) => {
@@ -101,15 +158,15 @@
         cleanup();
       }
     }, { once: true });
-    setTimeout(cleanup, 460);
+    setTimeout(cleanup, 520);
   }
 
   function renderTweet(container, username, tweetId) {
     ensureTwitterWidgetsScript();
     const theme = getActiveTheme();
 
-    // Always render the quiet loading placeholder immediately so the card never collapses to 0px
-    const fallbackCard = showTweetFallback(container, username, tweetId, true);
+    // Pure-CSS contained ripple inside a quiet empty space while the embed prepares off-flow
+    const rippleEl = showRippleLoader(container);
 
     const doCreate = (twttr) => {
       const stage = document.createElement("div");
@@ -124,13 +181,15 @@
       }).then((el) => {
         if (!el) {
           stage.remove();
-          showTweetFallback(container, username, tweetId, false);
+          showTweetFallback(container, username, tweetId);
           return;
         }
-        revealTweetFluidly(container, fallbackCard, stage);
+        waitForStableHeight(el, () => {
+          revealTweetFluidly(container, rippleEl, stage);
+        });
       }).catch(() => {
         stage.remove();
-        showTweetFallback(container, username, tweetId, false);
+        showTweetFallback(container, username, tweetId);
       });
     };
 
@@ -150,7 +209,7 @@
           doCreate(window.twttr);
         } else if (attempts > 30) {
           clearInterval(interval);
-          showTweetFallback(container, username, tweetId, false);
+          showTweetFallback(container, username, tweetId);
         }
       }, 100);
     }

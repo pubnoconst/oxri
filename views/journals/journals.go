@@ -324,7 +324,7 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 				h.P(h.Class("journals-empty journals-loading-placeholder"), g.Attr("aria-live", "polite"), g.Text("Loading entries…")),
 			),
 		),
-		h.Script(h.Src("/assets/js/journal-media.js?v=4")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=5")),
 		catalogScript,
 	)
 }
@@ -345,7 +345,7 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 				CatalogContentFragment(isAuth, view),
 			),
 		),
-		h.Script(h.Src("/assets/js/journal-media.js?v=4")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=5")),
 		catalogScript,
 	)
 }
@@ -363,7 +363,7 @@ func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 				EntryCard(isAuth, item, false),
 			),
 		),
-		h.Script(h.Src("/assets/js/journal-media.js?v=4")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=5")),
 	)
 }
 
