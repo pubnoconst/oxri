@@ -21,6 +21,7 @@ const (
 	MaxTagCount          = domain.MaxJournalTagCount
 	MaxTagLength         = domain.MaxJournalTagLength
 	CurrentSchemaVersion = 2
+	readCacheTTL         = 2 * time.Minute
 )
 
 var (
@@ -31,6 +32,8 @@ var (
 // Store wraps SQL operations against a remote Turso / libSQL database.
 // writeMu serializes transactional write operations (Create, Update, AutoVacateBytes, Delete)
 // so concurrent goroutines cannot race past the content storage quota.
+// cacheMu guards an in-memory read snapshot invalidated immediately on any write,
+// eliminating cross-continent round-trip latency on catalog and entry reads.
 type Store struct {
 	db              *sql.DB
 	writeMu         sync.Mutex
@@ -38,11 +41,16 @@ type Store struct {
 	lastID          int64
 	maxStorageBytes int64
 	pendingSub      *PendingSubmission
+
+	cacheMu       sync.RWMutex
+	cachedEntries []Journal
+	cacheValid    bool
+	cacheLoadedAt time.Time
 }
 
 // Open connects to a remote Turso/libSQL URL (libsql:// or https://), verifies
-// connectivity, and runs schema migrations. Local file databases are disabled;
-// only ":memory:" is accepted for ephemeral unit testing.
+// connectivity, runs schema migrations, and warms the in-memory read cache.
+// Local file databases are disabled; only ":memory:" is accepted for unit testing.
 func Open(ctx context.Context, dbURL, authToken string) (*Store, error) {
 	dbURL = strings.TrimSpace(dbURL)
 	if dbURL == "" {
@@ -71,6 +79,9 @@ func Open(ctx context.Context, dbURL, authToken string) (*Store, error) {
 			return nil, fmt.Errorf("failed to create libsql connector: %w", err)
 		}
 		sqlDB = sql.OpenDB(connector)
+		sqlDB.SetMaxIdleConns(4)
+		sqlDB.SetMaxOpenConns(8)
+		sqlDB.SetConnMaxLifetime(30 * time.Minute)
 	}
 
 	if err := sqlDB.PingContext(ctx); err != nil {
@@ -84,6 +95,9 @@ func Open(ctx context.Context, dbURL, authToken string) (*Store, error) {
 		return nil, fmt.Errorf("schema initialization failed: %w", err)
 	}
 
+	// Pre-warm the read cache at startup so initial /journals navigation is instant
+	_, _ = store.allEntriesCached(ctx)
+
 	return store, nil
 }
 
@@ -93,6 +107,13 @@ func (s *Store) Close() error {
 		return nil
 	}
 	return s.db.Close()
+}
+
+func (s *Store) invalidateCache() {
+	s.cacheMu.Lock()
+	s.cacheValid = false
+	s.cachedEntries = nil
+	s.cacheMu.Unlock()
 }
 
 func (s *Store) nextID() int64 {

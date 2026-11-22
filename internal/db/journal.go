@@ -101,6 +101,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
+	s.invalidateCache()
 	s.ClearPendingSubmission()
 
 	return &Journal{
@@ -164,6 +165,7 @@ WHERE id = ?;`
 	if err := tx.Commit(); err != nil {
 		return err
 	}
+	s.invalidateCache()
 	s.ClearPendingSubmission()
 	return nil
 }
@@ -185,6 +187,9 @@ func (s *Store) SetPublished(ctx context.Context, ids []int64, published bool) e
 	}
 	q := fmt.Sprintf("UPDATE journals SET published = ? WHERE id IN (%s);", strings.Join(placeholders, ","))
 	_, err := s.db.ExecContext(ctx, q, args...)
+	if err == nil {
+		s.invalidateCache()
+	}
 	return err
 }
 
@@ -194,6 +199,9 @@ func (s *Store) SetAllPublished(ctx context.Context, published bool) error {
 	defer s.writeMu.Unlock()
 
 	_, err := s.db.ExecContext(ctx, `UPDATE journals SET published = ?;`, boolToInt(published))
+	if err == nil {
+		s.invalidateCache()
+	}
 	return err
 }
 
@@ -226,6 +234,7 @@ func (s *Store) ToggleBookmark(ctx context.Context, id int64) (bool, error) {
 	if err := tx.Commit(); err != nil {
 		return false, err
 	}
+	s.invalidateCache()
 	return bookmarked == 1, nil
 }
 
@@ -236,7 +245,11 @@ func (s *Store) Delete(ctx context.Context, ids []int64) error {
 	}
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
-	return deleteTx(ctx, s.db, ids)
+	err := deleteTx(ctx, s.db, ids)
+	if err == nil {
+		s.invalidateCache()
+	}
+	return err
 }
 
 func deleteTx(ctx context.Context, q queryExecer, ids []int64) error {
@@ -260,5 +273,8 @@ func (s *Store) DeleteAll(ctx context.Context) error {
 	defer s.writeMu.Unlock()
 
 	_, err := s.db.ExecContext(ctx, `DELETE FROM journals;`)
+	if err == nil {
+		s.invalidateCache()
+	}
 	return err
 }

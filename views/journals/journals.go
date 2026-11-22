@@ -300,8 +300,7 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 			batchBar,
 			feedContent,
 		),
-		h.Script(h.Src("https://platform.twitter.com/widgets.js"), h.Charset("utf-8"), h.Async()),
-		h.Script(h.Src("/assets/js/journal-media.js?v=1")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=2")),
 		catalogScript,
 	)
 }
@@ -319,8 +318,7 @@ func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 				EntryCard(isAuth, item, false),
 			),
 		),
-		h.Script(h.Src("https://platform.twitter.com/widgets.js"), h.Charset("utf-8"), h.Async()),
-		h.Script(h.Src("/assets/js/journal-media.js?v=1")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=2")),
 	)
 }
 

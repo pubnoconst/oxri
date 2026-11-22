@@ -126,6 +126,7 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit schema migration transaction: %w", err)
 	}
+	s.invalidateCache()
 
 	return nil
 }

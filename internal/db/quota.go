@@ -329,5 +329,6 @@ func (s *Store) AutoVacateBytes(ctx context.Context, requiredBytes int64) (AutoV
 	if err := tx.Commit(); err != nil {
 		return plan, err
 	}
+	s.invalidateCache()
 	return plan, nil
 }
