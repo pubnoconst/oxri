@@ -84,6 +84,18 @@ type Service struct {
 	closed               bool
 }
 
+var (
+	capMinterOnce sync.Once
+	pkgCapMinter  domain.CapMinter
+)
+
+func acquireCapMinter() domain.CapMinter {
+	capMinterOnce.Do(func() {
+		pkgCapMinter = domain.SetupCapMinter()
+	})
+	return pkgCapMinter
+}
+
 // NewService initializes the authentication service.
 func NewService(authorizedKeyStr, hostKeyPath, sshAddr string) (*Service, error) {
 	if strings.TrimSpace(authorizedKeyStr) == "" {
@@ -103,8 +115,8 @@ func NewService(authorizedKeyStr, hostKeyPath, sshAddr string) (*Service, error)
 		return nil, fmt.Errorf("failed to prepare host key: %w", err)
 	}
 
-	// Mint capability creator from domain (single-use across process lifetime)
-	minter := domain.SetupCapMinter()
+	// Mint capability creator from domain (owned exclusively by package auth)
+	minter := acquireCapMinter()
 
 	return &Service{
 		pendingLogins:        make(map[string]*PendingLogin),

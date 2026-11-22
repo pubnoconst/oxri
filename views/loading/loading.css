@@ -1,0 +1,121 @@
+/* Standalone smooth loading state using shared design tokens. */
+.loading-page {
+  min-height: 100svh;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: var(--space-page-y) var(--space-page-x);
+  box-sizing: border-box;
+  animation: loadingPageEaseIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: var(--space-page-y) var(--space-page-x);
+  box-sizing: border-box;
+  background: var(--page);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.loading-overlay[hidden] {
+  display: none;
+}
+
+.loading-overlay.is-visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.loading-phrase {
+  margin: 0;
+  max-width: 32rem;
+  text-align: center;
+  font-family: var(--font-serif);
+  font-size: clamp(1.05rem, 1.5vw, 1.25rem);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.015em;
+  color: var(--page-ink);
+  user-select: none;
+  animation: loadingPhrasePulse 1.8s ease-in-out infinite;
+}
+
+.loading-char {
+  display: inline-block;
+  transform-origin: 50% 62%;
+  will-change: transform, opacity;
+  animation: loadingMagnifyWave 1.6s linear infinite;
+  animation-delay: calc(var(--i, 0) * 34ms);
+}
+
+.loading-char.is-space {
+  width: 0.28em;
+}
+
+@keyframes loadingPageEaseIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loadingPhrasePulse {
+  0%, 100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Smooth bell-curve magnification traveling linearly across characters like a magnifying glass. */
+@keyframes loadingMagnifyWave {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 0.78;
+  }
+  5% {
+    transform: scale(1.12) translateY(-0.02em);
+    opacity: 0.88;
+  }
+  10% {
+    transform: scale(1.32) translateY(-0.055em);
+    opacity: 0.98;
+  }
+  13% {
+    transform: scale(1.42) translateY(-0.07em);
+    opacity: 1;
+  }
+  16% {
+    transform: scale(1.32) translateY(-0.055em);
+    opacity: 0.98;
+  }
+  21% {
+    transform: scale(1.12) translateY(-0.02em);
+    opacity: 0.88;
+  }
+  26%, 100% {
+    transform: scale(1) translateY(0);
+    opacity: 0.78;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-page,
+  .loading-phrase,
+  .loading-char {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

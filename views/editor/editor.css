@@ -1,0 +1,372 @@
+/* Journal editor: two calm, symmetrically balanced cards consuming canonical design tokens. */
+.journal-editor-page {
+  width: min(92rem, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: var(--space-page-y) var(--space-page-x);
+  box-sizing: border-box;
+}
+
+.journal-editor-header {
+  margin-bottom: var(--space-header-bottom);
+}
+
+.editor-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: var(--space-header-top);
+}
+
+.editor-eyebrow {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  opacity: 0.55;
+  text-transform: uppercase;
+}
+
+.journal-editor-header h1 {
+  margin: 0;
+  font-size: var(--heading-h1);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.editor-notice {
+  margin: 0 0 0.3rem;
+  font-size: 1rem;
+  opacity: 0.6;
+}
+
+/* Symmetrical 2-column grid: cards have identical 50/50 width and stretched height */
+.journal-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.25rem, 2.5vw, 1.85rem);
+  align-items: stretch;
+}
+
+/* Card foundation: shared borders, subtle elevation, and flex layout */
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-card-pad);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+}
+
+.editor-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.editor-field label,
+.editor-section-heading h2 {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: var(--heading-h2);
+  font-weight: 400;
+}
+
+.editor-section-heading h2 { margin: 0; }
+.editor-section-heading span {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  opacity: 0.4;
+}
+
+.editor-field { margin-bottom: 1.15rem; }
+.editor-field label { font-size: 1.1rem; }
+
+.field-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.25rem;
+}
+
+.field-counter {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  opacity: 0.55;
+}
+
+.field-counter.is-invalid {
+  color: var(--accent-danger);
+  opacity: 1;
+}
+
+.field-error {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  color: var(--accent-danger);
+  min-height: 0;
+}
+
+.field-error:empty {
+  display: none;
+}
+
+.tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+
+.tag-suggestions:empty {
+  display: none;
+}
+
+.tag-suggestion-label {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  opacity: 0.5;
+  margin-right: 0.15rem;
+}
+
+.tag-suggestion-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.14rem 0.55rem;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--page-ink);
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.tag-suggestion-pill:hover,
+.tag-suggestion-pill:focus-visible {
+  border-color: var(--border-focus);
+  background: color-mix(in srgb, var(--page-ink) 8%, transparent);
+}
+
+.editor-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--page-ink);
+}
+
+.editor-server-error {
+  margin: 0 0 1.5rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--accent-danger) 50%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--accent-danger) 8%, transparent);
+  color: var(--accent-danger);
+  font-size: 0.95rem;
+}
+
+.editor-field input,
+.editor-compose-card textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--page);
+  color: var(--page-ink);
+  font: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.editor-field input {
+  min-height: 2.6rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.editor-field input:focus,
+.editor-compose-card textarea:focus {
+  border-color: var(--border-focus);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--page-ink) 8%, transparent);
+}
+
+.field-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  opacity: 0.55;
+}
+
+/* Left Card: Entry content textarea expands to fill remaining card height */
+.editor-content-field {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 0;
+}
+
+.editor-content-field textarea {
+  display: block;
+  flex: 1;
+  min-height: 22rem;
+  padding: 0.9rem 1rem;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+/* Right Card: Preview structure matching the left compose card */
+.editor-preview-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.journal-preview {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.journal-preview-media {
+  padding: 0.5rem 0 0;
+}
+
+.journal-preview-media.is-empty {
+  min-height: 5.5rem;
+  margin: 0.5rem 0 0;
+  padding: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px dashed var(--border-input);
+  border-radius: var(--radius-card);
+  background: var(--surface-subtle);
+  color: var(--page-ink);
+  font-size: 0.92rem;
+  opacity: 0.5;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Preview body: flex-1 takes up the remaining height to match compose card exactly */
+.journal-preview-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding-top: 1rem;
+}
+
+.journal-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.journal-preview-tags:empty { display: none; }
+
+.journal-preview-tags .journal-tag-chip.is-invalid {
+  border-color: color-mix(in srgb, var(--accent-danger) 65%, transparent);
+  color: var(--accent-danger);
+}
+
+/* Rendered preview content scrolls smoothly within matching card height */
+.journal-rendered-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  font-size: 1.15rem;
+  line-height: 1.7;
+  padding-right: 0.4rem;
+}
+
+.journal-rendered-content h1,
+.journal-rendered-content h2,
+.journal-rendered-content h3 {
+  margin: 1.2rem 0 0.6rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.journal-rendered-content h1 { font-size: 1.85rem; }
+.journal-rendered-content h2 { font-size: 1.5rem; }
+.journal-rendered-content h3 { font-size: var(--heading-h3); }
+.journal-rendered-content p,
+.journal-rendered-content ul,
+.journal-rendered-content ol,
+.journal-rendered-content blockquote,
+.journal-rendered-content pre { margin: 0 0 1rem; }
+.journal-rendered-content pre {
+  overflow-x: auto;
+  padding: 0.85rem;
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
+  font-family: var(--font-mono);
+}
+.journal-rendered-content a { color: inherit; text-decoration-thickness: 1px; }
+
+/* Publish button action: centered horizontally at the bottom of the page */
+.journal-editor-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem 1rem;
+  margin: 3.5rem auto 2.5rem;
+  text-align: center;
+}
+
+.publish-note {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.55;
+}
+
+@media (max-width: 760px) {
+  .journal-editor-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .editor-heading { align-items: start; flex-direction: column; gap: 0.35rem; }
+  .editor-notice { margin: 0; }
+  .editor-content-field textarea { min-height: 18rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-field input,
+  .editor-compose-card textarea { transition: none; }
+}
