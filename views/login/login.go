@@ -82,7 +82,7 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 			h.Span(h.Class("card-water-wave wave-2")),
 			h.Span(h.Class("card-water-wave wave-3")),
 		),
-		h.Script(h.Src("/assets/js/water-ripple.js?v=1")),
+		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
 	)
 }
 

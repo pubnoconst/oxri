@@ -311,20 +311,35 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 		catalogScript = h.Script(h.Src("/assets/js/journals-catalog.js?v=2"))
 	}
 
+	rippleStyle := "--ripple-x:50%;--ripple-y:38%;--ripple-diameter:150vmax;"
+
 	return layout.Doc(
 		"Journals - RES IMPERII",
 		StylePath+"?v=3",
-		h.Main(h.Class("journals-page"),
-			renderJournalsHeader(isAuth),
-			h.Div(
-				h.ID("journals-catalog-stage"),
-				g.Attr("hx-get", contentURL),
-				g.Attr("hx-trigger", "load"),
-				g.Attr("hx-swap", "innerHTML swap:120ms"),
-				h.P(h.Class("journals-empty journals-loading-placeholder"), g.Attr("aria-live", "polite"), g.Text("Loading entries…")),
+		h.Div(h.Class("water-stage"), g.Attr("data-water-stage", ""),
+			h.Main(h.Class("journals-page"),
+				renderJournalsHeader(isAuth),
+				h.Div(
+					h.ID("journals-catalog-stage"),
+					g.Attr("hx-get", contentURL),
+					g.Attr("hx-trigger", "load"),
+					g.Attr("hx-swap", "innerHTML swap:120ms"),
+					h.P(h.Class("journals-empty journals-loading-placeholder"), g.Attr("aria-live", "polite"), g.Text("Loading entries…")),
+				),
 			),
 		),
-		h.Script(h.Src("/assets/js/journal-media.js?v=6")),
+		h.Div(
+			h.Class("card-water-ripple is-pagewide"),
+			g.Attr("style", rippleStyle),
+			g.Attr("data-water-dismiss-on-swap", "journals-catalog-stage"),
+			g.Attr("aria-hidden", "true"),
+			h.Span(h.Class("card-water-drop")),
+			h.Span(h.Class("card-water-wave wave-1")),
+			h.Span(h.Class("card-water-wave wave-2")),
+			h.Span(h.Class("card-water-wave wave-3")),
+		),
+		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=7")),
 		catalogScript,
 	)
 }
@@ -345,7 +360,8 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 				CatalogContentFragment(isAuth, view),
 			),
 		),
-		h.Script(h.Src("/assets/js/journal-media.js?v=6")),
+		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=7")),
 		catalogScript,
 	)
 }
@@ -363,7 +379,8 @@ func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 				EntryCard(isAuth, item, false),
 			),
 		),
-		h.Script(h.Src("/assets/js/journal-media.js?v=6")),
+		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=7")),
 	)
 }
 

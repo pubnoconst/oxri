@@ -312,7 +312,19 @@ a {
   pointer-events: none;
 }
 
-/* Full-card pure-CSS water drop ripple: disturbs text & reflects sunlit highlights across the entire entry card */
+/* Full-card & pagewide pure-CSS water drop ripple: synced with SVG radial refraction in water-ripple.js */
+.water-refract-svg {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.water-stage {
+  position: relative;
+  min-height: 100svh;
+}
+
 .card-water-ripple {
   position: absolute;
   inset: 0;
@@ -320,7 +332,14 @@ a {
   border-radius: inherit;
   pointer-events: none;
   z-index: 3;
-  transition: opacity 320ms ease-out;
+  transition: opacity 360ms ease-out;
+}
+
+.card-water-ripple.is-pagewide {
+  position: fixed;
+  inset: 0;
+  border-radius: 0;
+  z-index: 50;
 }
 
 .card-water-ripple.is-fading-out {
@@ -331,17 +350,17 @@ a {
   position: absolute;
   left: var(--ripple-x, 50%);
   top: var(--ripple-y, 32%);
-  width: 0.75rem;
-  height: 0.75rem;
+  width: 0.7rem;
+  height: 0.7rem;
   border-radius: 999px;
   transform: translate(-50%, -50%);
   background: radial-gradient(
     circle at 38% 35%,
     var(--ripple-sun) 0%,
-    color-mix(in srgb, var(--page-ink) 14%, transparent) 58%,
+    color-mix(in srgb, var(--page-ink) 12%, transparent) 58%,
     transparent 100%
   );
-  animation: water-drop-pulse 2.7s ease-in-out infinite;
+  animation: water-drop-pulse 3.2s ease-in-out infinite;
 }
 
 .card-water-wave {
@@ -354,10 +373,7 @@ a {
   transform: translate(-50%, -50%) scale(0.02);
   opacity: 0;
   will-change: transform, opacity;
-  /* Optical refraction along the moving annular wavefront disturbs preview text beneath */
-  -webkit-backdrop-filter: blur(1.8px) brightness(1.08) contrast(1.06);
-  backdrop-filter: blur(1.8px) brightness(1.08) contrast(1.06);
-  /* Annular wave mask: isolates distortion and specular sheen strictly to the thin moving crest */
+  /* Annular wave mask: isolates the sunlit specular sheen strictly to the thin moving crest */
   -webkit-mask-image: radial-gradient(
     circle,
     transparent 42%,
@@ -381,31 +397,31 @@ a {
       transparent 43.2%,
       var(--ripple-trough) 45.5%,
       var(--ripple-sun) 47.4%,
-      rgba(255, 255, 255, 0.18) 49.2%,
+      rgba(255, 255, 255, 0.14) 49.2%,
       transparent 52.2%
     );
-  animation: water-wave-propagate 2.7s cubic-bezier(0.12, 0.72, 0.28, 1) infinite;
+  animation: water-wave-propagate 3.2s cubic-bezier(0.12, 0.72, 0.28, 1) infinite;
 }
 
 .card-water-wave.wave-2 {
-  animation-delay: 0.9s;
+  animation-delay: 1.06s;
 }
 
 .card-water-wave.wave-3 {
-  animation-delay: 1.8s;
+  animation-delay: 2.12s;
 }
 
 @keyframes water-drop-pulse {
   0%, 100% {
-    opacity: 0.32;
-    transform: translate(-50%, -50%) scale(0.82);
+    opacity: 0.28;
+    transform: translate(-50%, -50%) scale(0.84);
   }
   18% {
-    opacity: 0.85;
-    transform: translate(-50%, -50%) scale(1.18);
+    opacity: 0.72;
+    transform: translate(-50%, -50%) scale(1.14);
   }
   45% {
-    opacity: 0.4;
+    opacity: 0.36;
     transform: translate(-50%, -50%) scale(0.92);
   }
 }
@@ -415,14 +431,14 @@ a {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.02);
   }
-  10% {
-    opacity: 0.92;
+  12% {
+    opacity: 0.68;
   }
-  55% {
-    opacity: 0.48;
+  58% {
+    opacity: 0.34;
   }
-  85% {
-    opacity: 0.14;
+  86% {
+    opacity: 0.1;
   }
   100% {
     opacity: 0;
