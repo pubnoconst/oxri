@@ -32,10 +32,10 @@ func TestLandingPageAndComponentCSS(t *testing.T) {
 		"Journals",
 		"Log in",
 		"/assets/css/site.css?v=9",
-		"/views/landing/landing.css?v=1",
+		"/views/landing/landing.css?v=2",
 		"/assets/js/htmx.min.js",
 		"/assets/js/theme-toggle.js?v=2",
-		"/assets/js/navigation-feedback.js?v=1",
+		"/assets/js/navigation-feedback.js?v=2",
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("missing %q in landing page HTML", expected)

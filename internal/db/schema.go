@@ -52,6 +52,13 @@ CREATE TABLE IF NOT EXISTS books (
   updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );`
 
+const authStateTableDDL = `
+CREATE TABLE IF NOT EXISTS auth_state (
+  key TEXT PRIMARY KEY,
+  value_int INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+);`
+
 // SchemaVersion returns the highest applied migration version recorded in schema_migrations,
 // or 0 if no migrations have been recorded yet.
 func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
@@ -159,6 +166,11 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("failed to seed book %s: %w", seed.Slug, err)
 		}
+	}
+
+	// Migration v6: Create auth_state table for restart-safe TOTP replay watermarks
+	if _, err := tx.ExecContext(ctx, authStateTableDDL); err != nil {
+		return fmt.Errorf("failed to create auth_state table: %w", err)
 	}
 
 	if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO schema_migrations (version) VALUES (?);`, CurrentSchemaVersion); err != nil {

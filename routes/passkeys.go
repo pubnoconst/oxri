@@ -49,7 +49,11 @@ func loadWebAuthnCreds(r *http.Request, store *db.Store, rpID string) ([]db.Pass
 
 func handlePasskeyRegisterBegin(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, err := serverfns.RequireAuth(authSvc, r); err != nil {
+		if _, err := serverfns.RequireFreshAuth(authSvc, r, auth.FreshAuthWindow); err != nil {
+			if errors.Is(err, serverfns.ErrStaleSession) {
+				http.Error(w, "Recent sign-in required. Please re-verify your identity to manage passkeys.", http.StatusForbidden)
+				return
+			}
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -94,7 +98,11 @@ func handlePasskeyRegisterBegin(store *db.Store, authSvc *auth.Service) http.Han
 
 func handlePasskeyRegisterFinish(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, err := serverfns.RequireAuth(authSvc, r); err != nil {
+		if _, err := serverfns.RequireFreshAuth(authSvc, r, auth.FreshAuthWindow); err != nil {
+			if errors.Is(err, serverfns.ErrStaleSession) {
+				http.Error(w, "Recent sign-in required. Please re-verify your identity to manage passkeys.", http.StatusForbidden)
+				return
+			}
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -165,7 +173,11 @@ func handlePasskeyRegisterFinish(store *db.Store, authSvc *auth.Service) http.Ha
 
 func handlePasskeyDelete(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, err := serverfns.RequireAuth(authSvc, r); err != nil {
+		if _, err := serverfns.RequireFreshAuth(authSvc, r, auth.FreshAuthWindow); err != nil {
+			if errors.Is(err, serverfns.ErrStaleSession) {
+				http.Redirect(w, r, "/login?next=/pilot/user/settings&reauth=1", http.StatusSeeOther)
+				return
+			}
 			http.Redirect(w, r, "/login?next=/pilot/user/settings", http.StatusSeeOther)
 			return
 		}
@@ -281,6 +293,10 @@ func handlePasskeyLoginFinish(store *db.Store, authSvc *auth.Service, limiter *i
 
 		if updatedJSON, mErr := auth.MarshalCredential(cred); mErr == nil {
 			_ = store.UpdatePasskeyCredential(r.Context(), auth.CredentialIDString(cred.ID), rpID, updatedJSON, time.Now().UTC())
+		}
+
+		if oldSess, err := r.Cookie(auth.SessionCookieName); err == nil && oldSess.Value != "" {
+			authSvc.RevokeSession(oldSess.Value)
 		}
 
 		http.SetCookie(w, &http.Cookie{

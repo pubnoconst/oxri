@@ -108,3 +108,120 @@ func TestPasskeyRoutesAndStorePersistence(t *testing.T) {
 		t.Fatalf("expected 0 passkeys after delete, got %d (err=%v)", count, err)
 	}
 }
+
+func TestPasskeyManagementRequiresFreshAuth(t *testing.T) {
+	ctx := context.Background()
+	store, err := db.Open(ctx, ":memory:", "")
+	if err != nil {
+		t.Fatalf("db.Open: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	secret, err := auth.GenerateTOTPSecret()
+	if err != nil {
+		t.Fatalf("GenerateTOTPSecret: %v", err)
+	}
+	now := time.Unix(1700000000, 0).UTC()
+	authSvc, err := auth.NewServiceWithOptions(auth.ServiceOptions{
+		TOTPSecret: secret,
+		NowFunc:    func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("NewServiceWithOptions: %v", err)
+	}
+	defer func() { _ = authSvc.Close() }()
+
+	sessID, err := authSvc.CreateSession()
+	if err != nil {
+		t.Fatalf("CreateSession: %v", err)
+	}
+	sessionCookie := &http.Cookie{
+		Name:  auth.SessionCookieName,
+		Value: sessID,
+		Path:  "/",
+	}
+
+	if err := store.SavePasskey(ctx, db.PasskeyRecord{
+		ID:             "cred-reauth-1",
+		RPID:           "localhost",
+		Name:           "Hardware Key",
+		CredentialJSON: `{"id":"AQID"}`,
+		CreatedAt:      now,
+	}); err != nil {
+		t.Fatalf("SavePasskey: %v", err)
+	}
+
+	router := NewRouter(Config{
+		AssetsDir:   "../assets",
+		AuthService: authSvc,
+		Store:       store,
+	})
+
+	// 1. Within fresh window (t=0): /pilot/passkeys/begin succeeds
+	reqFresh := httptest.NewRequest(http.MethodPost, "http://localhost:8080/pilot/passkeys/begin", nil)
+	reqFresh.Host = "localhost:8080"
+	reqFresh.AddCookie(sessionCookie)
+	recFresh := httptest.NewRecorder()
+	router.ServeHTTP(recFresh, reqFresh)
+	if recFresh.Code != http.StatusOK {
+		t.Fatalf("expected 200 for fresh passkey registration begin, got %d", recFresh.Code)
+	}
+
+	// 2. Advance past FreshAuthWindow (+6m): passkey mutations must be blocked while session remains logged in
+	now = now.Add(6 * time.Minute)
+
+	reqStaleBegin := httptest.NewRequest(http.MethodPost, "http://localhost:8080/pilot/passkeys/begin", nil)
+	reqStaleBegin.Host = "localhost:8080"
+	reqStaleBegin.AddCookie(sessionCookie)
+	recStaleBegin := httptest.NewRecorder()
+	router.ServeHTTP(recStaleBegin, reqStaleBegin)
+	if recStaleBegin.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden for stale /pilot/passkeys/begin, got %d", recStaleBegin.Code)
+	}
+
+	reqStaleFinish := httptest.NewRequest(http.MethodPost, "http://localhost:8080/pilot/passkeys/finish", strings.NewReader("{}"))
+	reqStaleFinish.Host = "localhost:8080"
+	reqStaleFinish.AddCookie(sessionCookie)
+	recStaleFinish := httptest.NewRecorder()
+	router.ServeHTTP(recStaleFinish, reqStaleFinish)
+	if recStaleFinish.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden for stale /pilot/passkeys/finish, got %d", recStaleFinish.Code)
+	}
+
+	reqStaleDel := httptest.NewRequest(http.MethodPost, "http://localhost:8080/pilot/passkeys/cred-reauth-1/delete", nil)
+	reqStaleDel.Host = "localhost:8080"
+	reqStaleDel.AddCookie(sessionCookie)
+	recStaleDel := httptest.NewRecorder()
+	router.ServeHTTP(recStaleDel, reqStaleDel)
+	if recStaleDel.Code != http.StatusSeeOther || recStaleDel.Header().Get("Location") != "/login?next=/pilot/user/settings&reauth=1" {
+		t.Fatalf("expected 303 redirect to reauth on stale delete, got %d loc=%q", recStaleDel.Code, recStaleDel.Header().Get("Location"))
+	}
+	count, err := store.CountPasskeys(ctx, "localhost")
+	if err != nil || count != 1 {
+		t.Fatalf("expected passkey to remain intact on stale delete, got count=%d err=%v", count, err)
+	}
+
+	// 3. Settings page renders re-verify prompt and /login?reauth=1 renders rather than bouncing away
+	reqSettings := httptest.NewRequest(http.MethodGet, "http://localhost:8080/pilot/user/settings", nil)
+	reqSettings.Host = "localhost:8080"
+	reqSettings.AddCookie(sessionCookie)
+	recSettings := httptest.NewRecorder()
+	router.ServeHTTP(recSettings, reqSettings)
+	if recSettings.Code != http.StatusOK {
+		t.Fatalf("expected 200 on stale /pilot/user/settings, got %d", recSettings.Code)
+	}
+	if !strings.Contains(recSettings.Body.String(), "Re-verify identity") || !strings.Contains(recSettings.Body.String(), "/login?next=/pilot/user/settings&amp;reauth=1") {
+		if !strings.Contains(recSettings.Body.String(), "Re-verify identity") || !strings.Contains(recSettings.Body.String(), "reauth=1") {
+			t.Fatalf("expected Re-verify identity link on stale settings page")
+		}
+	}
+
+	reqReauthLogin := httptest.NewRequest(http.MethodGet, "http://localhost:8080/login?next=/pilot/user/settings&reauth=1", nil)
+	reqReauthLogin.Host = "localhost:8080"
+	reqReauthLogin.AddCookie(sessionCookie)
+	recReauthLogin := httptest.NewRecorder()
+	router.ServeHTTP(recReauthLogin, reqReauthLogin)
+	if recReauthLogin.Code != http.StatusOK || !strings.Contains(recReauthLogin.Body.String(), "Re-verify your identity to manage security settings") {
+		t.Fatalf("expected 200 reauth login screen even with existing session, got %d", recReauthLogin.Code)
+	}
+}

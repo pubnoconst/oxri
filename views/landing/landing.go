@@ -21,7 +21,9 @@ func Page(isAuth bool) g.Node {
 	if isAuth {
 		authNodes = append(authNodes,
 			h.A(h.Class("landing-auth"), h.Href("/pilot/user/settings"), g.Text("Settings")),
-			h.A(h.Class("landing-auth"), h.Href("/logout"), g.Text("Log out")),
+			h.Form(h.Class("landing-auth-form"), h.Method("POST"), h.Action("/logout"),
+				h.Button(h.Type("submit"), h.Class("landing-auth"), g.Text("Log out")),
+			),
 		)
 	} else {
 		authNodes = append(authNodes,
@@ -29,7 +31,7 @@ func Page(isAuth bool) g.Node {
 		)
 	}
 
-	return layout.Doc("RES IMPERII", StylePath+"?v=1",
+	return layout.Doc("RES IMPERII", StylePath+"?v=2",
 		h.Main(h.Class("landing"),
 			h.Nav(h.Class("landing-nav"),
 				h.H1(h.Class("landing-title"), g.Text("RES·IMPERII")),

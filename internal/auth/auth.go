@@ -1,9 +1,10 @@
 // Package auth provides RFC 6238 TOTP authentication with mandatory server-side
-// confirmation cooldown, single-use replay protection, and HTTP session management
-// for Res Imperii.
+// confirmation cooldown, persistent single-use replay protection, per-IP lockout,
+// FIDO2/WebAuthn passkeys, and HTTP session management for Res Imperii.
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -29,6 +30,15 @@ const (
 
 	// SessionDuration is how long an authenticated HTTP session remains valid.
 	SessionDuration = 24 * time.Hour
+
+	// FreshAuthWindow is the step-up window during which sensitive security actions
+	// (such as adding or removing passkeys) are permitted without re-verifying identity.
+	FreshAuthWindow = 5 * time.Minute
+
+	maxPendingTOTP     = 256
+	maxPendingWebAuthn = 256
+	maxActiveSessions  = 64
+	maxTrackedFailIPs  = 2048
 )
 
 var (
@@ -42,6 +52,7 @@ var (
 // server-side confirmation cooldown so success/failure is never revealed early.
 type PendingTOTPVerification struct {
 	ID          string
+	ClientIP    string
 	BindingHash []byte
 	CreatedAt   time.Time
 	ReadyAt     time.Time
@@ -63,6 +74,8 @@ type ServiceOptions struct {
 	TOTPSecret       string
 	PasswordHash     string
 	TOTPConfirmDelay time.Duration
+	ReplayStore      TOTPReplayStore
+	NowFunc          func() time.Time
 }
 
 // Service manages TOTP + optional Argon2id password verification, confirmation cooldowns,
@@ -76,7 +89,9 @@ type Service struct {
 	passwordHash     string
 	totpConfirmDelay time.Duration
 	lastUsedTOTPStep int64
-	totpFailures     []time.Time
+	totpFailuresByIP map[string][]time.Time
+	replayStore      TOTPReplayStore
+	nowFunc          func() time.Time
 	capMinter        domain.CapMinter
 }
 
@@ -121,6 +136,18 @@ func NewServiceWithOptions(opts ServiceOptions) (*Service, error) {
 		confirmDelay = DefaultTOTPConfirmDelay
 	}
 
+	lastUsedStep := int64(-1)
+	if opts.ReplayStore != nil {
+		loadCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		persistedStep, err := opts.ReplayStore.LoadLastTOTPStep(loadCtx)
+		cancel()
+		if err != nil {
+			log.Printf("[AUTH] warning: failed to load persisted TOTP replay watermark: %v", err)
+		} else if persistedStep > -1 {
+			lastUsedStep = persistedStep
+		}
+	}
+
 	return &Service{
 		pendingTOTP:      make(map[string]*PendingTOTPVerification),
 		pendingWebAuthn:  make(map[string]*pendingWebAuthnCeremony),
@@ -128,9 +155,126 @@ func NewServiceWithOptions(opts ServiceOptions) (*Service, error) {
 		totpSecret:       totpSecret,
 		passwordHash:     passwordHash,
 		totpConfirmDelay: confirmDelay,
-		lastUsedTOTPStep: -1,
+		lastUsedTOTPStep: lastUsedStep,
+		totpFailuresByIP: make(map[string][]time.Time),
+		replayStore:      opts.ReplayStore,
+		nowFunc:          opts.NowFunc,
 		capMinter:        acquireCapMinter(),
 	}, nil
+}
+
+func (s *Service) now() time.Time {
+	if s != nil && s.nowFunc != nil {
+		return s.nowFunc().UTC()
+	}
+	return time.Now().UTC()
+}
+
+func normalizeClientIP(ip string) string {
+	trimmed := strings.TrimSpace(ip)
+	if trimmed == "" {
+		return "unknown"
+	}
+	return trimmed
+}
+
+func (s *Service) persistLastTOTPStep(step int64) {
+	if s == nil || s.replayStore == nil {
+		return
+	}
+	saveCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := s.replayStore.SaveLastTOTPStep(saveCtx, step); err != nil {
+		log.Printf("[AUTH] warning: failed to persist TOTP replay watermark: %v", err)
+	}
+}
+
+func (s *Service) pruneFailuresLocked(ip string, now time.Time) []time.Time {
+	cutoff := now.Add(-totpLockoutWindow)
+	list := s.totpFailuresByIP[ip]
+	if len(list) == 0 {
+		return nil
+	}
+	recent := list[:0]
+	for _, ts := range list {
+		if ts.After(cutoff) {
+			recent = append(recent, ts)
+		}
+	}
+	if len(recent) == 0 {
+		delete(s.totpFailuresByIP, ip)
+		return nil
+	}
+	s.totpFailuresByIP[ip] = recent
+	return recent
+}
+
+func (s *Service) sweepExpiredFailuresLocked(now time.Time) {
+	cutoff := now.Add(-totpLockoutWindow)
+	for ip, list := range s.totpFailuresByIP {
+		recent := list[:0]
+		for _, ts := range list {
+			if ts.After(cutoff) {
+				recent = append(recent, ts)
+			}
+		}
+		if len(recent) == 0 {
+			delete(s.totpFailuresByIP, ip)
+		} else {
+			s.totpFailuresByIP[ip] = recent
+		}
+	}
+}
+
+func (s *Service) recordFailureLocked(ip string, now time.Time) int {
+	if _, exists := s.totpFailuresByIP[ip]; !exists && len(s.totpFailuresByIP) >= maxTrackedFailIPs {
+		s.sweepExpiredFailuresLocked(now)
+		for len(s.totpFailuresByIP) >= maxTrackedFailIPs {
+			var oldestIP string
+			var oldestLast time.Time
+			for k, times := range s.totpFailuresByIP {
+				var latest time.Time
+				if len(times) > 0 {
+					latest = times[len(times)-1]
+				}
+				if oldestIP == "" || latest.Before(oldestLast) {
+					oldestIP = k
+					oldestLast = latest
+				}
+			}
+			if oldestIP == "" {
+				break
+			}
+			delete(s.totpFailuresByIP, oldestIP)
+		}
+	}
+
+	recent := append(s.pruneFailuresLocked(ip, now), now)
+	s.totpFailuresByIP[ip] = recent
+	return len(recent)
+}
+
+func (s *Service) storeSessionLocked(sessionID string, now time.Time) {
+	s.cleanupExpiredLocked()
+	for len(s.activeSessions) >= maxActiveSessions {
+		var oldestID string
+		var oldestTime time.Time
+		for id, sess := range s.activeSessions {
+			if oldestID == "" || sess.CreatedAt.Before(oldestTime) {
+				oldestID = id
+				oldestTime = sess.CreatedAt
+			}
+		}
+		if oldestID == "" {
+			break
+		}
+		delete(s.activeSessions, oldestID)
+	}
+	s.activeSessions[sessionID] = &UserSession{
+		SessionID: sessionID,
+		CreatedAt: now,
+		ExpiresAt: now.Add(SessionDuration),
+	}
 }
 
 // HasTOTP reports whether RFC 6238 TOTP login is configured.
@@ -153,62 +297,12 @@ func (s *Service) TOTPConfirmDelay() time.Duration {
 
 // StartTOTPVerification evaluates the optional Argon2id password and 6-digit TOTP code
 // at submission time and holds the outcome behind a mandatory server-side cooldown (default 30s)
-// before revealing success or failure. Only one pending confirmation may be in-flight at a time,
-// capping guesses to 1 per cooldown window globally.
-func (s *Service) StartTOTPVerification(password, code, redirectURL string) (verifyID, bindingCookie string, readyAt time.Time, err error) {
+// before revealing success or failure. Only one pending confirmation per client IP may be
+// in-flight at a time, and failed-attempt lockouts are isolated per client IP so an attacker
+// cannot lock out the legitimate administrator from another address.
+func (s *Service) StartTOTPVerification(clientIP, password, code, redirectURL string) (verifyID, bindingCookie string, readyAt time.Time, err error) {
 	if !s.HasTOTP() {
 		return "", "", time.Time{}, ErrTOTPNotConfigured
-	}
-
-	now := time.Now().UTC()
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.cleanupExpiredLocked()
-
-	// Prevent parallel brute-forcing: reject if another confirmation is currently cooling down
-	for _, p := range s.pendingTOTP {
-		if now.Before(p.ReadyAt) {
-			return "", "", time.Time{}, ErrTOTPPending
-		}
-	}
-
-	// Prune old failure timestamps outside lockout window
-	cutoff := now.Add(-totpLockoutWindow)
-	recentFailures := s.totpFailures[:0]
-	for _, ts := range s.totpFailures {
-		if ts.After(cutoff) {
-			recentFailures = append(recentFailures, ts)
-		}
-	}
-	s.totpFailures = recentFailures
-
-	var (
-		approved   bool
-		failureErr error
-	)
-	if len(s.totpFailures) >= totpMaxFailures {
-		failureErr = ErrTOTPLocked
-	} else {
-		pwOK := true
-		if s.passwordHash != "" {
-			pwOK = VerifyPassword(s.passwordHash, password)
-		}
-		matchedStep, totpOK := VerifyTOTP(s.totpSecret, code, now)
-		switch {
-		case !pwOK || !totpOK:
-			log.Printf("[AUTH] login rejected (pwOK=%t, totpOK=%t, failures=%d)", pwOK, totpOK, len(s.totpFailures)+1)
-			s.totpFailures = append(s.totpFailures, now)
-			failureErr = ErrTOTPInvalid
-		case matchedStep <= s.lastUsedTOTPStep:
-			log.Printf("[AUTH] login rejected (replayed TOTP step)")
-			failureErr = ErrTOTPReplayed
-		default:
-			s.lastUsedTOTPStep = matchedStep
-			s.totpFailures = nil
-			approved = true
-		}
 	}
 
 	idBytes := make([]byte, 16)
@@ -224,9 +318,60 @@ func (s *Service) StartTOTPVerification(password, code, redirectURL string) (ver
 	bindingCookie = hex.EncodeToString(bindingBytes)
 	bindingHash := sha256.Sum256([]byte(bindingCookie))
 
+	ip := normalizeClientIP(clientIP)
+	now := s.now()
+
+	var (
+		approved      bool
+		stepToPersist int64
+	)
+
+	s.mu.Lock()
+	s.cleanupExpiredLocked()
+
+	// Prevent parallel brute-forcing per client IP without blocking other IPs
+	for _, p := range s.pendingTOTP {
+		if p.ClientIP == ip && now.Before(p.ReadyAt) {
+			s.mu.Unlock()
+			return "", "", time.Time{}, ErrTOTPPending
+		}
+	}
+	if len(s.pendingTOTP) >= maxPendingTOTP {
+		s.mu.Unlock()
+		return "", "", time.Time{}, ErrTOTPPending
+	}
+
+	recentFailures := s.pruneFailuresLocked(ip, now)
+
+	var failureErr error
+	if len(recentFailures) >= totpMaxFailures {
+		failureErr = ErrTOTPLocked
+	} else {
+		pwOK := true
+		if s.passwordHash != "" {
+			pwOK = VerifyPassword(s.passwordHash, password)
+		}
+		matchedStep, totpOK := VerifyTOTP(s.totpSecret, code, now)
+		switch {
+		case !pwOK || !totpOK:
+			count := s.recordFailureLocked(ip, now)
+			log.Printf("[AUTH] login rejected (ip=%s, pwOK=%t, totpOK=%t, failures=%d)", ip, pwOK, totpOK, count)
+			failureErr = ErrTOTPInvalid
+		case matchedStep <= s.lastUsedTOTPStep:
+			log.Printf("[AUTH] login rejected (ip=%s, replayed TOTP step)", ip)
+			failureErr = ErrTOTPReplayed
+		default:
+			s.lastUsedTOTPStep = matchedStep
+			delete(s.totpFailuresByIP, ip)
+			approved = true
+			stepToPersist = matchedStep
+		}
+	}
+
 	readyAt = now.Add(s.totpConfirmDelay)
 	s.pendingTOTP[verifyID] = &PendingTOTPVerification{
 		ID:          verifyID,
+		ClientIP:    ip,
 		BindingHash: bindingHash[:],
 		CreatedAt:   now,
 		ReadyAt:     readyAt,
@@ -234,6 +379,11 @@ func (s *Service) StartTOTPVerification(password, code, redirectURL string) (ver
 		Approved:    approved,
 		FailureErr:  failureErr,
 		RedirectURL: redirectURL,
+	}
+	s.mu.Unlock()
+
+	if approved {
+		s.persistLastTOTPStep(stepToPersist)
 	}
 
 	return verifyID, bindingCookie, readyAt, nil
@@ -248,7 +398,7 @@ func (s *Service) PendingTOTPStatus(verifyID, bindingCookie string) (remaining t
 	if !exists {
 		return 0, ErrChallengeNotFound
 	}
-	now := time.Now().UTC()
+	now := s.now()
 	if now.After(p.ExpiresAt) {
 		return 0, ErrChallengeExpired
 	}
@@ -266,6 +416,12 @@ func (s *Service) PendingTOTPStatus(verifyID, bindingCookie string) (remaining t
 // cooldown has elapsed. Before ReadyAt, it returns ErrTOTPConfirming without leaking
 // whether the code succeeded or failed.
 func (s *Service) RedeemTOTPVerification(verifyID, bindingCookie string) (sessionID, redirectURL string, err error) {
+	sessBytes := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, sessBytes); err != nil {
+		return "", "", err
+	}
+	sessionID = hex.EncodeToString(sessBytes)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -274,7 +430,7 @@ func (s *Service) RedeemTOTPVerification(verifyID, bindingCookie string) (sessio
 		return "", "", ErrChallengeNotFound
 	}
 
-	now := time.Now().UTC()
+	now := s.now()
 	if now.After(p.ExpiresAt) {
 		delete(s.pendingTOTP, verifyID)
 		return "", "", ErrChallengeExpired
@@ -299,60 +455,23 @@ func (s *Service) RedeemTOTPVerification(verifyID, bindingCookie string) (sessio
 		return "", redirectURL, ErrTOTPInvalid
 	}
 
-	sessBytes := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, sessBytes); err != nil {
-		return "", "", err
-	}
-	sessionID = hex.EncodeToString(sessBytes)
-
-	s.activeSessions[sessionID] = &UserSession{
-		SessionID: sessionID,
-		CreatedAt: now,
-		ExpiresAt: now.Add(SessionDuration),
-	}
+	s.storeSessionLocked(sessionID, now)
 
 	return sessionID, redirectURL, nil
 }
 
 // AuthenticateTOTP verifies a 6-digit RFC 6238 TOTP code immediately with single-use
-// replay protection and failed-attempt lockout, returning a new 256-bit session identifier.
+// replay protection and per-IP failed-attempt lockout, returning a new 256-bit session identifier.
 func (s *Service) AuthenticateTOTP(code string) (string, error) {
+	return s.AuthenticateTOTPForIP("local", code)
+}
+
+// AuthenticateTOTPForIP verifies a 6-digit RFC 6238 TOTP code immediately for clientIP
+// with persistent replay protection and per-IP lockout.
+func (s *Service) AuthenticateTOTPForIP(clientIP, code string) (string, error) {
 	if !s.HasTOTP() {
 		return "", ErrTOTPNotConfigured
 	}
-
-	now := time.Now().UTC()
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.cleanupExpiredLocked()
-
-	cutoff := now.Add(-totpLockoutWindow)
-	recentFailures := s.totpFailures[:0]
-	for _, ts := range s.totpFailures {
-		if ts.After(cutoff) {
-			recentFailures = append(recentFailures, ts)
-		}
-	}
-	s.totpFailures = recentFailures
-
-	if len(s.totpFailures) >= totpMaxFailures {
-		return "", ErrTOTPLocked
-	}
-
-	matchedStep, ok := VerifyTOTP(s.totpSecret, code, now)
-	if !ok {
-		s.totpFailures = append(s.totpFailures, now)
-		return "", ErrTOTPInvalid
-	}
-
-	if matchedStep <= s.lastUsedTOTPStep {
-		return "", ErrTOTPReplayed
-	}
-
-	s.lastUsedTOTPStep = matchedStep
-	s.totpFailures = nil
 
 	sessBytes := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, sessBytes); err != nil {
@@ -360,11 +479,36 @@ func (s *Service) AuthenticateTOTP(code string) (string, error) {
 	}
 	sessionID := hex.EncodeToString(sessBytes)
 
-	s.activeSessions[sessionID] = &UserSession{
-		SessionID: sessionID,
-		CreatedAt: now,
-		ExpiresAt: now.Add(SessionDuration),
+	ip := normalizeClientIP(clientIP)
+	now := s.now()
+
+	s.mu.Lock()
+	s.cleanupExpiredLocked()
+
+	recentFailures := s.pruneFailuresLocked(ip, now)
+	if len(recentFailures) >= totpMaxFailures {
+		s.mu.Unlock()
+		return "", ErrTOTPLocked
 	}
+
+	matchedStep, ok := VerifyTOTP(s.totpSecret, code, now)
+	if !ok {
+		s.recordFailureLocked(ip, now)
+		s.mu.Unlock()
+		return "", ErrTOTPInvalid
+	}
+
+	if matchedStep <= s.lastUsedTOTPStep {
+		s.mu.Unlock()
+		return "", ErrTOTPReplayed
+	}
+
+	s.lastUsedTOTPStep = matchedStep
+	delete(s.totpFailuresByIP, ip)
+	s.storeSessionLocked(sessionID, now)
+	s.mu.Unlock()
+
+	s.persistLastTOTPStep(matchedStep)
 
 	return sessionID, nil
 }
@@ -372,8 +516,18 @@ func (s *Service) AuthenticateTOTP(code string) (string, error) {
 // Authenticate checks if a session ID is valid and active.
 // If valid, it returns an unforgeable domain.AdminCap token.
 func (s *Service) Authenticate(sessionID string) (domain.AdminCap, bool) {
-	if sessionID == "" {
-		return domain.AdminCap{}, false
+	cap, valid, _ := s.AuthenticateFresh(sessionID, FreshAuthWindow)
+	return cap, valid
+}
+
+// AuthenticateFresh checks if sessionID is valid and whether it was minted within maxAge.
+func (s *Service) AuthenticateFresh(sessionID string, maxAge time.Duration) (cap domain.AdminCap, valid bool, fresh bool) {
+	if s == nil || sessionID == "" {
+		return domain.AdminCap{}, false, false
+	}
+
+	if maxAge <= 0 {
+		maxAge = FreshAuthWindow
 	}
 
 	s.mu.RLock()
@@ -381,18 +535,20 @@ func (s *Service) Authenticate(sessionID string) (domain.AdminCap, bool) {
 
 	sess, exists := s.activeSessions[sessionID]
 	if !exists {
-		return domain.AdminCap{}, false
+		return domain.AdminCap{}, false, false
 	}
 
-	if time.Now().UTC().After(sess.ExpiresAt) {
-		return domain.AdminCap{}, false
+	now := s.now()
+	if now.After(sess.ExpiresAt) {
+		return domain.AdminCap{}, false, false
 	}
 
 	if s.capMinter == nil {
-		return domain.AdminCap{}, false
+		return domain.AdminCap{}, false, false
 	}
 
-	return s.capMinter(), true
+	isFresh := now.Sub(sess.CreatedAt) <= maxAge
+	return s.capMinter(), true, isFresh
 }
 
 // CreateSession mints a new 256-bit random authenticated session and stores it.
@@ -402,14 +558,10 @@ func (s *Service) CreateSession() (string, error) {
 		return "", err
 	}
 	sessionID := hex.EncodeToString(sessBytes)
-	now := time.Now().UTC()
+	now := s.now()
 
 	s.mu.Lock()
-	s.activeSessions[sessionID] = &UserSession{
-		SessionID: sessionID,
-		CreatedAt: now,
-		ExpiresAt: now.Add(SessionDuration),
-	}
+	s.storeSessionLocked(sessionID, now)
 	s.mu.Unlock()
 	return sessionID, nil
 }
@@ -428,11 +580,12 @@ func (s *Service) Close() error {
 	clear(s.pendingTOTP)
 	clear(s.pendingWebAuthn)
 	clear(s.activeSessions)
+	clear(s.totpFailuresByIP)
 	return nil
 }
 
 func (s *Service) cleanupExpiredLocked() {
-	now := time.Now().UTC()
+	now := s.now()
 	for id, pending := range s.pendingTOTP {
 		if now.After(pending.ExpiresAt) {
 			delete(s.pendingTOTP, id)
@@ -448,4 +601,5 @@ func (s *Service) cleanupExpiredLocked() {
 			delete(s.activeSessions, sessID)
 		}
 	}
+	s.sweepExpiredFailuresLocked(now)
 }

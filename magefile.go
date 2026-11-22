@@ -69,6 +69,13 @@ func Password() error {
 	return sh.RunWithV(envWithCgoDisabled(), "go", "run", "./cmd/passgen")
 }
 
+// Backup exports journals, books, and passkey metadata from Turso into
+// ../oxri-parent/backups/oxri-backup-YYYYMMDD-HHMMSS.json (0600 permissions).
+func Backup() error {
+	fmt.Println("==> Exporting offline Turso backup snapshot...")
+	return sh.RunWithV(envWithCgoDisabled(), "go", "run", "./cmd/backup")
+}
+
 // Clean removes compiled binaries in bin/.
 func Clean() error {
 	fmt.Println("==> Removing bin/...")

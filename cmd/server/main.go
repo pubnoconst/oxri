@@ -44,26 +44,6 @@ func main() {
 		assetsDir = "assets"
 	}
 
-	adminTOTPSecret := os.Getenv("ADMIN_TOTP_SECRET")
-	adminPasswordHash := os.Getenv("ADMIN_PASSWORD_HASH")
-	var authSvc *auth.Service
-	if adminTOTPSecret != "" {
-		var err error
-		authSvc, err = auth.NewServiceWithOptions(auth.ServiceOptions{
-			TOTPSecret:   adminTOTPSecret,
-			PasswordHash: adminPasswordHash,
-		})
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to initialize auth service: %v\n", err)
-		} else if authSvc.HasPassword() {
-			fmt.Println("Res Imperii 2FA enabled (Argon2id Password + RFC 6238 TOTP)")
-		} else {
-			fmt.Println("Res Imperii TOTP authentication enabled")
-		}
-	} else {
-		fmt.Println("Notice: ADMIN_TOTP_SECRET not configured; running in read-only public mode.")
-	}
-
 	var store *db.Store
 	dbURL := os.Getenv("TURSO_DATABASE_URL")
 	dbToken := os.Getenv("TURSO_AUTH_TOKEN")
@@ -83,6 +63,30 @@ func main() {
 			schemaVer, used, store.MaxStorageBytes())
 	} else {
 		fmt.Println("Notice: TURSO_DATABASE_URL not configured.")
+	}
+
+	adminTOTPSecret := os.Getenv("ADMIN_TOTP_SECRET")
+	adminPasswordHash := os.Getenv("ADMIN_PASSWORD_HASH")
+	var authSvc *auth.Service
+	if adminTOTPSecret != "" {
+		authOpts := auth.ServiceOptions{
+			TOTPSecret:   adminTOTPSecret,
+			PasswordHash: adminPasswordHash,
+		}
+		if store != nil {
+			authOpts.ReplayStore = store
+		}
+		var err error
+		authSvc, err = auth.NewServiceWithOptions(authOpts)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to initialize auth service: %v\n", err)
+		} else if authSvc.HasPassword() {
+			fmt.Println("Res Imperii 2FA enabled (Argon2id Password + RFC 6238 TOTP)")
+		} else {
+			fmt.Println("Res Imperii TOTP authentication enabled")
+		}
+	} else {
+		fmt.Println("Notice: ADMIN_TOTP_SECRET not configured; running in read-only public mode.")
 	}
 
 	handler := routes.NewRouter(routes.Config{

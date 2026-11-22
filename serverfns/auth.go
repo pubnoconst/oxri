@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/domain"
@@ -12,6 +13,7 @@ import (
 
 var (
 	ErrUnauthenticated = errors.New("serverfns: unauthenticated session")
+	ErrStaleSession    = errors.New("serverfns: recent reauthentication required")
 	ErrInvalidRedirect = errors.New("serverfns: invalid redirect URL")
 )
 
@@ -66,6 +68,30 @@ func RequireAuth(svc *auth.Service, r *http.Request) (domain.AdminCap, error) {
 	cap, ok := svc.Authenticate(cookie.Value)
 	if !ok || cap.IsZero() {
 		return domain.AdminCap{}, ErrUnauthenticated
+	}
+
+	return cap, nil
+}
+
+// RequireFreshAuth verifies both an active authenticated session and that the session was
+// minted within maxAge, protecting sensitive credential management endpoints against
+// long-lived stolen session cookies.
+func RequireFreshAuth(svc *auth.Service, r *http.Request, maxAge time.Duration) (domain.AdminCap, error) {
+	if svc == nil {
+		return domain.AdminCap{}, ErrUnauthenticated
+	}
+
+	cookie, err := r.Cookie(auth.SessionCookieName)
+	if err != nil || cookie.Value == "" {
+		return domain.AdminCap{}, ErrUnauthenticated
+	}
+
+	cap, valid, fresh := svc.AuthenticateFresh(cookie.Value, maxAge)
+	if !valid || cap.IsZero() {
+		return domain.AdminCap{}, ErrUnauthenticated
+	}
+	if !fresh {
+		return domain.AdminCap{}, ErrStaleSession
 	}
 
 	return cap, nil

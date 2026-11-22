@@ -47,6 +47,16 @@
     }, delayMs);
   });
 
+  // Handle declarative confirmation prompts without inline onsubmit attributes (strict CSP).
+  document.addEventListener("submit", (event) => {
+    const form = event.target instanceof HTMLFormElement ? event.target : null;
+    if (!form) return;
+    const msg = form.getAttribute("data-confirm");
+    if (msg && !window.confirm(msg)) {
+      event.preventDefault();
+    }
+  });
+
   // Ensure Back/Forward Cache restore clears any leaving/pending state.
   window.addEventListener("pageshow", clearNavigationState);
 })();

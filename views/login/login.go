@@ -88,7 +88,7 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 
 // TOTPPage renders the quiet authentication screen: one-click Passkey sign-in when enrolled
 // for this domain, alongside Argon2id password + 6-digit TOTP recovery/bootstrap login.
-func TOTPPage(nextURL, errMsg string, requirePassword, hasPasskeys bool) g.Node {
+func TOTPPage(nextURL, errMsg string, requirePassword, hasPasskeys, reauth bool) g.Node {
 	var errNode g.Node
 	if errMsg != "" {
 		errNode = h.P(h.Class("auth-error"), g.Attr("role", "alert"), g.Text(errMsg))
@@ -100,6 +100,9 @@ func TOTPPage(nextURL, errMsg string, requirePassword, hasPasskeys bool) g.Node 
 	}
 	if hasPasskeys {
 		subtitle = "Sign in with your Passkey or fallback credentials"
+	}
+	if reauth {
+		subtitle = "Re-verify your identity to manage security settings"
 	}
 
 	var passwordField g.Node
