@@ -69,10 +69,33 @@ type UserSession struct {
 	ExpiresAt time.Time
 }
 
-// Service manages cryptographic authentication challenges and sessions.
+// PendingTOTPVerification tracks a pure TOTP login attempt during its mandatory
+// server-side confirmation cooldown so success/failure is never revealed early.
+type PendingTOTPVerification struct {
+	ID          string
+	BindingHash []byte
+	CreatedAt   time.Time
+	ReadyAt     time.Time
+	ExpiresAt   time.Time
+	Approved    bool
+	FailureErr  error
+	RedirectURL string
+}
+
+// ServiceOptions configures the authentication methods enabled for Service.
+type ServiceOptions struct {
+	AuthorizedKey    string
+	HostKeyPath      string
+	SSHAddr          string
+	TOTPSecret       string
+	TOTPConfirmDelay time.Duration
+}
+
+// Service manages cryptographic authentication challenges, TOTP verification, and sessions.
 type Service struct {
 	mu                   sync.RWMutex
 	pendingLogins        map[string]*PendingLogin
+	pendingTOTP          map[string]*PendingTOTPVerification
 	activeSessions       map[string]*UserSession
 	authorizedKey        ssh.PublicKey
 	authorizedKeyComment string
@@ -80,6 +103,10 @@ type Service struct {
 	hostSigner           ssh.Signer
 	sshAddr              string
 	listener             net.Listener
+	totpSecret           string
+	totpConfirmDelay     time.Duration
+	lastUsedTOTPStep     int64
+	totpFailures         []time.Time
 	capMinter            domain.CapMinter
 	closed               bool
 }
@@ -96,23 +123,60 @@ func acquireCapMinter() domain.CapMinter {
 	return pkgCapMinter
 }
 
-// NewService initializes the authentication service.
+// NewService initializes the authentication service with SSH public key authentication.
 func NewService(authorizedKeyStr, hostKeyPath, sshAddr string) (*Service, error) {
 	if strings.TrimSpace(authorizedKeyStr) == "" {
 		return nil, errors.New("ADMIN_SSH_PUBKEY is required")
 	}
+	return NewServiceWithOptions(ServiceOptions{
+		AuthorizedKey: authorizedKeyStr,
+		HostKeyPath:   hostKeyPath,
+		SSHAddr:       sshAddr,
+	})
+}
+
+// NewServiceWithOptions initializes the authentication service with TOTP and/or SSH authentication.
+func NewServiceWithOptions(opts ServiceOptions) (*Service, error) {
+	authKeyStr := strings.TrimSpace(opts.AuthorizedKey)
+	totpSecret := NormalizeTOTPSecret(opts.TOTPSecret)
+
+	if authKeyStr == "" && totpSecret == "" {
+		return nil, errors.New("at least one of ADMIN_TOTP_SECRET or ADMIN_SSH_PUBKEY is required")
+	}
+
+	if totpSecret != "" {
+		if _, err := decodeTOTPSecret(totpSecret); err != nil {
+			return nil, fmt.Errorf("invalid ADMIN_TOTP_SECRET: %w", err)
+		}
+	}
+
+	sshAddr := opts.SSHAddr
 	if sshAddr == "" {
 		sshAddr = "127.0.0.1:2222"
 	}
 
-	pubKey, comment, _, _, err := ssh.ParseAuthorizedKey([]byte(authorizedKeyStr))
-	if err != nil {
-		return nil, fmt.Errorf("invalid authorized public key: %w", err)
+	var (
+		pubKey     ssh.PublicKey
+		comment    string
+		keyType    string
+		hostSigner ssh.Signer
+	)
+	if authKeyStr != "" {
+		var err error
+		pubKey, comment, _, _, err = ssh.ParseAuthorizedKey([]byte(authKeyStr))
+		if err != nil {
+			return nil, fmt.Errorf("invalid authorized public key: %w", err)
+		}
+		keyType = pubKey.Type()
+		hostSigner, err = loadOrGenerateHostKey(opts.HostKeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to prepare host key: %w", err)
+		}
 	}
 
-	hostSigner, err := loadOrGenerateHostKey(hostKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare host key: %w", err)
+	confirmDelay := opts.TOTPConfirmDelay
+	if confirmDelay <= 0 {
+		confirmDelay = DefaultTOTPConfirmDelay
 	}
 
 	// Mint capability creator from domain (owned exclusively by package auth)
@@ -120,14 +184,245 @@ func NewService(authorizedKeyStr, hostKeyPath, sshAddr string) (*Service, error)
 
 	return &Service{
 		pendingLogins:        make(map[string]*PendingLogin),
+		pendingTOTP:          make(map[string]*PendingTOTPVerification),
 		activeSessions:       make(map[string]*UserSession),
 		authorizedKey:        pubKey,
 		authorizedKeyComment: comment,
-		authorizedKeyType:    pubKey.Type(),
+		authorizedKeyType:    keyType,
 		hostSigner:           hostSigner,
 		sshAddr:              sshAddr,
+		totpSecret:           totpSecret,
+		totpConfirmDelay:     confirmDelay,
+		lastUsedTOTPStep:     -1,
 		capMinter:            minter,
 	}, nil
+}
+
+// TOTPConfirmDelay returns the configured server-side confirmation wait for pure TOTP logins.
+func (s *Service) TOTPConfirmDelay() time.Duration {
+	if s == nil || s.totpConfirmDelay <= 0 {
+		return DefaultTOTPConfirmDelay
+	}
+	return s.totpConfirmDelay
+}
+
+// StartTOTPVerification evaluates a 6-digit TOTP code at submission time and holds the
+// outcome behind a mandatory server-side cooldown (default 30s) before revealing success
+// or failure. Only one pending confirmation may be in-flight at a time, capping guesses
+// to 1 per cooldown window globally.
+func (s *Service) StartTOTPVerification(code, redirectURL string) (verifyID, bindingCookie string, readyAt time.Time, err error) {
+	if !s.HasTOTP() {
+		return "", "", time.Time{}, ErrTOTPNotConfigured
+	}
+
+	now := time.Now().UTC()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.cleanupExpiredLocked()
+
+	// Prevent parallel brute-forcing: reject if another confirmation is currently cooling down
+	for _, p := range s.pendingTOTP {
+		if now.Before(p.ReadyAt) {
+			return "", "", time.Time{}, ErrTOTPPending
+		}
+	}
+
+	// Prune old failure timestamps outside lockout window
+	cutoff := now.Add(-totpLockoutWindow)
+	recentFailures := s.totpFailures[:0]
+	for _, ts := range s.totpFailures {
+		if ts.After(cutoff) {
+			recentFailures = append(recentFailures, ts)
+		}
+	}
+	s.totpFailures = recentFailures
+
+	var (
+		approved   bool
+		failureErr error
+	)
+	if len(s.totpFailures) >= totpMaxFailures {
+		failureErr = ErrTOTPLocked
+	} else if matchedStep, ok := VerifyTOTP(s.totpSecret, code, now); !ok {
+		s.totpFailures = append(s.totpFailures, now)
+		failureErr = ErrTOTPInvalid
+	} else if matchedStep <= s.lastUsedTOTPStep {
+		failureErr = ErrTOTPReplayed
+	} else {
+		s.lastUsedTOTPStep = matchedStep
+		s.totpFailures = nil
+		approved = true
+	}
+
+	idBytes := make([]byte, 16)
+	if _, err := io.ReadFull(rand.Reader, idBytes); err != nil {
+		return "", "", time.Time{}, err
+	}
+	verifyID = hex.EncodeToString(idBytes)
+
+	bindingBytes := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, bindingBytes); err != nil {
+		return "", "", time.Time{}, err
+	}
+	bindingCookie = hex.EncodeToString(bindingBytes)
+	bindingHash := sha256.Sum256([]byte(bindingCookie))
+
+	readyAt = now.Add(s.totpConfirmDelay)
+	s.pendingTOTP[verifyID] = &PendingTOTPVerification{
+		ID:          verifyID,
+		BindingHash: bindingHash[:],
+		CreatedAt:   now,
+		ReadyAt:     readyAt,
+		ExpiresAt:   readyAt.Add(2 * time.Minute),
+		Approved:    approved,
+		FailureErr:  failureErr,
+		RedirectURL: redirectURL,
+	}
+
+	return verifyID, bindingCookie, readyAt, nil
+}
+
+// PendingTOTPStatus verifies browser binding and returns how much cooldown time remains.
+func (s *Service) PendingTOTPStatus(verifyID, bindingCookie string) (remaining time.Duration, err error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	p, exists := s.pendingTOTP[verifyID]
+	if !exists {
+		return 0, ErrChallengeNotFound
+	}
+	now := time.Now().UTC()
+	if now.After(p.ExpiresAt) {
+		return 0, ErrChallengeExpired
+	}
+	providedHash := sha256.Sum256([]byte(bindingCookie))
+	if subtle.ConstantTimeCompare(providedHash[:], p.BindingHash) != 1 {
+		return 0, ErrInvalidBinding
+	}
+	if now.Before(p.ReadyAt) {
+		return p.ReadyAt.Sub(now), nil
+	}
+	return 0, nil
+}
+
+// RedeemTOTPVerification completes a pending TOTP verification once its mandatory
+// cooldown has elapsed. Before ReadyAt, it returns ErrTOTPConfirming without leaking
+// whether the code succeeded or failed.
+func (s *Service) RedeemTOTPVerification(verifyID, bindingCookie string) (sessionID, redirectURL string, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	p, exists := s.pendingTOTP[verifyID]
+	if !exists {
+		return "", "", ErrChallengeNotFound
+	}
+
+	now := time.Now().UTC()
+	if now.After(p.ExpiresAt) {
+		delete(s.pendingTOTP, verifyID)
+		return "", "", ErrChallengeExpired
+	}
+
+	providedHash := sha256.Sum256([]byte(bindingCookie))
+	if subtle.ConstantTimeCompare(providedHash[:], p.BindingHash) != 1 {
+		return "", "", ErrInvalidBinding
+	}
+
+	if now.Before(p.ReadyAt) {
+		return "", "", ErrTOTPConfirming
+	}
+
+	redirectURL = p.RedirectURL
+	delete(s.pendingTOTP, verifyID)
+
+	if !p.Approved {
+		if p.FailureErr != nil {
+			return "", redirectURL, p.FailureErr
+		}
+		return "", redirectURL, ErrTOTPInvalid
+	}
+
+	sessBytes := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, sessBytes); err != nil {
+		return "", "", err
+	}
+	sessionID = hex.EncodeToString(sessBytes)
+
+	s.activeSessions[sessionID] = &UserSession{
+		SessionID: sessionID,
+		CreatedAt: now,
+		ExpiresAt: now.Add(SessionDuration),
+	}
+
+	return sessionID, redirectURL, nil
+}
+
+// HasTOTP reports whether RFC 6238 TOTP login is configured.
+func (s *Service) HasTOTP() bool {
+	return s != nil && s.totpSecret != ""
+}
+
+// HasSSH reports whether loopback SSH challenge login is configured.
+func (s *Service) HasSSH() bool {
+	return s != nil && s.authorizedKey != nil
+}
+
+// AuthenticateTOTP verifies a 6-digit RFC 6238 TOTP code with single-use replay protection
+// and failed-attempt lockout, returning a new 256-bit session identifier on success.
+func (s *Service) AuthenticateTOTP(code string) (string, error) {
+	if !s.HasTOTP() {
+		return "", ErrTOTPNotConfigured
+	}
+
+	now := time.Now().UTC()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.cleanupExpiredLocked()
+
+	// Prune old failure timestamps outside lockout window
+	cutoff := now.Add(-totpLockoutWindow)
+	recentFailures := s.totpFailures[:0]
+	for _, ts := range s.totpFailures {
+		if ts.After(cutoff) {
+			recentFailures = append(recentFailures, ts)
+		}
+	}
+	s.totpFailures = recentFailures
+
+	if len(s.totpFailures) >= totpMaxFailures {
+		return "", ErrTOTPLocked
+	}
+
+	matchedStep, ok := VerifyTOTP(s.totpSecret, code, now)
+	if !ok {
+		s.totpFailures = append(s.totpFailures, now)
+		return "", ErrTOTPInvalid
+	}
+
+	if matchedStep <= s.lastUsedTOTPStep {
+		return "", ErrTOTPReplayed
+	}
+
+	s.lastUsedTOTPStep = matchedStep
+	s.totpFailures = nil
+
+	sessBytes := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, sessBytes); err != nil {
+		return "", err
+	}
+	sessionID := hex.EncodeToString(sessBytes)
+
+	s.activeSessions[sessionID] = &UserSession{
+		SessionID: sessionID,
+		CreatedAt: now,
+		ExpiresAt: now.Add(SessionDuration),
+	}
+
+	return sessionID, nil
 }
 
 // CreateChallenge generates a new 6-digit challenge code and an unguessable 256-bit
@@ -139,12 +434,21 @@ func (s *Service) CreateChallenge(clientIP, redirectURL string) (token string, b
 
 	s.cleanupExpiredLocked()
 
-	// Generate 6-digit challenge code (100000 - 999999)
-	n, err := rand.Int(rand.Reader, big.NewInt(900000))
-	if err != nil {
-		return "", "", err
+	// Generate a collision-free 6-digit challenge code (100000 - 999999)
+	for attempts := 0; attempts < 32; attempts++ {
+		n, err := rand.Int(rand.Reader, big.NewInt(900000))
+		if err != nil {
+			return "", "", err
+		}
+		candidate := fmt.Sprintf("%06d", n.Int64()+100000)
+		if _, exists := s.pendingLogins[candidate]; !exists {
+			token = candidate
+			break
+		}
 	}
-	token = fmt.Sprintf("%06d", n.Int64()+100000)
+	if token == "" {
+		return "", "", errors.New("failed to allocate unique challenge token")
+	}
 
 	// Generate 256-bit random binding secret
 	bindingBytes := make([]byte, 32)
@@ -260,6 +564,9 @@ func (s *Service) SSHAddr() string {
 
 // StartSSHListener starts the loopback SSH challenge receiver.
 func (s *Service) StartSSHListener() error {
+	if s.authorizedKey == nil || s.hostSigner == nil {
+		return errors.New("SSH authentication is not configured")
+	}
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			if !bytes.Equal(key.Marshal(), s.authorizedKey.Marshal()) {
@@ -434,6 +741,11 @@ func (s *Service) cleanupExpiredLocked() {
 	for token, challenge := range s.pendingLogins {
 		if now.After(challenge.ExpiresAt) {
 			delete(s.pendingLogins, token)
+		}
+	}
+	for id, pending := range s.pendingTOTP {
+		if now.After(pending.ExpiresAt) {
+			delete(s.pendingTOTP, id)
 		}
 	}
 	for sessID, sess := range s.activeSessions {

@@ -143,6 +143,17 @@ func (l *ipRateLimiter) allow(ip string) bool {
 }
 
 func clientIPFromRequest(r *http.Request) string {
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("TRUST_PROXY")), "true") {
+		if cfIP := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); cfIP != "" {
+			return cfIP
+		}
+		if xff := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); xff != "" {
+			parts := strings.Split(xff, ",")
+			if first := strings.TrimSpace(parts[0]); first != "" {
+				return first
+			}
+		}
+	}
 	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
 	if err == nil && host != "" {
 		return host
@@ -151,4 +162,14 @@ func clientIPFromRequest(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return "127.0.0.1"
+}
+
+func isHTTPSRequest(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	if strings.EqualFold(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")), "https") {
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "prod")
 }

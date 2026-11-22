@@ -74,6 +74,10 @@
 
     requestAnimationFrame(alignOrigin);
 
+    const waterHandle = window.ResImperiiWater
+      ? window.ResImperiiWater.attach(hostCard, overlay, { amplitude: 7 })
+      : null;
+
     return {
       spacer,
       overlay,
@@ -84,6 +88,7 @@
         if (spacer.parentNode === container) spacer.remove();
       },
       cleanup() {
+        if (waterHandle) waterHandle.detach();
         if (spacer.parentNode === container) spacer.remove();
         if (overlay.parentNode) overlay.remove();
       },

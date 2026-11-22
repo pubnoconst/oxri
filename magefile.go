@@ -54,6 +54,13 @@ func Check() error {
 	return Build()
 }
 
+// Totp generates (or preserves) ADMIN_TOTP_SECRET in ../oxri-parent/db.env
+// and writes a scannable QR code PNG to ../oxri-parent/totp-qr.png.
+func Totp() error {
+	fmt.Println("==> Preparing TOTP seed and QR code in parent secrets folder...")
+	return sh.RunWithV(envWithCgoDisabled(), "go", "run", "./cmd/totpgen")
+}
+
 // Clean removes compiled binaries in bin/.
 func Clean() error {
 	fmt.Println("==> Removing bin/...")
