@@ -32,3 +32,17 @@ func TestFormatBytes(t *testing.T) {
 		t.Errorf("FormatBytes(2048) = %q", got)
 	}
 }
+
+func TestRenderMarkdownSanitizesRunesAndSchemes(t *testing.T) {
+	raw := "Hello 🚀 мир [bad](javascript:alert(1)) and [good](https://example.com)"
+	rendered := RenderMarkdown(raw)
+	if strings.Contains(rendered, "🚀") || strings.Contains(rendered, "мир") {
+		t.Errorf("RenderMarkdown failed to strip disallowed runes: %q", rendered)
+	}
+	if strings.Contains(strings.ToLower(rendered), "javascript:") {
+		t.Errorf("RenderMarkdown failed to neutralize javascript: scheme: %q", rendered)
+	}
+	if !strings.Contains(rendered, `href="https://example.com"`) {
+		t.Errorf("RenderMarkdown should preserve valid https:// link: %q", rendered)
+	}
+}

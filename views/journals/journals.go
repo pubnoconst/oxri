@@ -29,8 +29,9 @@ const StylePath = "/views/journals/journals.css"
 const MaxExcerptRunes = 280
 
 var (
-	blockEndRe = regexp.MustCompile(`(?i)</(?:p|h[1-6]|li|blockquote|pre|div)>|<br\s*/?>`)
-	htmlTagRe  = regexp.MustCompile(`<[^>]+>`)
+	blockEndRe   = regexp.MustCompile(`(?i)</(?:p|h[1-6]|li|blockquote|pre|div)>|<br\s*/?>`)
+	htmlTagRe    = regexp.MustCompile(`<[^>]+>`)
+	attrSchemeRe = regexp.MustCompile(`(?i)\b(href|src)\s*=\s*"([^"]*)"`)
 )
 
 // RenderedEntry pairs a persisted Journal row with pre-rendered safe HTML, excerpt, and metadata.
@@ -95,13 +96,30 @@ func (v CatalogView) ToggleTagURL(tag string) string {
 	return "/journals?" + encoded
 }
 
-// RenderMarkdown converts Markdown prose into sanitized HTML (raw HTML omitted by goldmark).
+// RenderMarkdown converts Markdown prose into sanitized HTML (raw HTML omitted by goldmark,
+// input prose runes strictly whitelisted, and link schemes restricted to http/https/relative).
 func RenderMarkdown(src string) string {
+	cleanSrc := db.SanitizeProseInput(src)
 	var buf bytes.Buffer
-	if err := goldmark.Convert([]byte(src), &buf); err != nil {
+	if err := goldmark.Convert([]byte(cleanSrc), &buf); err != nil {
 		return ""
 	}
-	return buf.String()
+	return attrSchemeRe.ReplaceAllStringFunc(buf.String(), func(match string) string {
+		sub := attrSchemeRe.FindStringSubmatch(match)
+		if len(sub) < 3 {
+			return match
+		}
+		attrName := sub[1]
+		val := strings.TrimSpace(html.UnescapeString(sub[2]))
+		lower := strings.ToLower(val)
+		if strings.HasPrefix(lower, "https://") ||
+			strings.HasPrefix(lower, "http://") ||
+			(strings.HasPrefix(lower, "/") && !strings.HasPrefix(lower, "//")) ||
+			strings.HasPrefix(lower, "#") {
+			return match
+		}
+		return fmt.Sprintf(`%s="#"`, attrName)
+	})
 }
 
 // Excerpt280 extracts plain text from Markdown-rendered HTML and caps it at 280 characters.
