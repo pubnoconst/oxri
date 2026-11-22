@@ -3,6 +3,7 @@ package pilot
 
 import (
 	_ "embed"
+	"fmt"
 
 	"github.com/oxri/oxri-go/views/layout"
 	g "maragu.dev/gomponents"
@@ -15,18 +16,114 @@ var StyleCSS string
 // StylePath is the public route for the pilot settings component CSS.
 const StylePath = "/views/pilot/settings.css"
 
+// PasskeyItem is a display-ready enrolled Passkey for the current RP ID.
+type PasskeyItem struct {
+	ID         string
+	Name       string
+	CreatedAt  string
+	LastUsedAt string
+}
+
+// SettingsData carries the live authentication and passkey state for /pilot/user/settings.
+type SettingsData struct {
+	MethodLabel      string
+	RPID             string
+	PasskeySupported bool
+	Passkeys         []PasskeyItem
+}
+
 // SettingsPage renders the administrative security and profile settings view.
-func SettingsPage(keyType string) g.Node {
+func SettingsPage(data SettingsData) g.Node {
+	if data.MethodLabel == "" {
+		data.MethodLabel = "TOTP (RFC 6238)"
+	}
+
+	enrolledLabel := fmt.Sprintf("%d credentials", len(data.Passkeys))
+	if len(data.Passkeys) == 1 {
+		enrolledLabel = "1 credential"
+	}
+
+	passkeyBadge := h.Span(h.Class("badge badge-pending"), g.Text("Not Enrolled"))
+	if len(data.Passkeys) > 0 {
+		passkeyBadge = h.Span(h.Class("badge badge-active"), g.Text("Active"))
+	} else if !data.PasskeySupported {
+		passkeyBadge = h.Span(h.Class("badge badge-pending"), g.Text("Requires HTTPS / localhost"))
+	}
+
+	var passkeyList g.Node
+	if len(data.Passkeys) > 0 {
+		items := make([]g.Node, 0, len(data.Passkeys))
+		for _, pk := range data.Passkeys {
+			metaText := "Added " + pk.CreatedAt
+			if pk.LastUsedAt != "" {
+				metaText += " · Last used " + pk.LastUsedAt
+			}
+			items = append(items, h.Li(h.Class("passkey-row"),
+				h.Div(h.Class("passkey-row-info"),
+					h.Span(h.Class("passkey-row-name"), g.Text(pk.Name)),
+					h.Span(h.Class("passkey-row-meta"), g.Text(metaText)),
+				),
+				h.Form(
+					h.Method("POST"),
+					h.Action("/pilot/passkeys/"+pk.ID+"/delete"),
+					g.Attr("onsubmit", "return confirm('Remove this passkey?');"),
+					h.Button(h.Type("submit"), h.Class("btn btn-destructive btn-sm"), g.Text("Remove")),
+				),
+			))
+		}
+		passkeyList = h.Ul(h.Class("passkey-list"), g.Group(items))
+	}
+
+	var footerControls g.Node
+	if data.PasskeySupported {
+		footerControls = h.Div(h.Class("methods-footer"),
+			h.Div(h.Class("passkey-add-row"),
+				h.Input(
+					h.ID("passkey-label-input"),
+					h.Type("text"),
+					h.Class("passkey-label-input"),
+					h.Placeholder("Passkey label (e.g. Proton Pass, Laptop, Phone)"),
+					g.Attr("maxlength", "32"),
+					g.Attr("aria-label", "Passkey label"),
+				),
+				h.Button(h.Type("button"), h.ID("add-passkey-btn"), h.Class("btn btn-encouraged"), g.Text("Add Passkey")),
+			),
+			h.P(h.ID("passkey-register-status"), h.Class("passkey-status"), g.Attr("role", "status"), g.Attr("hidden", "")),
+		)
+	} else {
+		footerControls = h.Div(h.Class("methods-footer"),
+			h.Div(h.Class("action-buttons"),
+				h.Button(h.Type("button"), h.Class("btn btn-encouraged"), g.Attr("disabled", ""), g.Attr("aria-disabled", "true"), g.Text("Add Passkey")),
+			),
+			h.Div(h.Class("https-notice"), g.Attr("role", "note"),
+				h.Div(h.Class("notice-icon"), g.Text("ℹ")),
+				h.Div(h.Class("notice-body"),
+					h.Span(h.Class("notice-title"), g.Text("Passkey registration requires HTTPS or localhost")),
+					h.P(g.Text("Open this page over HTTPS (e.g. your Render URL) or http://localhost:8080 (not 127.0.0.1) to enroll FIDO2/WebAuthn passkeys.")),
+				),
+			),
+		)
+	}
+
+	var rpMeta g.Node
+	if data.RPID != "" {
+		rpMeta = g.Group([]g.Node{
+			h.Span(h.Class("meta-sep"), g.Text("·")),
+			h.Span(h.Class("meta-label"), g.Text("Domain:")),
+			h.Code(h.Class("meta-code"), g.Text(data.RPID)),
+		})
+	}
+
 	return layout.Doc(
 		"Settings - RES IMPERII",
-		StylePath,
+		StylePath+"?v=2",
 		h.Main(h.Class("settings-page"),
 			h.Header(h.Class("settings-header"),
 				layout.BackLink("/", "Home"),
 				h.Div(h.Class("settings-heading"),
 					h.P(h.Class("settings-eyebrow"), g.Text("PILOT / EXPERIMENTAL · SETTINGS")),
 					h.H1(g.Text("Security & Authentication")),
-					h.P(h.Class("settings-subtitle"), g.Text("Manage administrative credentials, hardware security keys, and access controls in the experimental pilot environment.")),
+					h.P(h.Class("settings-subtitle"), g.Text("Manage administrative credentials, passkeys, and access controls for Res Imperii.")),
 				),
 			),
 			h.Div(h.Class("settings-stack"),
@@ -36,7 +133,7 @@ func SettingsPage(keyType string) g.Node {
 						h.Span(h.Class("status-dot")),
 						h.Div(h.Class("status-content"),
 							h.Span(h.Class("status-title"), g.Text("Administrative Session Active")),
-							h.Span(h.Class("status-desc"), g.Text("Authenticated via RFC 6238 TOTP · Session is active and valid")),
+							h.Span(h.Class("status-desc"), g.Text("Authenticated session is active and valid")),
 						),
 					),
 					h.Form(h.Method("POST"), h.Action("/logout"),
@@ -48,10 +145,27 @@ func SettingsPage(keyType string) g.Node {
 				h.Section(h.Class("settings-card"),
 					h.Div(h.Class("card-header"),
 						h.H2(g.Text("Authentication Methods")),
-						h.P(h.Class("card-desc"), g.Text("Configured credentials and keys used to sign in to Res Imperii.")),
+						h.P(h.Class("card-desc"), g.Text("Configured credentials and passkeys used to sign in to Res Imperii.")),
 					),
 					h.Div(h.Class("methods-list"),
-						// Method 1: Authenticator (TOTP)
+						// Method 1: Passkeys / WebAuthn
+						h.Div(h.Class("method-card method-card-stack"),
+							h.Div(h.Class("method-info"),
+								h.Div(h.Class("method-title-row"),
+									h.H3(h.Class("method-name"), g.Text("Passkeys (FIDO2 / WebAuthn)")),
+									passkeyBadge,
+								),
+								h.P(h.Class("method-description"), g.Text("Phishing-resistant sign-in via Proton Pass, Windows Hello, Touch ID, phone passkeys, or hardware security keys.")),
+								h.Div(h.Class("method-meta"),
+									h.Span(h.Class("meta-label"), g.Text("Enrolled:")),
+									h.Span(h.Class("meta-val"), g.Text(enrolledLabel)),
+									rpMeta,
+								),
+							),
+							passkeyList,
+						),
+
+						// Method 2: Password + Authenticator (TOTP)
 						h.Div(h.Class("method-card"),
 							h.Div(h.Class("method-info"),
 								h.Div(h.Class("method-title-row"),
@@ -61,54 +175,15 @@ func SettingsPage(keyType string) g.Node {
 								h.P(h.Class("method-description"), g.Text("6-digit time-based one-time codes with 30-second server confirmation cooldown and single-use replay protection.")),
 								h.Div(h.Class("method-meta"),
 									h.Span(h.Class("meta-label"), g.Text("Method:")),
-									h.Code(h.Class("meta-code"), g.Text(keyType)),
-									h.Span(h.Class("meta-sep"), g.Text("·")),
-									h.Span(h.Class("meta-label"), g.Text("Source:")),
-									h.Span(h.Class("meta-val"), g.Text("Environment (ADMIN_TOTP_SECRET)")),
+									h.Code(h.Class("meta-code"), g.Text(data.MethodLabel)),
 								),
-							),
-							h.Div(h.Class("method-actions"),
-								h.Button(h.Type("button"), h.Class("btn btn-destructive"), g.Attr("disabled", ""), g.Attr("aria-disabled", "true"), g.Attr("title", "Primary authenticator seed is configured via environment"), g.Text("Remove")),
-							),
-						),
-
-						// Method 2: Passkeys / WebAuthn
-						h.Div(h.Class("method-card"),
-							h.Div(h.Class("method-info"),
-								h.Div(h.Class("method-title-row"),
-									h.H3(h.Class("method-name"), g.Text("Passkeys (FIDO2 / WebAuthn)")),
-									h.Span(h.Class("badge badge-pending"), g.Text("Pending HTTPS")),
-								),
-								h.P(h.Class("method-description"), g.Text("Hardware security keys (YubiKey), platform biometrics (Windows Hello, Touch ID), and passkey managers.")),
-								h.Div(h.Class("method-meta"),
-									h.Span(h.Class("meta-label"), g.Text("Enrolled:")),
-									h.Span(h.Class("meta-val"), g.Text("0 credentials")),
-									h.Span(h.Class("meta-sep"), g.Text("·")),
-									h.Span(h.Class("meta-label"), g.Text("Standard:")),
-									h.Span(h.Class("meta-val"), g.Text("W3C WebAuthn Level 3")),
-								),
-							),
-							h.Div(h.Class("method-actions"),
-								h.Button(h.Type("button"), h.Class("btn btn-destructive"), g.Attr("disabled", ""), g.Attr("aria-disabled", "true"), g.Attr("title", "No registered passkey to remove"), g.Text("Remove")),
 							),
 						),
 					),
-
-					// Footer Controls & Notice
-					h.Div(h.Class("methods-footer"),
-						h.Div(h.Class("action-buttons"),
-							h.Button(h.Type("button"), h.Class("btn btn-encouraged"), g.Attr("disabled", ""), g.Attr("aria-disabled", "true"), g.Attr("title", "Passkey registration requires HTTPS and a registered domain"), g.Text("Add Passkey")),
-						),
-						h.Div(h.Class("https-notice"), g.Attr("role", "note"),
-							h.Div(h.Class("notice-icon"), g.Text("ℹ")),
-							h.Div(h.Class("notice-body"),
-								h.Span(h.Class("notice-title"), g.Text("Passkey management is locked in development")),
-								h.P(g.Text("Adding and removing FIDO2/WebAuthn passkeys requires a registered public domain origin (rp_id) and a secure HTTPS transport. These controls will be enabled once deployed to production.")),
-							),
-						),
-					),
+					footerControls,
 				),
 			),
 		),
+		h.Script(h.Src("/assets/js/passkey.js?v=1")),
 	)
 }

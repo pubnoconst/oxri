@@ -31,6 +31,19 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   applied_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );`
 
+const passkeysTableDDL = `
+CREATE TABLE IF NOT EXISTS passkeys (
+  id TEXT PRIMARY KEY,
+  rp_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  credential_json TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  last_used_at INTEGER NOT NULL
+);`
+
+const passkeysIndexDDL = `
+CREATE INDEX IF NOT EXISTS idx_passkeys_rp_id ON passkeys(rp_id);`
+
 // SchemaVersion returns the highest applied migration version recorded in schema_migrations,
 // or 0 if no migrations have been recorded yet.
 func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
@@ -117,6 +130,14 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 		if err := rebuildJournalsWithTagConstraintsTx(ctx, tx); err != nil {
 			return fmt.Errorf("failed to migrate journals tag constraints: %w", err)
 		}
+	}
+
+	// Migration v3: Create passkeys table for FIDO2 / WebAuthn credentials keyed by rp_id
+	if _, err := tx.ExecContext(ctx, passkeysTableDDL); err != nil {
+		return fmt.Errorf("failed to create passkeys table: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, passkeysIndexDDL); err != nil {
+		return fmt.Errorf("failed to create passkeys index: %w", err)
 	}
 
 	if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO schema_migrations (version) VALUES (?);`, CurrentSchemaVersion); err != nil {

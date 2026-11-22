@@ -100,14 +100,19 @@ func NewRouter(cfg Config) http.Handler {
 	loginLimiter := newIPRateLimiter(30, time.Minute)
 	totpSubmitLimiter := newIPRateLimiter(15, 5*time.Minute)
 	statusLimiter := newIPRateLimiter(120, time.Minute)
-	r.Get("/login", handleLogin(cfg.AuthService, loginLimiter))
-	r.Post("/login", handleLoginSubmit(cfg.AuthService, totpSubmitLimiter))
+	r.Get("/login", handleLogin(cfg.Store, cfg.AuthService, loginLimiter))
+	r.Post("/login", handleLoginSubmit(cfg.Store, cfg.AuthService, totpSubmitLimiter))
 	r.Get("/login/confirm", handleTOTPConfirm(cfg.AuthService))
 	r.Get("/auth/totp-status", handleTOTPStatus(cfg.AuthService, statusLimiter))
+	r.Post("/auth/passkey/begin", handlePasskeyLoginBegin(cfg.Store, cfg.AuthService, loginLimiter))
+	r.Post("/auth/passkey/finish", handlePasskeyLoginFinish(cfg.Store, cfg.AuthService, loginLimiter))
 	r.HandleFunc("/logout", handleLogout(cfg.AuthService)) // Handles both GET and POST
 
-	// 8. Protected Profile / Pilot Settings Routes
-	r.Get("/pilot/user/settings", handlePilotSettings(cfg.AuthService))
+	// 8. Protected Profile / Pilot Settings & Passkey Management Routes
+	r.Get("/pilot/user/settings", handlePilotSettings(cfg.Store, cfg.AuthService))
+	r.Post("/pilot/passkeys/begin", handlePasskeyRegisterBegin(cfg.Store, cfg.AuthService))
+	r.Post("/pilot/passkeys/finish", handlePasskeyRegisterFinish(cfg.Store, cfg.AuthService))
+	r.Post("/pilot/passkeys/{id}/delete", handlePasskeyDelete(cfg.Store, cfg.AuthService))
 
 	return r
 }
@@ -146,13 +151,21 @@ func handleBookI() http.HandlerFunc {
 	}
 }
 
-func renderLoginView(w http.ResponseWriter, authSvc *auth.Service, next, errMsg string, status int) {
+func renderLoginView(w http.ResponseWriter, r *http.Request, store *db.Store, authSvc *auth.Service, next, errMsg string, status int) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if status != http.StatusOK {
 		w.WriteHeader(status)
 	}
 	requirePassword := authSvc != nil && authSvc.HasPassword()
-	_ = login.TOTPPage(next, errMsg, requirePassword).Render(w)
+	hasPasskeys := false
+	if store != nil {
+		if rpID, _, supported := auth.ResolveWebAuthnOrigin(r, isHTTPSRequest(r)); supported {
+			if count, err := store.CountPasskeys(r.Context(), rpID); err == nil && count > 0 {
+				hasPasskeys = true
+			}
+		}
+	}
+	_ = login.TOTPPage(next, errMsg, requirePassword, hasPasskeys).Render(w)
 }
 
 func isValidVerifyID(id string) bool {
@@ -183,7 +196,7 @@ func loginErrorMessage(code string) string {
 	}
 }
 
-func handleLogin(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
+func handleLogin(store *db.Store, authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		next := serverfns.SanitizeRedirect(r.URL.Query().Get("next"))
 		if _, err := serverfns.RequireAuth(authSvc, r); err == nil {
@@ -202,11 +215,11 @@ func handleLogin(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc
 		}
 
 		errMsg := loginErrorMessage(r.URL.Query().Get("err"))
-		renderLoginView(w, authSvc, next, errMsg, http.StatusOK)
+		renderLoginView(w, r, store, authSvc, next, errMsg, http.StatusOK)
 	}
 }
 
-func handleLoginSubmit(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
+func handleLoginSubmit(store *db.Store, authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if authSvc == nil || !authSvc.HasTOTP() {
 			errorpage.Render(w, http.StatusServiceUnavailable, "TOTP authentication is not configured.")
@@ -220,7 +233,7 @@ func handleLoginSubmit(authSvc *auth.Service, limiter *ipRateLimiter) http.Handl
 		}
 
 		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
-			renderLoginView(w, authSvc, next, "Too many attempts. Please wait a few minutes.", http.StatusTooManyRequests)
+			renderLoginView(w, r, store, authSvc, next, "Too many attempts. Please wait a few minutes.", http.StatusTooManyRequests)
 			return
 		}
 
@@ -229,7 +242,7 @@ func handleLoginSubmit(authSvc *auth.Service, limiter *ipRateLimiter) http.Handl
 		verifyID, bindingCookie, _, err := authSvc.StartTOTPVerification(password, code, next)
 		if err != nil {
 			if errors.Is(err, auth.ErrTOTPPending) {
-				renderLoginView(w, authSvc, next, "A confirmation is already in progress. Please wait.", http.StatusTooManyRequests)
+				renderLoginView(w, r, store, authSvc, next, "A confirmation is already in progress. Please wait.", http.StatusTooManyRequests)
 				return
 			}
 			errorpage.Render(w, http.StatusInternalServerError, "Failed to initiate authentication confirmation.")
@@ -364,7 +377,7 @@ func handleTOTPStatus(authSvc *auth.Service, limiter *ipRateLimiter) http.Handle
 	}
 }
 
-func handlePilotSettings(authSvc *auth.Service) http.HandlerFunc {
+func handlePilotSettings(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if _, err := serverfns.RequireAuth(authSvc, r); err != nil {
 			http.Redirect(w, r, "/login?next=/pilot/user/settings", http.StatusSeeOther)
@@ -376,8 +389,32 @@ func handlePilotSettings(authSvc *auth.Service) http.HandlerFunc {
 			methodLabel = "Password (Argon2id) + TOTP (RFC 6238)"
 		}
 
+		rpID, _, supported := auth.ResolveWebAuthnOrigin(r, isHTTPSRequest(r))
+		var items []pilot.PasskeyItem
+		if store != nil && supported {
+			if recs, err := store.ListPasskeys(r.Context(), rpID); err == nil {
+				for _, rec := range recs {
+					lastUsed := ""
+					if !rec.LastUsedAt.IsZero() {
+						lastUsed = rec.LastUsedAt.Local().Format("Jan 2, 2006")
+					}
+					items = append(items, pilot.PasskeyItem{
+						ID:         rec.ID,
+						Name:       rec.Name,
+						CreatedAt:  rec.CreatedAt.Local().Format("Jan 2, 2006"),
+						LastUsedAt: lastUsed,
+					})
+				}
+			}
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = pilot.SettingsPage(methodLabel).Render(w)
+		_ = pilot.SettingsPage(pilot.SettingsData{
+			MethodLabel:      methodLabel,
+			RPID:             rpID,
+			PasskeySupported: supported && store != nil,
+			Passkeys:         items,
+		}).Render(w)
 	}
 }
 
