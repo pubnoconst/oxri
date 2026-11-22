@@ -109,7 +109,7 @@ func renderForm(csrfToken, envPath, errMsg string) string {
 
 func main() {
 	secretsDir := resolveSecretsDir()
-	envPath := filepath.Join(secretsDir, "db.env")
+	envPath := filepath.Join(secretsDir, "pw.env")
 	absEnv, _ := filepath.Abs(envPath)
 
 	csrfBytes := make([]byte, 16)
@@ -191,7 +191,7 @@ func main() {
 		if err := upsertEnvVar(envPath, "ADMIN_PASSWORD_HASH", hash); err != nil {
 			mu.Unlock()
 			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = w.Write([]byte(renderForm(csrfToken, absEnv, "Failed to write db.env: "+err.Error())))
+			_, _ = w.Write([]byte(renderForm(csrfToken, absEnv, "Failed to write pw.env: "+err.Error())))
 			return
 		}
 		done = true

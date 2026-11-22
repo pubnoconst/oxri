@@ -18,8 +18,10 @@ import (
 func main() {
 	envFiles := []string{
 		filepath.Join("..", "oxri-parent", "db.env"),
+		filepath.Join("..", "oxri-parent", "pw.env"),
 		filepath.Join("..", "oxri-parent", ".env"),
 		filepath.Join("..", "db.env"),
+		filepath.Join("..", "pw.env"),
 		filepath.Join("..", ".env"),
 	}
 	_ = db.LoadEnvFiles(envFiles...)
