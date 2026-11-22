@@ -20,6 +20,8 @@ var allowedRedirectPrefixes = []string{
 	"/",
 	"/pilot/user/settings",
 	"/book-i",
+	"/book-ii",
+	"/book-iii",
 	"/journals",
 }
 

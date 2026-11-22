@@ -207,9 +207,7 @@ func TestBookIPage(t *testing.T) {
 	for _, expected := range []string{
 		"Book I - RES IMPERII",
 		"/views/booki/booki.css",
-		"On Cause",
-		"Causal Succession",
-		"Substance, Cosmos and Substrate",
+		"<h1>Book I</h1>",
 		"back-link",
 		"back-icon",
 		"Back",
