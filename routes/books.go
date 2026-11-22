@@ -1,0 +1,108 @@
+package routes
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/oxri/oxri-go/internal/auth"
+	"github.com/oxri/oxri-go/internal/db"
+	"github.com/oxri/oxri-go/serverfns"
+	"github.com/oxri/oxri-go/views/booki"
+	"github.com/oxri/oxri-go/views/errorpage"
+)
+
+func handleBookView(store *db.Store, authSvc *auth.Service, slug string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		title, ok := db.BookTitle(slug)
+		if !ok {
+			errorpage.Render(w, http.StatusNotFound, "")
+			return
+		}
+
+		_, authErr := serverfns.RequireAuth(authSvc, r)
+		isAuth := (authErr == nil)
+
+		body := "# " + title + "\n\n*Forthcoming.*"
+		if store != nil {
+			b, err := store.GetBook(r.Context(), slug)
+			if err != nil {
+				renderInternalError(w, r, http.StatusInternalServerError, err)
+				return
+			}
+			title = b.Title
+			body = b.Body
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = booki.BookPage(slug, title, body, isAuth).Render(w)
+	}
+}
+
+func handleBookEditForm(store *db.Store, authSvc *auth.Service, slug string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAdminOrRedirect(w, r, authSvc) {
+			return
+		}
+		title, ok := db.BookTitle(slug)
+		if !ok {
+			errorpage.Render(w, http.StatusNotFound, "")
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+		b, err := store.GetBook(r.Context(), slug)
+		if err != nil {
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = booki.EditPage(slug, title, b.Body, "").Render(w)
+	}
+}
+
+func handleBookSave(store *db.Store, authSvc *auth.Service, slug string, limiter *ipRateLimiter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAdminOrRedirect(w, r, authSvc) {
+			return
+		}
+		title, ok := db.BookTitle(slug)
+		if !ok {
+			errorpage.Render(w, http.StatusNotFound, "")
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
+			errorpage.Render(w, http.StatusTooManyRequests, "Too many save requests. Please wait briefly.")
+			return
+		}
+
+		if err := r.ParseForm(); err != nil {
+			errorpage.Render(w, http.StatusBadRequest, "")
+			return
+		}
+
+		rawBody := r.FormValue("body")
+		if _, err := store.SaveBook(r.Context(), slug, rawBody); err != nil {
+			if errors.Is(err, db.ErrInvalidInput) || errors.Is(err, db.ErrBookTooLarge) {
+				safeEcho := db.SanitizeProseInput(rawBody)
+				if len(safeEcho) > db.MaxBookBodyBytes {
+					safeEcho = safeEcho[:db.MaxBookBodyBytes]
+				}
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.WriteHeader(http.StatusUnprocessableEntity)
+				_ = booki.EditPage(slug, title, safeEcho, err.Error()).Render(w)
+				return
+			}
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+
+		http.Redirect(w, r, "/"+slug, http.StatusSeeOther)
+	}
+}

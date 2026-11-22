@@ -44,6 +44,14 @@ CREATE TABLE IF NOT EXISTS passkeys (
 const passkeysIndexDDL = `
 CREATE INDEX IF NOT EXISTS idx_passkeys_rp_id ON passkeys(rp_id);`
 
+const booksTableDDL = `
+CREATE TABLE IF NOT EXISTS books (
+  slug TEXT PRIMARY KEY CHECK(slug IN ('book-i', 'book-ii', 'book-iii')),
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+);`
+
 // SchemaVersion returns the highest applied migration version recorded in schema_migrations,
 // or 0 if no migrations have been recorded yet.
 func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
@@ -138,6 +146,19 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 	}
 	if _, err := tx.ExecContext(ctx, passkeysIndexDDL); err != nil {
 		return fmt.Errorf("failed to create passkeys index: %w", err)
+	}
+
+	// Migration v4: Create books table for Book I, II, III markdown content
+	if _, err := tx.ExecContext(ctx, booksTableDDL); err != nil {
+		return fmt.Errorf("failed to create books table: %w", err)
+	}
+	for _, seed := range defaultBooksSeed() {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT OR IGNORE INTO books (slug, title, body, updated_at) VALUES (?, ?, ?, ?);`,
+			seed.Slug, seed.Title, seed.Body, seed.UpdatedAt.UnixMilli(),
+		); err != nil {
+			return fmt.Errorf("failed to seed book %s: %w", seed.Slug, err)
+		}
 	}
 
 	if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO schema_migrations (version) VALUES (?);`, CurrentSchemaVersion); err != nil {

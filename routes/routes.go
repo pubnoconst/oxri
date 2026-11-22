@@ -68,15 +68,21 @@ func NewRouter(cfg Config) http.Handler {
 	}
 	r.Handle("/assets/*", noDirListingAssetHandler(assetsDir))
 
-	// 5. Public Page & Health Routes
+	// 5. Public Page, Books & Health Routes
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
 	r.Get("/", handleLanding(cfg.AuthService))
-	r.Get("/book-i", handleBookI())
 	r.Get("/loading", handleLoadingPage())
+
+	bookWriteLimiter := newIPRateLimiter(20, 5*time.Minute)
+	for _, slug := range []string{"book-i", "book-ii", "book-iii"} {
+		r.Get("/"+slug, handleBookView(cfg.Store, cfg.AuthService, slug))
+		r.Get("/"+slug+"/edit", handleBookEditForm(cfg.Store, cfg.AuthService, slug))
+		r.Post("/"+slug, handleBookSave(cfg.Store, cfg.AuthService, slug, bookWriteLimiter))
+	}
 
 	// 6. Journals & Editor Routes
 	r.Get("/journals", handleJournalsCatalog(cfg.AuthService))
@@ -141,13 +147,6 @@ func handleLanding(authSvc *auth.Service) http.HandlerFunc {
 		_, err := serverfns.RequireAuth(authSvc, r)
 		isAuth := (err == nil)
 		_ = landing.Page(isAuth).Render(w)
-	}
-}
-
-func handleBookI() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = booki.Page().Render(w)
 	}
 }
 

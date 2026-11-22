@@ -77,3 +77,137 @@
   margin-top: 2rem;
   margin-bottom: 3rem;
 }
+
+.book-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Authenticated Book Markdown Editor */
+.book-editor-page {
+  width: min(76rem, 100%);
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: var(--space-page-y) var(--space-page-x) 4rem;
+  box-sizing: border-box;
+  font-family: var(--font-serif);
+}
+
+.book-editor-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.book-editor-header h1 {
+  margin: 1.25rem 0 0;
+  font-size: var(--heading-h1);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.book-editor-error {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent-danger) 45%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--accent-danger) 8%, transparent);
+  color: var(--accent-danger);
+  font-size: 0.96rem;
+}
+
+.book-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.book-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.book-editor-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.book-pane-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.book-pane-label {
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  opacity: 0.68;
+}
+
+.book-byte-count {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  opacity: 0.58;
+}
+
+.book-md-textarea {
+  width: 100%;
+  min-height: 36rem;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  color: var(--page-ink);
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  line-height: 1.65;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.book-md-textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+.book-preview-box {
+  min-height: 36rem;
+  max-height: 52rem;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  font-size: 1.12rem;
+  line-height: 1.72;
+  box-sizing: border-box;
+}
+
+.book-preview-box > h1:first-child {
+  margin-top: 0.5rem;
+}
+
+.book-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+@media (max-width: 860px) {
+  .book-editor-grid {
+    grid-template-columns: 1fr;
+  }
+  .book-md-textarea,
+  .book-preview-box {
+    min-height: 22rem;
+  }
+}
