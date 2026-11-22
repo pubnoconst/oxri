@@ -147,16 +147,17 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		}
 
 		in, formData := parseJournalForm(r)
-		if _, err := store.Create(r.Context(), in); err != nil {
-			if errors.Is(err, db.ErrInvalidInput) {
-				sanitizeFormDataForEcho(&formData)
-				formData.ErrorMsg = err.Error()
-				formData.ExistingTags, _ = store.DistinctTags(r.Context(), true)
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				w.WriteHeader(http.StatusUnprocessableEntity)
-				_ = editor.FormPage(true, formData).Render(w)
-				return
-			}
+		validated, err := db.ParseValidatedEntry(in)
+		if err != nil {
+			sanitizeFormDataForEcho(&formData)
+			formData.ErrorMsg = err.Error()
+			formData.ExistingTags, _ = store.DistinctTags(r.Context(), true)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			_ = editor.FormPage(true, formData).Render(w)
+			return
+		}
+		if _, err := store.CreateValidated(r.Context(), validated); err != nil {
 			if errors.Is(err, db.ErrQuotaExceeded) {
 				sanitizeFormDataForEcho(&formData)
 				store.SetPendingSubmission(&db.PendingSubmission{
@@ -166,7 +167,7 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 					Body:       formData.Body,
 					Published:  formData.Published,
 					Bookmarked: formData.Bookmarked,
-					EntryBytes: db.EstimateInputBytes(in),
+					EntryBytes: validated.EstimatedBytes(db.RowOverheadBytes),
 				})
 				http.Redirect(w, r, "/journals/vacate-space/", http.StatusSeeOther)
 				return
@@ -233,16 +234,17 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		in, formData := parseJournalForm(r)
 		formData.IsEdit = true
 		formData.EntryID = id
-		if err := store.Update(r.Context(), id, in); err != nil {
-			if errors.Is(err, db.ErrInvalidInput) {
-				sanitizeFormDataForEcho(&formData)
-				formData.ErrorMsg = err.Error()
-				formData.ExistingTags, _ = store.DistinctTags(r.Context(), true)
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				w.WriteHeader(http.StatusUnprocessableEntity)
-				_ = editor.FormPage(true, formData).Render(w)
-				return
-			}
+		validated, err := db.ParseValidatedEntry(in)
+		if err != nil {
+			sanitizeFormDataForEcho(&formData)
+			formData.ErrorMsg = err.Error()
+			formData.ExistingTags, _ = store.DistinctTags(r.Context(), true)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			_ = editor.FormPage(true, formData).Render(w)
+			return
+		}
+		if err := store.UpdateValidated(r.Context(), id, validated); err != nil {
 			if errors.Is(err, db.ErrNotFound) {
 				errorpage.Render(w, http.StatusNotFound, "")
 				return
@@ -257,7 +259,7 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 					Body:       formData.Body,
 					Published:  formData.Published,
 					Bookmarked: formData.Bookmarked,
-					EntryBytes: db.EstimateInputBytes(in),
+					EntryBytes: validated.EstimatedBytes(db.RowOverheadBytes),
 				})
 				http.Redirect(w, r, "/journals/vacate-space/", http.StatusSeeOther)
 				return
