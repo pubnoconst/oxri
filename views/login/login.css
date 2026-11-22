@@ -115,7 +115,13 @@
   pointer-events: none;
 }
 
-.auth-page.is-submerged {
+.auth-water-stage {
+  position: relative;
+  min-height: 100svh;
+}
+
+/* Applied by water-ripple.js once the refraction map is ready */
+.auth-water-stage.is-submerged {
   filter: url(#water-surface-refract);
 }
 
@@ -126,9 +132,10 @@
   z-index: 50;
 }
 
+/* Distortion comes from the SVG displacement filter; the rings only carry the sunlit sheen */
 .card-water-ripple.is-pagewide .card-water-wave {
-  -webkit-backdrop-filter: blur(2.6px) brightness(1.12) contrast(1.1);
-  backdrop-filter: blur(2.6px) brightness(1.12) contrast(1.1);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .auth-confirm-card {
@@ -308,7 +315,7 @@
     animation: none;
     opacity: 0.8;
   }
-  .auth-page.is-submerged {
+  .auth-water-stage.is-submerged {
     filter: none;
   }
 }

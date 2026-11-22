@@ -4,6 +4,7 @@ package login
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 
 	"github.com/oxri/oxri-go/views/layout"
 	g "maragu.dev/gomponents"
@@ -32,38 +33,47 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 	barStyle := fmt.Sprintf("--cooldown-ms:%dms;--cooldown-start:%.4f;", remainingMs, startRatio)
 	rippleStyle := "--ripple-x:50%;--ripple-y:46%;--ripple-diameter:150vmax;"
 
-	// Inline SVG optical water-refraction filter (zero JS, strict-CSP safe):
-	// gently bends submerged text as if viewed beneath a calm sunlit water surface.
-	waterFilterSVG := `<svg class="water-refract-svg" aria-hidden="true" width="0" height="0" focusable="false">` +
-		`<defs><filter id="water-surface-refract" x="-5%" y="-5%" width="110%" height="110%">` +
-		`<feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="2" seed="3" result="noise">` +
-		`<animate attributeName="baseFrequency" dur="5.4s" values="0.011 0.017;0.016 0.023;0.011 0.017" repeatCount="indefinite"/>` +
-		`</feTurbulence>` +
-		`<feDisplacementMap in="SourceGraphic" in2="noise" scale="2.6" xChannelSelector="R" yChannelSelector="G">` +
-		`<animate attributeName="scale" dur="2.7s" values="1.4;3.2;1.8;2.8;1.4" repeatCount="indefinite"/>` +
-		`</feDisplacementMap>` +
-		`</filter></defs></svg>`
+	// Inline SVG refraction filter (strict-CSP safe). Three chained displacement maps, one per
+	// expanding wavefront, bend the submerged content radially along each ripple. The map images,
+	// positions and strengths are driven per-frame by /assets/js/water-ripple.js from the CSS rings.
+	// color-interpolation-filters=sRGB is essential so mid-grey (128) means zero displacement.
+	var filterSVG strings.Builder
+	filterSVG.WriteString(`<svg class="water-refract-svg" aria-hidden="true" width="0" height="0" focusable="false"><defs>`)
+	filterSVG.WriteString(`<filter id="water-surface-refract" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-20" y="-20" width="4000" height="3000" color-interpolation-filters="sRGB">`)
+	filterSVG.WriteString(`<feFlood flood-color="rgb(128,128,128)" flood-opacity="1" result="neutral"/>`)
+	for i := 1; i <= 3; i++ {
+		in := "SourceGraphic"
+		if i > 1 {
+			in = fmt.Sprintf("d%d", i-1)
+		}
+		filterSVG.WriteString(fmt.Sprintf(`<feImage id="wr-img-%d" preserveAspectRatio="none" x="-10" y="-10" width="1" height="1" result="m%d"/>`, i, i))
+		filterSVG.WriteString(fmt.Sprintf(`<feMerge result="map%d"><feMergeNode in="neutral"/><feMergeNode in="m%d"/></feMerge>`, i, i))
+		filterSVG.WriteString(fmt.Sprintf(`<feDisplacementMap id="wr-disp-%d" in="%s" in2="map%d" scale="0" xChannelSelector="R" yChannelSelector="G" result="d%d"/>`, i, in, i, i))
+	}
+	filterSVG.WriteString(`</filter></defs></svg>`)
 
 	return layout.Doc(
 		"Confirming - RES IMPERII",
-		StylePath+"?v=5",
-		g.Raw(waterFilterSVG),
-		h.Main(h.Class("auth-page is-submerged"),
-			h.Header(h.Class("auth-header"),
-				layout.BackLink("/login", "Back"),
-				h.H1(g.Text("AUTHENTICATION")),
-			),
-			h.Section(h.Class("auth-card auth-confirm-card"), g.Attr("aria-live", "polite"),
-				h.P(h.Class("auth-confirm-phrase"), g.Text("Confirming, wait.")),
-				h.Div(h.Class("auth-cooldown-track"), g.Attr("role", "progressbar"), g.Attr("aria-label", "Authentication confirmation progress"),
-					h.Div(h.Class("auth-cooldown-fill"), g.Attr("style", barStyle)),
+		StylePath+"?v=6",
+		g.Raw(filterSVG.String()),
+		h.Div(h.Class("auth-water-stage"), g.Attr("data-water-stage", ""),
+			h.Main(h.Class("auth-page"),
+				h.Header(h.Class("auth-header"),
+					layout.BackLink("/login", "Back"),
+					h.H1(g.Text("AUTHENTICATION")),
 				),
-			),
-			h.Div(
-				h.ID("totp-confirm-poller"),
-				g.Attr("hx-get", fmt.Sprintf("/auth/totp-status?id=%s", verifyID)),
-				g.Attr("hx-trigger", "every 1s"),
-				g.Attr("hx-swap", "none"),
+				h.Section(h.Class("auth-card auth-confirm-card"), g.Attr("aria-live", "polite"),
+					h.P(h.Class("auth-confirm-phrase"), g.Text("Confirming, wait.")),
+					h.Div(h.Class("auth-cooldown-track"), g.Attr("role", "progressbar"), g.Attr("aria-label", "Authentication confirmation progress"),
+						h.Div(h.Class("auth-cooldown-fill"), g.Attr("style", barStyle)),
+					),
+				),
+				h.Div(
+					h.ID("totp-confirm-poller"),
+					g.Attr("hx-get", fmt.Sprintf("/auth/totp-status?id=%s", verifyID)),
+					g.Attr("hx-trigger", "every 1s"),
+					g.Attr("hx-swap", "none"),
+				),
 			),
 		),
 		h.Div(h.Class("card-water-ripple is-pagewide"), g.Attr("style", rippleStyle), g.Attr("aria-hidden", "true"),
@@ -72,6 +82,7 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 			h.Span(h.Class("card-water-wave wave-2")),
 			h.Span(h.Class("card-water-wave wave-3")),
 		),
+		h.Script(h.Src("/assets/js/water-ripple.js?v=1")),
 	)
 }
 
@@ -117,7 +128,7 @@ func TOTPPage(nextURL, errMsg, sshToken, sshCommand, sshPort string) g.Node {
 
 	return layout.Doc(
 		"Authentication - RES IMPERII",
-		StylePath+"?v=5",
+		StylePath+"?v=6",
 		h.Main(h.Class("auth-page"),
 			h.Header(h.Class("auth-header"),
 				layout.BackLink("/", "Home"),
