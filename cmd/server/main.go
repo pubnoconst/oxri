@@ -32,7 +32,11 @@ func main() {
 	}
 	addr := os.Getenv("ADDR")
 	if addr == "" {
-		addr = "127.0.0.1:" + port
+		if os.Getenv("RENDER") != "" || os.Getenv("APP_ENV") == "prod" {
+			addr = "0.0.0.0:" + port
+		} else {
+			addr = "127.0.0.1:" + port
+		}
 	}
 
 	assetsDir := os.Getenv("ASSETS_DIR")
