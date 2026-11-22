@@ -61,6 +61,14 @@ func Totp() error {
 	return sh.RunWithV(envWithCgoDisabled(), "go", "run", "./cmd/totpgen")
 }
 
+// Password starts a one-time loopback website (http://127.0.0.1:8089) that hashes
+// your chosen password with Argon2id, saves ADMIN_PASSWORD_HASH to ../oxri-parent/db.env,
+// and shuts itself down automatically.
+func Password() error {
+	fmt.Println("==> Starting one-time local password hash generator...")
+	return sh.RunWithV(envWithCgoDisabled(), "go", "run", "./cmd/passgen")
+}
+
 // Clean removes compiled binaries in bin/.
 func Clean() error {
 	fmt.Println("==> Removing bin/...")

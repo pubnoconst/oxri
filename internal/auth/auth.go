@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -59,15 +60,18 @@ type UserSession struct {
 // ServiceOptions configures the authentication service.
 type ServiceOptions struct {
 	TOTPSecret       string
+	PasswordHash     string
 	TOTPConfirmDelay time.Duration
 }
 
-// Service manages TOTP verification, confirmation cooldowns, and active sessions.
+// Service manages TOTP + optional Argon2id password verification, confirmation cooldowns,
+// and active sessions.
 type Service struct {
 	mu               sync.RWMutex
 	pendingTOTP      map[string]*PendingTOTPVerification
 	activeSessions   map[string]*UserSession
 	totpSecret       string
+	passwordHash     string
 	totpConfirmDelay time.Duration
 	lastUsedTOTPStep int64
 	totpFailures     []time.Time
@@ -103,6 +107,13 @@ func NewServiceWithOptions(opts ServiceOptions) (*Service, error) {
 		return nil, fmt.Errorf("invalid ADMIN_TOTP_SECRET: %w", err)
 	}
 
+	passwordHash := strings.TrimSpace(opts.PasswordHash)
+	if passwordHash != "" {
+		if err := ValidatePasswordHash(passwordHash); err != nil {
+			return nil, fmt.Errorf("invalid ADMIN_PASSWORD_HASH: %w", err)
+		}
+	}
+
 	confirmDelay := opts.TOTPConfirmDelay
 	if confirmDelay <= 0 {
 		confirmDelay = DefaultTOTPConfirmDelay
@@ -112,6 +123,7 @@ func NewServiceWithOptions(opts ServiceOptions) (*Service, error) {
 		pendingTOTP:      make(map[string]*PendingTOTPVerification),
 		activeSessions:   make(map[string]*UserSession),
 		totpSecret:       totpSecret,
+		passwordHash:     passwordHash,
 		totpConfirmDelay: confirmDelay,
 		lastUsedTOTPStep: -1,
 		capMinter:        acquireCapMinter(),
@@ -123,6 +135,11 @@ func (s *Service) HasTOTP() bool {
 	return s != nil && s.totpSecret != ""
 }
 
+// HasPassword reports whether an Argon2id password hash is configured alongside TOTP.
+func (s *Service) HasPassword() bool {
+	return s != nil && s.passwordHash != ""
+}
+
 // TOTPConfirmDelay returns the configured server-side confirmation wait for pure TOTP logins.
 func (s *Service) TOTPConfirmDelay() time.Duration {
 	if s == nil || s.totpConfirmDelay <= 0 {
@@ -131,11 +148,11 @@ func (s *Service) TOTPConfirmDelay() time.Duration {
 	return s.totpConfirmDelay
 }
 
-// StartTOTPVerification evaluates a 6-digit TOTP code at submission time and holds the
-// outcome behind a mandatory server-side cooldown (default 30s) before revealing success
-// or failure. Only one pending confirmation may be in-flight at a time, capping guesses
-// to 1 per cooldown window globally.
-func (s *Service) StartTOTPVerification(code, redirectURL string) (verifyID, bindingCookie string, readyAt time.Time, err error) {
+// StartTOTPVerification evaluates the optional Argon2id password and 6-digit TOTP code
+// at submission time and holds the outcome behind a mandatory server-side cooldown (default 30s)
+// before revealing success or failure. Only one pending confirmation may be in-flight at a time,
+// capping guesses to 1 per cooldown window globally.
+func (s *Service) StartTOTPVerification(password, code, redirectURL string) (verifyID, bindingCookie string, readyAt time.Time, err error) {
 	if !s.HasTOTP() {
 		return "", "", time.Time{}, ErrTOTPNotConfigured
 	}
@@ -170,15 +187,23 @@ func (s *Service) StartTOTPVerification(code, redirectURL string) (verifyID, bin
 	)
 	if len(s.totpFailures) >= totpMaxFailures {
 		failureErr = ErrTOTPLocked
-	} else if matchedStep, ok := VerifyTOTP(s.totpSecret, code, now); !ok {
-		s.totpFailures = append(s.totpFailures, now)
-		failureErr = ErrTOTPInvalid
-	} else if matchedStep <= s.lastUsedTOTPStep {
-		failureErr = ErrTOTPReplayed
 	} else {
-		s.lastUsedTOTPStep = matchedStep
-		s.totpFailures = nil
-		approved = true
+		pwOK := true
+		if s.passwordHash != "" {
+			pwOK = VerifyPassword(s.passwordHash, password)
+		}
+		matchedStep, totpOK := VerifyTOTP(s.totpSecret, code, now)
+		switch {
+		case !pwOK || !totpOK:
+			s.totpFailures = append(s.totpFailures, now)
+			failureErr = ErrTOTPInvalid
+		case matchedStep <= s.lastUsedTOTPStep:
+			failureErr = ErrTOTPReplayed
+		default:
+			s.lastUsedTOTPStep = matchedStep
+			s.totpFailures = nil
+			approved = true
+		}
 	}
 
 	idBytes := make([]byte, 16)

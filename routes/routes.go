@@ -141,12 +141,13 @@ func handleBookI() http.HandlerFunc {
 	}
 }
 
-func renderLoginView(w http.ResponseWriter, next, errMsg string, status int) {
+func renderLoginView(w http.ResponseWriter, authSvc *auth.Service, next, errMsg string, status int) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if status != http.StatusOK {
 		w.WriteHeader(status)
 	}
-	_ = login.TOTPPage(next, errMsg).Render(w)
+	requirePassword := authSvc != nil && authSvc.HasPassword()
+	_ = login.TOTPPage(next, errMsg, requirePassword).Render(w)
 }
 
 func isValidVerifyID(id string) bool {
@@ -196,7 +197,7 @@ func handleLogin(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc
 		}
 
 		errMsg := loginErrorMessage(r.URL.Query().Get("err"))
-		renderLoginView(w, next, errMsg, http.StatusOK)
+		renderLoginView(w, authSvc, next, errMsg, http.StatusOK)
 	}
 }
 
@@ -214,15 +215,16 @@ func handleLoginSubmit(authSvc *auth.Service, limiter *ipRateLimiter) http.Handl
 		}
 
 		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
-			renderLoginView(w, next, "Too many attempts. Please wait a few minutes.", http.StatusTooManyRequests)
+			renderLoginView(w, authSvc, next, "Too many attempts. Please wait a few minutes.", http.StatusTooManyRequests)
 			return
 		}
 
+		password := r.FormValue("password")
 		code := strings.TrimSpace(r.FormValue("code"))
-		verifyID, bindingCookie, _, err := authSvc.StartTOTPVerification(code, next)
+		verifyID, bindingCookie, _, err := authSvc.StartTOTPVerification(password, code, next)
 		if err != nil {
 			if errors.Is(err, auth.ErrTOTPPending) {
-				renderLoginView(w, next, "A confirmation is already in progress. Please wait.", http.StatusTooManyRequests)
+				renderLoginView(w, authSvc, next, "A confirmation is already in progress. Please wait.", http.StatusTooManyRequests)
 				return
 			}
 			errorpage.Render(w, http.StatusInternalServerError, "Failed to initiate authentication confirmation.")
@@ -364,8 +366,13 @@ func handlePilotSettings(authSvc *auth.Service) http.HandlerFunc {
 			return
 		}
 
+		methodLabel := "TOTP (RFC 6238)"
+		if authSvc != nil && authSvc.HasPassword() {
+			methodLabel = "Password (Argon2id) + TOTP (RFC 6238)"
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = pilot.SettingsPage("TOTP (RFC 6238)").Render(w)
+		_ = pilot.SettingsPage(methodLabel).Render(w)
 	}
 }
 

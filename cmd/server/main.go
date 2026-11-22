@@ -39,12 +39,18 @@ func main() {
 	}
 
 	adminTOTPSecret := os.Getenv("ADMIN_TOTP_SECRET")
+	adminPasswordHash := os.Getenv("ADMIN_PASSWORD_HASH")
 	var authSvc *auth.Service
 	if adminTOTPSecret != "" {
 		var err error
-		authSvc, err = auth.NewService(adminTOTPSecret)
+		authSvc, err = auth.NewServiceWithOptions(auth.ServiceOptions{
+			TOTPSecret:   adminTOTPSecret,
+			PasswordHash: adminPasswordHash,
+		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to initialize auth service: %v\n", err)
+		} else if authSvc.HasPassword() {
+			fmt.Println("Res Imperii 2FA enabled (Argon2id Password + RFC 6238 TOTP)")
 		} else {
 			fmt.Println("Res Imperii TOTP authentication enabled")
 		}

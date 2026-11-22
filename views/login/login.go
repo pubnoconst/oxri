@@ -86,26 +86,48 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 	)
 }
 
-// TOTPPage renders the quiet 6-digit RFC 6238 TOTP login screen.
-func TOTPPage(nextURL, errMsg string) g.Node {
+// TOTPPage renders the quiet authentication screen (optional Argon2id password + 6-digit TOTP).
+func TOTPPage(nextURL, errMsg string, requirePassword bool) g.Node {
 	var errNode g.Node
 	if errMsg != "" {
 		errNode = h.P(h.Class("auth-error"), g.Attr("role", "alert"), g.Text(errMsg))
 	}
 
+	subtitle := "Enter the 6-digit authenticator code for Res Imperii"
+	var passwordField g.Node
+	codeAutoFocus := g.Node(h.AutoFocus())
+	if requirePassword {
+		subtitle = "Enter your password and 6-digit authenticator code for Res Imperii"
+		codeAutoFocus = nil
+		passwordField = g.Group([]g.Node{
+			h.Input(h.Type("hidden"), h.Name("username"), h.Value("pilot"), g.Attr("autocomplete", "username")),
+			h.Label(h.For("admin-password"), h.Class("auth-totp-label"), g.Text("Password")),
+			h.Input(
+				h.ID("admin-password"),
+				h.Name("password"),
+				h.Type("password"),
+				h.Class("auth-password-input"),
+				g.Attr("autocomplete", "current-password"),
+				h.AutoFocus(),
+				h.Required(),
+			),
+		})
+	}
+
 	return layout.Doc(
 		"Authentication - RES IMPERII",
-		StylePath+"?v=7",
+		StylePath+"?v=8",
 		h.Main(h.Class("auth-page"),
 			h.Header(h.Class("auth-header"),
 				layout.BackLink("/", "Home"),
 				h.H1(g.Text("AUTHENTICATION")),
-				h.P(h.Class("auth-subtitle"), g.Text("Enter the 6-digit authenticator code for Res Imperii")),
+				h.P(h.Class("auth-subtitle"), g.Text(subtitle)),
 			),
 			h.Section(h.Class("auth-card"),
 				errNode,
 				h.Form(h.Class("auth-totp-form"), h.Method("POST"), h.Action("/login"),
 					h.Input(h.Type("hidden"), h.Name("next"), h.Value(nextURL)),
+					passwordField,
 					h.Label(h.For("totp-code"), h.Class("auth-totp-label"), g.Text("Authenticator Code")),
 					h.Input(
 						h.ID("totp-code"),
@@ -118,7 +140,7 @@ func TOTPPage(nextURL, errMsg string) g.Node {
 						g.Attr("maxlength", "6"),
 						g.Attr("minlength", "6"),
 						h.Placeholder("000000"),
-						h.AutoFocus(),
+						codeAutoFocus,
 						h.Required(),
 					),
 					h.Button(h.Type("submit"), h.Class("btn btn-neutral auth-totp-submit"), g.Text("Verify")),

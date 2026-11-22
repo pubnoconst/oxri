@@ -60,6 +60,24 @@
   opacity: 0.72;
 }
 
+.auth-password-input {
+  width: 100%;
+  padding: 0.72rem 0.95rem;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--page);
+  color: var(--page-ink);
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  box-sizing: border-box;
+  transition: border-color 140ms ease;
+}
+
+.auth-password-input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
 .auth-totp-input {
   width: 100%;
   padding: 0.8rem 1rem;
