@@ -16,6 +16,53 @@ var StyleCSS string
 // StylePath is the public route for the login component CSS.
 const StylePath = "/views/login/login.css"
 
+// TOTPConfirmPage renders the 30-second anti-bruteforce confirmation cooldown screen
+// featuring the full-card sunlit water-drop ripple, a smooth progress bar, and "Confirming, wait.".
+func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
+	if totalMs <= 0 {
+		totalMs = 30000
+	}
+	if remainingMs < 0 {
+		remainingMs = 0
+	}
+	if remainingMs > totalMs {
+		remainingMs = totalMs
+	}
+	startRatio := float64(totalMs-remainingMs) / float64(totalMs)
+	barStyle := fmt.Sprintf("--cooldown-ms:%dms;--cooldown-start:%.4f;", remainingMs, startRatio)
+	rippleStyle := "--ripple-x:50%;--ripple-y:38%;--ripple-diameter:52rem;"
+
+	return layout.Doc(
+		"Confirming - RES IMPERII",
+		StylePath+"?v=3",
+		h.Main(h.Class("auth-page"),
+			h.Header(h.Class("auth-header"),
+				layout.BackLink("/login", "Back"),
+				h.H1(g.Text("AUTHENTICATION")),
+			),
+			h.Section(h.Class("auth-card auth-confirm-card"), g.Attr("aria-live", "polite"),
+				h.Div(h.Class("card-water-ripple"), g.Attr("style", rippleStyle), g.Attr("aria-hidden", "true"),
+					h.Span(h.Class("card-water-drop")),
+					h.Span(h.Class("card-water-wave wave-1")),
+					h.Span(h.Class("card-water-wave wave-2")),
+					h.Span(h.Class("card-water-wave wave-3")),
+				),
+				h.Div(h.Class("auth-confirm-spacer"), g.Attr("aria-hidden", "true")),
+				h.P(h.Class("auth-confirm-phrase"), g.Text("Confirming, wait.")),
+				h.Div(h.Class("auth-cooldown-track"), g.Attr("role", "progressbar"), g.Attr("aria-label", "Authentication confirmation progress"),
+					h.Div(h.Class("auth-cooldown-fill"), g.Attr("style", barStyle)),
+				),
+			),
+			h.Div(
+				h.ID("totp-confirm-poller"),
+				g.Attr("hx-get", fmt.Sprintf("/auth/totp-status?id=%s", verifyID)),
+				g.Attr("hx-trigger", "every 1s"),
+				g.Attr("hx-swap", "none"),
+			),
+		),
+	)
+}
+
 // TOTPPage renders the quiet 6-digit RFC 6238 TOTP login screen, with an optional
 // collapsible loopback SSH fallback when SSH auth is also active locally.
 func TOTPPage(nextURL, errMsg, sshToken, sshCommand, sshPort string) g.Node {
@@ -58,7 +105,7 @@ func TOTPPage(nextURL, errMsg, sshToken, sshCommand, sshPort string) g.Node {
 
 	return layout.Doc(
 		"Authentication - RES IMPERII",
-		StylePath+"?v=2",
+		StylePath+"?v=3",
 		h.Main(h.Class("auth-page"),
 			h.Header(h.Class("auth-header"),
 				layout.BackLink("/", "Home"),

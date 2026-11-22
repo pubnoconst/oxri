@@ -471,7 +471,8 @@ func TestTOTPAuthRoutes_FullFlow(t *testing.T) {
 	}
 
 	authSvc, err := auth.NewServiceWithOptions(auth.ServiceOptions{
-		TOTPSecret: secret,
+		TOTPSecret:       secret,
+		TOTPConfirmDelay: 60 * time.Millisecond,
 	})
 	if err != nil {
 		t.Fatalf("NewServiceWithOptions: %v", err)
@@ -494,17 +495,71 @@ func TestTOTPAuthRoutes_FullFlow(t *testing.T) {
 		t.Fatalf("expected TOTP input in /login HTML")
 	}
 
-	// 2. POST /login with wrong code returns 401
+	extractBindingCookie := func(rec *httptest.ResponseRecorder) *http.Cookie {
+		for _, c := range rec.Result().Cookies() {
+			if c.Name == auth.BindingCookieName {
+				return c
+			}
+		}
+		return nil
+	}
+
+	// 2. POST /login with wrong code redirects 303 to /login/confirm (does not leak failure immediately)
 	badForm := url.Values{"code": {"000000"}, "next": {"/journals"}}
 	reqBad := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(badForm.Encode()))
 	reqBad.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	recBad := httptest.NewRecorder()
 	router.ServeHTTP(recBad, reqBad)
-	if recBad.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401 on invalid TOTP code, got %d", recBad.Code)
+	if recBad.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 to /login/confirm on TOTP submit, got %d", recBad.Code)
+	}
+	badConfirmLoc := recBad.Header().Get("Location")
+	if !strings.HasPrefix(badConfirmLoc, "/login/confirm?id=") {
+		t.Fatalf("expected /login/confirm redirect, got %q", badConfirmLoc)
+	}
+	badID := strings.TrimPrefix(badConfirmLoc, "/login/confirm?id=")
+	badBind := extractBindingCookie(recBad)
+	if badBind == nil {
+		t.Fatalf("expected binding cookie after TOTP submit")
 	}
 
-	// 3. POST /login with valid TOTP code issues session cookie and redirects 303
+	// Confirm page renders ripple, loading bar, and "Confirming, wait."
+	reqConfirmPage := httptest.NewRequest(http.MethodGet, badConfirmLoc, nil)
+	reqConfirmPage.AddCookie(badBind)
+	recConfirmPage := httptest.NewRecorder()
+	router.ServeHTTP(recConfirmPage, reqConfirmPage)
+	if recConfirmPage.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /login/confirm, got %d", recConfirmPage.Code)
+	}
+	confirmHTML := recConfirmPage.Body.String()
+	for _, expected := range []string{"Confirming, wait.", "card-water-ripple", "auth-cooldown-fill"} {
+		if !strings.Contains(confirmHTML, expected) {
+			t.Errorf("missing %q in /login/confirm HTML", expected)
+		}
+	}
+
+	// Polling before cooldown elapses returns 204 No Content
+	reqPollEarly := httptest.NewRequest(http.MethodGet, "/auth/totp-status?id="+badID, nil)
+	reqPollEarly.Header.Set("HX-Request", "true")
+	reqPollEarly.AddCookie(badBind)
+	recPollEarly := httptest.NewRecorder()
+	router.ServeHTTP(recPollEarly, reqPollEarly)
+	if recPollEarly.Code != http.StatusNoContent {
+		t.Fatalf("expected 204 while confirming, got %d", recPollEarly.Code)
+	}
+
+	// After cooldown, polling redirects back to /login?err=invalid
+	time.Sleep(75 * time.Millisecond)
+	reqPollBad := httptest.NewRequest(http.MethodGet, "/auth/totp-status?id="+badID, nil)
+	reqPollBad.Header.Set("HX-Request", "true")
+	reqPollBad.AddCookie(badBind)
+	recPollBad := httptest.NewRecorder()
+	router.ServeHTTP(recPollBad, reqPollBad)
+	if recPollBad.Code != http.StatusOK || !strings.Contains(recPollBad.Header().Get("HX-Redirect"), "err=invalid") {
+		t.Fatalf("expected HX-Redirect with err=invalid, got status=%d hx=%q", recPollBad.Code, recPollBad.Header().Get("HX-Redirect"))
+	}
+
+	// 3. POST /login with valid TOTP code confirms after cooldown and sets session cookie
 	validCode, err := auth.GenerateTOTPCode(secret, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("GenerateTOTPCode: %v", err)
@@ -515,32 +570,35 @@ func TestTOTPAuthRoutes_FullFlow(t *testing.T) {
 	recGood := httptest.NewRecorder()
 	router.ServeHTTP(recGood, reqGood)
 	if recGood.Code != http.StatusSeeOther {
-		t.Fatalf("expected 303 on valid TOTP code, got %d", recGood.Code)
+		t.Fatalf("expected 303 on valid TOTP submit, got %d", recGood.Code)
 	}
-	if loc := recGood.Header().Get("Location"); loc != "/journals" {
-		t.Fatalf("expected redirect to /journals, got %q", loc)
+	goodID := strings.TrimPrefix(recGood.Header().Get("Location"), "/login/confirm?id=")
+	goodBind := extractBindingCookie(recGood)
+	if goodBind == nil {
+		t.Fatalf("expected binding cookie on valid TOTP submit")
+	}
+
+	time.Sleep(75 * time.Millisecond)
+	reqPollGood := httptest.NewRequest(http.MethodGet, "/auth/totp-status?id="+goodID, nil)
+	reqPollGood.Header.Set("HX-Request", "true")
+	reqPollGood.AddCookie(goodBind)
+	recPollGood := httptest.NewRecorder()
+	router.ServeHTTP(recPollGood, reqPollGood)
+	if recPollGood.Code != http.StatusOK || recPollGood.Header().Get("HX-Redirect") != "/journals" {
+		t.Fatalf("expected HX-Redirect /journals, got status=%d hx=%q", recPollGood.Code, recPollGood.Header().Get("HX-Redirect"))
 	}
 	var sessionCookie *http.Cookie
-	for _, c := range recGood.Result().Cookies() {
+	for _, c := range recPollGood.Result().Cookies() {
 		if c.Name == auth.SessionCookieName {
 			sessionCookie = c
 			break
 		}
 	}
 	if sessionCookie == nil || sessionCookie.Value == "" {
-		t.Fatalf("expected session cookie after TOTP login")
+		t.Fatalf("expected session cookie after TOTP confirmation")
 	}
 
-	// 4. Replaying the same 6-digit code must be rejected with 401
-	reqReplay := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(goodForm.Encode()))
-	reqReplay.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	recReplay := httptest.NewRecorder()
-	router.ServeHTTP(recReplay, reqReplay)
-	if recReplay.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401 on replayed TOTP code, got %d", recReplay.Code)
-	}
-
-	// 5. Authenticated /pilot/user/settings succeeds and shows TOTP
+	// 4. Authenticated /pilot/user/settings succeeds and shows TOTP
 	reqSettings := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
 	reqSettings.AddCookie(sessionCookie)
 	recSettings := httptest.NewRecorder()

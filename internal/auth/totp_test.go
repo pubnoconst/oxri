@@ -103,3 +103,71 @@ func TestServiceAuthenticateTOTP_ReplayAndLockout(t *testing.T) {
 		t.Fatalf("expected ErrTOTPLocked after %d failures, got %v", totpMaxFailures, err)
 	}
 }
+
+func TestServicePendingTOTPVerification_CooldownAndSingleInFlight(t *testing.T) {
+	secret, err := GenerateTOTPSecret()
+	if err != nil {
+		t.Fatalf("GenerateTOTPSecret: %v", err)
+	}
+
+	// Default confirm delay must be 30 seconds
+	defaultSvc, err := NewServiceWithOptions(ServiceOptions{TOTPSecret: secret})
+	if err != nil {
+		t.Fatalf("NewServiceWithOptions(default): %v", err)
+	}
+	defer defaultSvc.Close()
+	if defaultSvc.TOTPConfirmDelay() != 30*time.Second {
+		t.Fatalf("expected default TOTPConfirmDelay of 30s, got %v", defaultSvc.TOTPConfirmDelay())
+	}
+
+	// Fast cooldown for unit testing
+	svc, err := NewServiceWithOptions(ServiceOptions{
+		TOTPSecret:       secret,
+		TOTPConfirmDelay: 60 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatalf("NewServiceWithOptions: %v", err)
+	}
+	defer svc.Close()
+
+	// 1. Invalid code still enters cooldown and does not reveal failure early
+	badID, badBind, _, err := svc.StartTOTPVerification("000000", "/journals")
+	if err != nil {
+		t.Fatalf("StartTOTPVerification(bad): %v", err)
+	}
+	if _, _, err := svc.RedeemTOTPVerification(badID, badBind); err != ErrTOTPConfirming {
+		t.Fatalf("expected ErrTOTPConfirming before cooldown elapses, got %v", err)
+	}
+	// Parallel attempt while one is cooling down must be rejected
+	if _, _, _, err := svc.StartTOTPVerification("000000", "/journals"); err != ErrTOTPPending {
+		t.Fatalf("expected ErrTOTPPending for concurrent attempt, got %v", err)
+	}
+	time.Sleep(75 * time.Millisecond)
+	if _, _, err := svc.RedeemTOTPVerification(badID, badBind); err != ErrTOTPInvalid {
+		t.Fatalf("expected ErrTOTPInvalid after cooldown, got %v", err)
+	}
+
+	// 2. Valid code enters cooldown, blocks early redemption, and succeeds after cooldown
+	validCode, err := GenerateTOTPCode(secret, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("GenerateTOTPCode: %v", err)
+	}
+	goodID, goodBind, _, err := svc.StartTOTPVerification(validCode, "/journals")
+	if err != nil {
+		t.Fatalf("StartTOTPVerification(good): %v", err)
+	}
+	if _, _, err := svc.RedeemTOTPVerification(goodID, goodBind); err != ErrTOTPConfirming {
+		t.Fatalf("expected ErrTOTPConfirming before cooldown elapses, got %v", err)
+	}
+	time.Sleep(75 * time.Millisecond)
+	sessID, nextURL, err := svc.RedeemTOTPVerification(goodID, goodBind)
+	if err != nil {
+		t.Fatalf("RedeemTOTPVerification(good): %v", err)
+	}
+	if nextURL != "/journals" || sessID == "" {
+		t.Fatalf("unexpected result: sessID=%q nextURL=%q", sessID, nextURL)
+	}
+	if _, ok := svc.Authenticate(sessID); !ok {
+		t.Fatalf("expected session from confirmed TOTP to authenticate")
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -96,7 +97,9 @@ func NewRouter(cfg Config) http.Handler {
 	statusLimiter := newIPRateLimiter(120, time.Minute)
 	r.Get("/login", handleLogin(cfg.AuthService, loginLimiter))
 	r.Post("/login", handleLoginSubmit(cfg.AuthService, totpSubmitLimiter))
+	r.Get("/login/confirm", handleTOTPConfirm(cfg.AuthService))
 	r.Get("/auth/status", handleAuthStatus(cfg.AuthService, statusLimiter))
+	r.Get("/auth/totp-status", handleTOTPStatus(cfg.AuthService, statusLimiter))
 	r.HandleFunc("/logout", handleLogout(cfg.AuthService)) // Handles both GET and POST
 
 	// 8. Protected Profile / Pilot Settings Routes
@@ -189,6 +192,34 @@ func renderLoginView(w http.ResponseWriter, r *http.Request, authSvc *auth.Servi
 	_ = login.Page(sshToken, sshCmd, next, sshPort).Render(w)
 }
 
+func isValidVerifyID(id string) bool {
+	if len(id) != 32 {
+		return false
+	}
+	for i := 0; i < len(id); i++ {
+		c := id[i]
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			return false
+		}
+	}
+	return true
+}
+
+func loginErrorMessage(code string) string {
+	switch code {
+	case "invalid":
+		return "Invalid or expired authentication code."
+	case "replayed":
+		return "That code was already used. Wait for the next 6-digit code."
+	case "locked":
+		return "Too many failed attempts. Please wait a few minutes."
+	case "expired":
+		return "Confirmation expired. Please enter a fresh 6-digit code."
+	default:
+		return ""
+	}
+}
+
 func handleLogin(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		next := serverfns.SanitizeRedirect(r.URL.Query().Get("next"))
@@ -207,7 +238,8 @@ func handleLogin(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc
 			return
 		}
 
-		renderLoginView(w, r, authSvc, next, "", http.StatusOK)
+		errMsg := loginErrorMessage(r.URL.Query().Get("err"))
+		renderLoginView(w, r, authSvc, next, errMsg, http.StatusOK)
 	}
 }
 
@@ -230,21 +262,124 @@ func handleLoginSubmit(authSvc *auth.Service, limiter *ipRateLimiter) http.Handl
 		}
 
 		code := strings.TrimSpace(r.FormValue("code"))
-		sessionID, err := authSvc.AuthenticateTOTP(code)
+		verifyID, bindingCookie, _, err := authSvc.StartTOTPVerification(code, next)
 		if err != nil {
-			status := http.StatusUnauthorized
-			msg := "Invalid or expired authentication code."
-			if errors.Is(err, auth.ErrTOTPLocked) {
-				status = http.StatusTooManyRequests
-				msg = "Too many failed attempts. Please wait a few minutes."
-			} else if errors.Is(err, auth.ErrTOTPReplayed) {
-				msg = "That code was already used. Wait for the next 6-digit code."
+			if errors.Is(err, auth.ErrTOTPPending) {
+				renderLoginView(w, r, authSvc, next, "A confirmation is already in progress. Please wait.", http.StatusTooManyRequests)
+				return
 			}
-			renderLoginView(w, r, authSvc, next, msg, status)
+			errorpage.Render(w, http.StatusInternalServerError, "Failed to initiate authentication confirmation.")
 			return
 		}
 
 		secure := isHTTPSRequest(r)
+		http.SetCookie(w, &http.Cookie{
+			Name:     auth.BindingCookieName,
+			Value:    bindingCookie,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   secure,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   180,
+		})
+
+		http.Redirect(w, r, "/login/confirm?id="+verifyID, http.StatusSeeOther)
+	}
+}
+
+func handleTOTPConfirm(authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if authSvc == nil || !authSvc.HasTOTP() {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		verifyID := strings.TrimSpace(r.URL.Query().Get("id"))
+		if !isValidVerifyID(verifyID) {
+			http.Redirect(w, r, "/login?err=expired", http.StatusSeeOther)
+			return
+		}
+		bindingCookie, err := r.Cookie(auth.BindingCookieName)
+		if err != nil || bindingCookie.Value == "" {
+			http.Redirect(w, r, "/login?err=expired", http.StatusSeeOther)
+			return
+		}
+		remaining, err := authSvc.PendingTOTPStatus(verifyID, bindingCookie.Value)
+		if err != nil {
+			http.Redirect(w, r, "/login?err=expired", http.StatusSeeOther)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = login.TOTPConfirmPage(verifyID, remaining.Milliseconds(), authSvc.TOTPConfirmDelay().Milliseconds()).Render(w)
+	}
+}
+
+func handleTOTPStatus(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if authSvc == nil || !authSvc.HasTOTP() {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+
+		verifyID := strings.TrimSpace(r.URL.Query().Get("id"))
+		if !isValidVerifyID(verifyID) {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		bindingCookie, err := r.Cookie(auth.BindingCookieName)
+		if err != nil || bindingCookie.Value == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		sessionID, redirectURL, err := authSvc.RedeemTOTPVerification(verifyID, bindingCookie.Value)
+		if errors.Is(err, auth.ErrTOTPConfirming) {
+			// Mandatory 30-second confirmation cooldown still active: keep polling
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		secure := isHTTPSRequest(r)
+		// Clear temporary binding cookie once confirmation resolves
+		http.SetCookie(w, &http.Cookie{
+			Name:     auth.BindingCookieName,
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   secure,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   -1,
+		})
+
+		if err != nil {
+			errCode := "invalid"
+			switch {
+			case errors.Is(err, auth.ErrTOTPLocked):
+				errCode = "locked"
+			case errors.Is(err, auth.ErrTOTPReplayed):
+				errCode = "replayed"
+			case errors.Is(err, auth.ErrChallengeExpired), errors.Is(err, auth.ErrChallengeNotFound):
+				errCode = "expired"
+			}
+			vals := url.Values{}
+			vals.Set("err", errCode)
+			if safeNext := serverfns.SanitizeRedirect(redirectURL); safeNext != "/" {
+				vals.Set("next", safeNext)
+			}
+			failTarget := "/login?" + vals.Encode()
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Redirect", failTarget)
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			http.Redirect(w, r, failTarget, http.StatusSeeOther)
+			return
+		}
+
 		http.SetCookie(w, &http.Cookie{
 			Name:     auth.SessionCookieName,
 			Value:    sessionID,
@@ -255,7 +390,13 @@ func handleLoginSubmit(authSvc *auth.Service, limiter *ipRateLimiter) http.Handl
 			MaxAge:   int(auth.SessionDuration.Seconds()),
 		})
 
-		http.Redirect(w, r, next, http.StatusSeeOther)
+		target := serverfns.SanitizeRedirect(redirectURL)
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Redirect", target)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		http.Redirect(w, r, target, http.StatusSeeOther)
 	}
 }
 
