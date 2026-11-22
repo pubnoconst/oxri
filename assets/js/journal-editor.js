@@ -31,10 +31,10 @@
 
   const MAX_MEDIA_LEN = 128;
   const MAX_TAG_COUNT = 3;
-  const MAX_TAG_LEN = 4;
+  const MAX_TAG_LEN = 8;
 
-  // Strict Unicode script regexes matching server-side internal/db/sanitize.go
-  const TAG_CHAR_RE = /^[\p{Script=Latin}\p{Script=Greek}0-9\u0300-\u036F]$/u;
+  // Strict ASCII-only tags and Latin/Greek prose matching server-side internal/domain/journal.go
+  const TAG_CHAR_RE = /^[A-Za-z0-9]$/;
   const PROSE_LETTER_RE = /^[\p{Script=Latin}\p{Script=Greek}\u0300-\u036F]$/u;
   const ALLOWED_TYPO_SET = new Set([
     0x00A1, 0x00A7, 0x00AB, 0x00B0, 0x00B7, 0x00BB, 0x00BF,
@@ -277,7 +277,7 @@
     if (chips.length > MAX_TAG_COUNT) {
       errText = `Maximum ${MAX_TAG_COUNT} tags allowed (currently ${chips.length}).`;
     } else if (badTagChar !== null) {
-      errText = `Tag contains disallowed character (${formatCodePoint(badTagChar)}): only English/Latin, Greek, and digits permitted (no emojis).`;
+      errText = `Tag contains disallowed character (${formatCodePoint(badTagChar)}): only ASCII letters and digits permitted.`;
     } else {
       const tooLong = chips.find((t) => Array.from(t).length > MAX_TAG_LEN);
       if (tooLong) {

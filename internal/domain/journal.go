@@ -13,7 +13,7 @@ import (
 const (
 	MaxJournalMediaURLLength = 128
 	MaxJournalTagCount       = 3
-	MaxJournalTagLength      = 4
+	MaxJournalTagLength      = 8
 )
 
 var (
@@ -50,22 +50,12 @@ func IsPrivateOrLocalHost(hostname string) bool {
 	return false
 }
 
-// IsAllowedJournalTagRune permits only ASCII digits (0-9) and Latin or Greek letters
-// (plus combining diacritical marks for accented Latin/Greek).
+// IsAllowedJournalTagRune permits only ASCII letters (A-Z, a-z) and ASCII digits (0-9).
 func IsAllowedJournalTagRune(r rune) bool {
-	if r >= '0' && r <= '9' {
-		return true
-	}
-	if unicode.IsLetter(r) && unicode.In(r, unicode.Latin, unicode.Greek) {
-		return true
-	}
-	if r >= 0x0300 && r <= 0x036F {
-		return true
-	}
-	return false
+	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
 }
 
-// ValidateJournalTagChars verifies that a tag contains only Latin/Greek letters and ASCII digits.
+// ValidateJournalTagChars verifies that a tag contains only ASCII letters and digits.
 func ValidateJournalTagChars(s string) (rune, bool) {
 	for _, r := range s {
 		if !IsAllowedJournalTagRune(r) {
@@ -145,7 +135,7 @@ func ParseJournalEntry(rawMediaURL string, rawTags []string, rawBody string, boo
 			return ValidatedJournalEntry{}, fmt.Errorf("%w: tag %q exceeds %d characters", ErrInvalidJournalInput, t, MaxJournalTagLength)
 		}
 		if badRune, ok := ValidateJournalTagChars(t); !ok {
-			return ValidatedJournalEntry{}, fmt.Errorf("%w: tag contains disallowed character U+%04X (only English/Latin, Greek, and digits permitted; no emojis)", ErrInvalidJournalInput, badRune)
+			return ValidatedJournalEntry{}, fmt.Errorf("%w: tag contains disallowed character U+%04X (only ASCII letters and digits permitted)", ErrInvalidJournalInput, badRune)
 		}
 		if seen[t] {
 			return ValidatedJournalEntry{}, fmt.Errorf("%w: duplicate tag %q (tags must be unique)", ErrInvalidJournalInput, t)
