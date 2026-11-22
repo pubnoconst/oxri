@@ -37,4 +37,16 @@ func TestParseProse(t *testing.T) {
 	if err == nil {
 		t.Errorf("ParseProse exceeding maxLen expected error, got nil")
 	}
+
+	// Allow Latin, Greek, numbers, and standard punctuation
+	if _, err := domain.ParseProse("Rōma æterna, Λόγος 123 — RES·IMPERII.", 500); err != nil {
+		t.Errorf("ParseProse rejected valid Latin/Greek/numbers: %v", err)
+	}
+
+	// Reject emojis and non-Latin/Greek scripts
+	for _, bad := range []string{"Hello 🚀", "Hello мир", "Zero\u200BWidth"} {
+		if _, err := domain.ParseProse(bad, 500); err == nil {
+			t.Errorf("ParseProse(%q) expected error for disallowed characters, got nil", bad)
+		}
+	}
 }

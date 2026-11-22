@@ -21,7 +21,7 @@
 
 .editor-eyebrow {
   margin: 0 0 0.35rem;
-  font-family: var(--font-sans);
+  font-family: var(--font-serif);
   font-size: 0.7rem;
   letter-spacing: 0.14em;
   opacity: 0.55;
@@ -82,7 +82,7 @@
 
 .editor-section-heading h2 { margin: 0; }
 .editor-section-heading span {
-  font-family: var(--font-sans);
+  font-family: var(--font-serif);
   font-size: 0.7rem;
   letter-spacing: 0.12em;
   opacity: 0.4;
@@ -133,7 +133,7 @@
 }
 
 .tag-suggestion-label {
-  font-family: var(--font-sans);
+  font-family: var(--font-serif);
   font-size: 0.72rem;
   opacity: 0.5;
   margin-right: 0.15rem;
@@ -147,7 +147,7 @@
   border-radius: var(--radius-pill);
   background: transparent;
   color: var(--page-ink);
-  font-family: var(--font-sans);
+  font-family: var(--font-serif);
   font-size: 0.74rem;
   letter-spacing: 0.02em;
   cursor: pointer;
