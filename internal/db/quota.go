@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/oxri/oxri-go/internal/domain"
 )
 
 const (
@@ -19,11 +21,11 @@ const (
 )
 
 // ErrQuotaExceeded is returned when creating or updating a journal entry would
-// exceed the configured Turso storage limit.
+// exceed the configured content storage budget.
 var ErrQuotaExceeded = errors.New("storage quota exceeded")
 
-// QuotaExceededError provides exact byte estimates when a journal write exceeds
-// the configured storage budget.
+// QuotaExceededError provides exact UTF-8 byte estimates when a journal write exceeds
+// the configured content storage budget.
 type QuotaExceededError struct {
 	RequiredBytes int64
 	EntryBytes    int64
@@ -40,7 +42,7 @@ func (e *QuotaExceededError) Unwrap() error {
 	return ErrQuotaExceeded
 }
 
-// EstimatedBytes returns the estimated byte footprint of a persisted journal entry.
+// EstimatedBytes returns the exact UTF-8 content + row header byte footprint of a persisted journal entry.
 func (j Journal) EstimatedBytes() int64 {
 	return RowOverheadBytes +
 		int64(len(j.MediaURL)) +
@@ -50,7 +52,7 @@ func (j Journal) EstimatedBytes() int64 {
 		int64(len(j.Body))
 }
 
-// EstimateInputBytes returns the estimated byte footprint of a validated or raw JournalInput.
+// EstimateInputBytes returns the exact UTF-8 byte footprint of a JournalInput.
 func EstimateInputBytes(in JournalInput) int64 {
 	total := RowOverheadBytes + int64(len(strings.TrimSpace(in.MediaURL))) + int64(len(in.Body))
 	for i, tag := range in.Tags {
@@ -101,8 +103,7 @@ func (s *Store) ClearPendingSubmission() {
 }
 
 // RequiredBytesForPending calculates how many more bytes must still be vacated for the
-// stashed pending submission (or returns 0 if it now fits within MaxStorageBytes or all
-// existing entries have already been vacated).
+// stashed pending submission (or returns 0 if it now fits within MaxStorageBytes).
 func (s *Store) RequiredBytesForPending(ctx context.Context) (required int64, entryBytes int64, used int64, limit int64, err error) {
 	used, err = s.UsedStorageBytes(ctx)
 	if err != nil {
@@ -125,12 +126,9 @@ func (s *Store) RequiredBytesForPending(ctx context.Context) (required int64, en
 			projected = availableToVacate + entryBytes
 		}
 	}
-	if availableToVacate <= 0 {
-		return 0, entryBytes, used, limit, nil
-	}
 	if projected > limit {
 		required = projected - limit
-		if required > availableToVacate {
+		if availableToVacate > 0 && required > availableToVacate {
 			required = availableToVacate
 		}
 	}
@@ -144,7 +142,7 @@ func (s *Store) SetMaxStorageBytes(limit int64) {
 	s.maxStorageBytes = limit
 }
 
-// MaxStorageBytes returns the effective storage limit in bytes.
+// MaxStorageBytes returns the effective content storage budget limit in bytes.
 func (s *Store) MaxStorageBytes() int64 {
 	s.idMu.Lock()
 	limit := s.maxStorageBytes
@@ -160,37 +158,45 @@ func (s *Store) MaxStorageBytes() int64 {
 	return DefaultMaxStorageBytes
 }
 
-// UsedStorageBytes returns the total estimated byte footprint across all rows in `journals`.
-func (s *Store) UsedStorageBytes(ctx context.Context) (int64, error) {
-	const q = `
+// usedStorageBytesSQL uses length(CAST(col AS BLOB)) so SQLite measures exact UTF-8 byte
+// counts rather than Unicode code point counts, matching Go's len(str) identically for
+// multi-byte Latin diacritics and Greek characters.
+const usedStorageBytesSQL = `
 SELECT COALESCE(SUM(
   82 +
-  length(media_url) +
-  length(COALESCE(tag1, '')) +
-  length(COALESCE(tag2, '')) +
-  length(COALESCE(tag3, '')) +
-  length(body)
+  length(CAST(media_url AS BLOB)) +
+  length(CAST(COALESCE(tag1, '') AS BLOB)) +
+  length(CAST(COALESCE(tag2, '') AS BLOB)) +
+  length(CAST(COALESCE(tag3, '') AS BLOB)) +
+  length(CAST(body AS BLOB))
 ), 0) FROM journals;`
+
+// UsedStorageBytes returns the total UTF-8 content + row header byte footprint across all rows in `journals`.
+func (s *Store) UsedStorageBytes(ctx context.Context) (int64, error) {
+	return usedStorageBytesTx(ctx, s.db)
+}
+
+func usedStorageBytesTx(ctx context.Context, q queryExecer) (int64, error) {
 	var used int64
-	if err := s.db.QueryRowContext(ctx, q).Scan(&used); err != nil {
+	if err := q.QueryRowContext(ctx, usedStorageBytesSQL).Scan(&used); err != nil {
 		return 0, err
 	}
 	return used, nil
 }
 
-func (s *Store) checkQuotaForCreate(ctx context.Context, valid JournalInput) error {
-	used, err := s.UsedStorageBytes(ctx)
+// checkQuotaForCreateTx evaluates projected usage <= limit inside the active write transaction,
+// even when the database is empty (used == 0).
+func (s *Store) checkQuotaForCreateTx(ctx context.Context, q queryExecer, entry domain.ValidatedJournalEntry) error {
+	used, err := usedStorageBytesTx(ctx, q)
 	if err != nil {
 		return err
 	}
-	if used <= 0 {
-		return nil
-	}
 	limit := s.MaxStorageBytes()
-	entryBytes := EstimateInputBytes(valid)
-	if used+entryBytes > limit {
-		req := (used + entryBytes) - limit
-		if req > used {
+	entryBytes := entry.EstimatedBytes(RowOverheadBytes)
+	projected := used + entryBytes
+	if projected > limit {
+		req := projected - limit
+		if used > 0 && req > used {
 			req = used
 		}
 		return &QuotaExceededError{
@@ -203,26 +209,28 @@ func (s *Store) checkQuotaForCreate(ctx context.Context, valid JournalInput) err
 	return nil
 }
 
-func (s *Store) checkQuotaForUpdate(ctx context.Context, id int64, valid JournalInput) error {
-	existing, err := s.Get(ctx, id, true)
+// checkQuotaForUpdateTx evaluates (used - oldBytes + newBytes) <= limit inside the active write transaction,
+// even when no other rows exist (otherBytes == 0).
+func (s *Store) checkQuotaForUpdateTx(ctx context.Context, q queryExecer, id int64, entry domain.ValidatedJournalEntry) error {
+	existing, err := getTx(ctx, q, id, true)
 	if err != nil {
 		return err
 	}
-	used, err := s.UsedStorageBytes(ctx)
+	used, err := usedStorageBytesTx(ctx, q)
 	if err != nil {
 		return err
 	}
 	oldBytes := existing.EstimatedBytes()
 	otherBytes := used - oldBytes
-	if otherBytes <= 0 {
-		return nil
+	if otherBytes < 0 {
+		otherBytes = 0
 	}
 	limit := s.MaxStorageBytes()
-	newBytes := EstimateInputBytes(valid)
+	newBytes := entry.EstimatedBytes(RowOverheadBytes)
 	projected := otherBytes + newBytes
 	if projected > limit {
 		req := projected - limit
-		if req > otherBytes {
+		if otherBytes > 0 && req > otherBytes {
 			req = otherBytes
 		}
 		return &QuotaExceededError{
@@ -247,7 +255,11 @@ type AutoVacatePlan struct {
 // PreviewAutoVacate computes the prioritized set of unpublished (first) and un-bookmarked (second)
 // entries needed to vacate at least requiredBytes.
 func (s *Store) PreviewAutoVacate(ctx context.Context, requiredBytes int64) (AutoVacatePlan, error) {
-	const q = `
+	return previewAutoVacateTx(ctx, s.db, requiredBytes)
+}
+
+func previewAutoVacateTx(ctx context.Context, q queryExecer, requiredBytes int64) (AutoVacatePlan, error) {
+	const sqlQuery = `
 SELECT id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published
 FROM journals
 WHERE published = 0 OR bookmarked = 0
@@ -256,7 +268,7 @@ ORDER BY
   created_at ASC,
   id ASC;`
 
-	rows, err := s.db.QueryContext(ctx, q)
+	rows, err := q.QueryContext(ctx, sqlQuery)
 	if err != nil {
 		return AutoVacatePlan{}, err
 	}
@@ -285,22 +297,38 @@ ORDER BY
 	return plan, rows.Err()
 }
 
-// AutoVacateBytes deletes unpublished entries (prioritized, oldest first) and then
-// un-bookmarked entries (oldest first) until at least requiredBytes have been freed.
+// AutoVacateBytes atomically computes the prioritized eviction plan and deletes the selected
+// unpublished (first) and un-bookmarked (second) entries inside a single database transaction.
 func (s *Store) AutoVacateBytes(ctx context.Context, requiredBytes int64) (AutoVacatePlan, error) {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+
 	target := requiredBytes
 	if target <= 0 {
 		target = 1
 	}
-	plan, err := s.PreviewAutoVacate(ctx, target)
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return AutoVacatePlan{}, err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	plan, err := previewAutoVacateTx(ctx, tx, target)
 	if err != nil {
 		return plan, err
 	}
 	if len(plan.CandidateIDs) == 0 {
 		return plan, nil
 	}
-	if err := s.Delete(ctx, plan.CandidateIDs); err != nil {
+	if err := deleteTx(ctx, tx, plan.CandidateIDs); err != nil {
 		return plan, err
 	}
+	if err := tx.Commit(); err != nil {
+		return plan, err
+	}
+	s.invalidateCache()
 	return plan, nil
 }

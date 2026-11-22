@@ -38,7 +38,23 @@
     container.append(card);
   }
 
+  let twitterScriptInjected = false;
+  function ensureTwitterWidgetsScript() {
+    if (twitterScriptInjected || (window.twttr && window.twttr.widgets)) return;
+    if (document.querySelector('script[src*="platform.twitter.com/widgets.js"]')) {
+      twitterScriptInjected = true;
+      return;
+    }
+    twitterScriptInjected = true;
+    const s = document.createElement("script");
+    s.src = "https://platform.twitter.com/widgets.js";
+    s.charset = "utf-8";
+    s.async = true;
+    document.head.appendChild(s);
+  }
+
   function renderTweet(container, username, tweetId) {
+    ensureTwitterWidgetsScript();
     const theme = getActiveTheme();
 
     const doCreate = (twttr) => {
@@ -171,11 +187,15 @@
     const slots = document.querySelectorAll("[data-media-url]");
     slots.forEach((slot) => {
       const raw = slot.getAttribute("data-media-url") || "";
+      if (slot.getAttribute("data-media-mounted") === raw && slot.childElementCount > 0) {
+        return;
+      }
       const url = safeUrl(raw);
       slot.replaceChildren();
       if (!url) return;
       const media = createMedia(url) || createLinkFallback(url);
       slot.append(media);
+      slot.setAttribute("data-media-mounted", raw);
     });
   }
 
@@ -192,6 +212,8 @@
   } else {
     mountCatalogSlots();
   }
+  document.addEventListener("htmx:afterSwap", mountCatalogSlots);
+  document.addEventListener("htmx:afterSettle", mountCatalogSlots);
 
   const themeObserver = new MutationObserver(() => {
     const slots = document.querySelectorAll("[data-media-url]");

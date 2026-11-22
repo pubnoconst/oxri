@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -409,5 +410,128 @@ func TestStorageQuotaAndAutoVacatePriority(t *testing.T) {
 	}
 	if _, err := store.Get(ctx, eBookmarked.ID, true); err != nil {
 		t.Errorf("expected published bookmarked entry to be preserved, got err=%v", err)
+	}
+}
+
+func TestQuotaEnforcedOnEmptyDatabaseAndSingleEntryUpdate(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, ":memory:", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	// 1. Empty database (used == 0) must still reject an entry exceeding MaxStorageBytes
+	store.SetMaxStorageBytes(100)
+	oversized := JournalInput{
+		MediaURL:  "https://example.com/large.png",
+		Tags:      []string{"Log"},
+		Body:      strings.Repeat("a", 120),
+		Published: true,
+	}
+	if _, err := store.Create(ctx, oversized); !errors.Is(err, ErrQuotaExceeded) {
+		t.Fatalf("expected ErrQuotaExceeded on empty database when entry > limit, got %v", err)
+	}
+
+	// 2. Single-entry database (otherBytes == 0) must still reject an Update exceeding MaxStorageBytes
+	small := JournalInput{
+		MediaURL:  "https://example.com/a.png",
+		Tags:      []string{"Log"},
+		Body:      "Short",
+		Published: true,
+	}
+	store.SetMaxStorageBytes(EstimateInputBytes(small) + 10)
+	created, err := store.Create(ctx, small)
+	if err != nil {
+		t.Fatalf("Create small failed: %v", err)
+	}
+
+	if err := store.Update(ctx, created.ID, oversized); !errors.Is(err, ErrQuotaExceeded) {
+		t.Fatalf("expected ErrQuotaExceeded when updating sole entry past limit, got %v", err)
+	}
+}
+
+func TestMultiByteUTF8LatinAndGreekByteEstimationMatchesSQLite(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, ":memory:", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	entry, err := store.Create(ctx, JournalInput{
+		MediaURL:  "https://example.com/roma.png",
+		Tags:      []string{"Rōma", "Νόος"},
+		Body:      "Rōma æterna — Λόγος καὶ ἀρετή.",
+		Published: true,
+	})
+	if err != nil {
+		t.Fatalf("Create with multi-byte Latin/Greek failed: %v", err)
+	}
+
+	usedSQL, err := store.UsedStorageBytes(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	estGo := entry.EstimatedBytes()
+	if usedSQL != estGo {
+		t.Errorf("SQLite byte count (%d) != Go UTF-8 EstimatedBytes (%d) for multi-byte Latin/Greek", usedSQL, estGo)
+	}
+}
+
+func TestConcurrentCreatesNeverExceedQuota(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, ":memory:", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	sample := JournalInput{
+		MediaURL:  "https://example.com/item.png",
+		Tags:      []string{"Log"},
+		Body:      "Concurrent atomic quota verification entry.",
+		Published: true,
+	}
+	singleBytes := EstimateInputBytes(sample)
+
+	// Allow room for at most 3 entries
+	limit := singleBytes * 3
+	store.SetMaxStorageBytes(limit)
+
+	const workers = 10
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	successCount := 0
+	quotaErrCount := 0
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, createErr := store.Create(ctx, sample)
+			mu.Lock()
+			defer mu.Unlock()
+			if createErr == nil {
+				successCount++
+			} else if errors.Is(createErr, ErrQuotaExceeded) {
+				quotaErrCount++
+			} else {
+				t.Errorf("unexpected error during concurrent Create: %v", createErr)
+			}
+		}()
+	}
+	wg.Wait()
+
+	if successCount != 3 || quotaErrCount != 7 {
+		t.Errorf("expected 3 successes and 7 ErrQuotaExceeded, got %d successes and %d quota errors", successCount, quotaErrCount)
+	}
+
+	used, err := store.UsedStorageBytes(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if used > limit {
+		t.Errorf("UsedStorageBytes (%d) exceeded limit (%d) under concurrent writes", used, limit)
 	}
 }

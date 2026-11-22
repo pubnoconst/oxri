@@ -1,21 +1,15 @@
 # Next
 
-- **Latest Commit**: `0ca7a44` (`docs: add comprehensive README for project overview and navigation`)
-- **Active Branch**: `main` (promoted from `v2`; previous generation archived at `v1` @ `53b509e`)
+- **Latest Commit**: `f4b4ace` (`fix(db): enforce atomic transactional quota & eviction, unify domain validation boundary, and decompose internal/db`)
+- **Active Branch**: `v2-db-integrity-and-modularity` (PR open against `main` for review and UI test)
 - **Active Experiment / Undo Instructions**: None.
-
-## Completed Milestones (v2 -> main)
-
-1. **Principia & Date-Partitioned PR Workflow** (`BLUEPRINTS/Principia.md`, `BLUEPRINTS/RATIONALE/Y2026/M11/D22/pubnoconst/001..013`).
-2. **Phase 1 — Pure Go Skeleton & Build System** (`CGO_ENABLED=0` `magefile.go`, `assets/css/site.css`, vendored HTMX, Landing page).
-3. **Phase 2 — Domain Modeling & Capability Tokens** (`internal/domain`: `MediaURL`, `Tag`, `TagSet`, `Prose`, `SafePath`, `ValidatedEntry`, `AdminCap`).
-4. **Phase 3 — Remote Turso / libSQL Database & 4.5 GB Quota** (`internal/db`: transactional versioned migrations, strict character whitelisting, prioritized `AutoVacateBytes`).
-5. **Phase 4 — Hardened Loopback SSH Auth & Browser Binding** (`internal/auth`: 256-bit HttpOnly browser binding cookie, exact 6-digit token matching, zero `pty-req` noise, `/login`, `/pilot/user/settings`).
-6. **Phase 5 — Views, Journals System, Make Room & Security Middleware** (`views/errorpage`, `views/booki`, `views/loading`, `views/editor`, `views/journals`, `routes/middleware.go` CSP/CSRF/nosniff/rate-limiting, vendored `markdown-it` & `DOMPurify`).
 
 ## Next on Mind
 
-1. **Future Milestone — Anti-AiTM Phishing-Resistant Auth (TOTP + Channel/Key Binding & WebAuthn)**:
-   - Bind TOTP / SSH challenges to client origin / WebAuthn passkeys (`rp_id`) once deployed over public HTTPS to prevent live relay (Adversary-in-the-Middle) phishing.
-2. **Books II & III**:
-   - Author and embed canonical Markdown essays for `/book-ii` and `/book-iii`.
+1. **Database Data-Integrity & Modularity Audit Remediation Review**:
+   - Keep Pull Request open for user review and UI testing.
+   - All 6 database audit findings (empty-DB quota bypass, atomic transactional quota check, UTF-8 `CAST(... AS BLOB)` byte parity between Go and SQLite, atomic transactional `AutoVacateBytes`, unified `domain.ValidatedJournalEntry` persistence boundary, and modular decomposition of `internal/db`) are implemented and covered by concurrency/adversarial unit tests.
+
+2. **Pre-Deployment Authentication & Operational Hardening**:
+   - Challenge collision loop / unique challenge IDs, `Secure: true` cookie enforcement under HTTPS, `POST`-only `/logout`, strict host-key persistence check, and bounded SSH listener shutdown (`sync.WaitGroup`).
+   - Phishing-resistant authentication (TOTP + channel/origin binding & WebAuthn passkeys).

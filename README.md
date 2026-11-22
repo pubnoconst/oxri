@@ -34,7 +34,7 @@ oxri/
 │       └── main.go                  # HTTP & Loopback SSH server entrypoint with graceful shutdown
 ├── internal/
 │   ├── auth/                        # Loopback SSH challenge listener & 256-bit browser binding
-│   ├── db/                          # Remote Turso/libSQL store, versioned migrations & 4.5 GB quota
+│   ├── db/                          # Remote Turso/libSQL store (store, schema, journal, query, quota, validation)
 │   └── domain/                      # "Parse, Don't Validate" opaque domain types & AdminCap token
 ├── serverfns/
 │   ├── doc.go                       # Encapsulated server functions boundary

@@ -183,15 +183,9 @@ func Page(isAuth bool, entries []RenderedEntry) g.Node {
 	})
 }
 
-// CatalogPage renders the main /journals collage grid with search, tag filters, and batch management.
-func CatalogPage(isAuth bool, view CatalogView) g.Node {
-	var authLink g.Node
-	if isAuth {
-		authLink = h.A(h.Class("auth-action-link"), h.Href("/logout"), g.Text("Sign out"))
-	} else {
-		authLink = h.A(h.Class("auth-action-link"), h.Href("/login?next=/journals"), g.Text("Author sign in"))
-	}
-
+// CatalogContentFragment renders the filter bar, batch action toolbar, and collage cards
+// so they can be populated asynchronously via HTMX (/journals/content) after the page shell loads.
+func CatalogContentFragment(isAuth bool, view CatalogView) g.Node {
 	var filterBar g.Node
 	if len(view.Entries) > 0 || len(view.AllTags) > 0 || view.HasFilters() {
 		hiddenTagInputs := make([]g.Node, 0, len(view.SelectedTags))
@@ -277,31 +271,81 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 		feedContent = h.Div(h.Class("journals-feed is-collage-grid"), g.Group(cards))
 	}
 
+	return g.Group([]g.Node{
+		filterBar,
+		batchBar,
+		feedContent,
+	})
+}
+
+func renderJournalsHeader(isAuth bool) g.Node {
+	var authLink g.Node
+	if isAuth {
+		authLink = h.A(h.Class("auth-action-link"), h.Href("/logout"), g.Text("Sign out"))
+	} else {
+		authLink = h.A(h.Class("auth-action-link"), h.Href("/login?next=/journals"), g.Text("Author sign in"))
+	}
+
+	return h.Header(h.Class("journals-header"),
+		layout.BackLink("/", "Back"),
+		h.Div(h.Class("journals-title-row"),
+			h.H1(g.Text("Journals")),
+			h.Div(h.Class("journals-actions"),
+				h.A(h.Class("new-entry-link btn btn-neutral"), h.Href("/journals/new"), g.Text("Add New Entry")),
+				authLink,
+			),
+		),
+	)
+}
+
+// CatalogShellPage renders the /journals document frame in 0ms independent of the database.
+// Once mounted in the browser, HTMX fetches contentURL (/journals/content) from the remote DB
+// and populates #journals-catalog-stage asynchronously.
+func CatalogShellPage(isAuth bool, contentURL string) g.Node {
+	if contentURL == "" {
+		contentURL = "/journals/content"
+	}
+
 	var catalogScript g.Node
 	if isAuth {
-		catalogScript = h.Script(h.Src("/assets/js/journals-catalog.js?v=1"))
+		catalogScript = h.Script(h.Src("/assets/js/journals-catalog.js?v=2"))
 	}
 
 	return layout.Doc(
 		"Journals - RES IMPERII",
 		StylePath+"?v=1",
 		h.Main(h.Class("journals-page"),
-			h.Header(h.Class("journals-header"),
-				layout.BackLink("/", "Back"),
-				h.Div(h.Class("journals-title-row"),
-					h.H1(g.Text("Journals")),
-					h.Div(h.Class("journals-actions"),
-						h.A(h.Class("new-entry-link btn btn-neutral"), h.Href("/journals/new"), g.Text("Add New Entry")),
-						authLink,
-					),
-				),
+			renderJournalsHeader(isAuth),
+			h.Div(
+				h.ID("journals-catalog-stage"),
+				g.Attr("hx-get", contentURL),
+				g.Attr("hx-trigger", "load"),
+				g.Attr("hx-swap", "innerHTML"),
+				h.P(h.Class("journals-empty"), g.Attr("aria-live", "polite"), g.Text("Loading entries…")),
 			),
-			filterBar,
-			batchBar,
-			feedContent,
 		),
-		h.Script(h.Src("https://platform.twitter.com/widgets.js"), h.Charset("utf-8"), h.Async()),
-		h.Script(h.Src("/assets/js/journal-media.js?v=1")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=3")),
+		catalogScript,
+	)
+}
+
+// CatalogPage renders the main /journals collage grid with search, tag filters, and batch management.
+func CatalogPage(isAuth bool, view CatalogView) g.Node {
+	var catalogScript g.Node
+	if isAuth {
+		catalogScript = h.Script(h.Src("/assets/js/journals-catalog.js?v=2"))
+	}
+
+	return layout.Doc(
+		"Journals - RES IMPERII",
+		StylePath+"?v=1",
+		h.Main(h.Class("journals-page"),
+			renderJournalsHeader(isAuth),
+			h.Div(h.ID("journals-catalog-stage"),
+				CatalogContentFragment(isAuth, view),
+			),
+		),
+		h.Script(h.Src("/assets/js/journal-media.js?v=3")),
 		catalogScript,
 	)
 }
@@ -319,8 +363,7 @@ func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 				EntryCard(isAuth, item, false),
 			),
 		),
-		h.Script(h.Src("https://platform.twitter.com/widgets.js"), h.Charset("utf-8"), h.Async()),
-		h.Script(h.Src("/assets/js/journal-media.js?v=1")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=2")),
 	)
 }
 
