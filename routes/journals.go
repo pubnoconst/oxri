@@ -1,0 +1,509 @@
+package routes
+
+import (
+	"errors"
+	"fmt"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/oxri/oxri-go/internal/auth"
+	"github.com/oxri/oxri-go/internal/db"
+	"github.com/oxri/oxri-go/serverfns"
+	"github.com/oxri/oxri-go/views/editor"
+	"github.com/oxri/oxri-go/views/errorpage"
+	"github.com/oxri/oxri-go/views/journals"
+	"github.com/oxri/oxri-go/views/loading"
+)
+
+func renderInternalError(w http.ResponseWriter, r *http.Request, status int, cause error) {
+	ref := errorpage.NewReference()
+	if cause != nil {
+		log.Printf("[HTTP %d] Ref: %s | Method: %s | URL: %s | Cause: %v", status, ref, r.Method, r.URL.Path, cause)
+	}
+	errorpage.RenderWithReference(w, status, "", ref)
+}
+
+func requireAdminOrRedirect(w http.ResponseWriter, r *http.Request, authSvc *auth.Service) bool {
+	if _, err := serverfns.RequireAuth(authSvc, r); err != nil {
+		if r.Method == http.MethodGet {
+			next := serverfns.SanitizeRedirect(r.URL.Path)
+			http.Redirect(w, r, "/login?next="+next, http.StatusSeeOther)
+			return false
+		}
+		errorpage.Render(w, http.StatusForbidden, "")
+		return false
+	}
+	return true
+}
+
+func handleLoadingPage() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = loading.Page(loading.DefaultPhrase).Render(w)
+	}
+}
+
+func handleJournalsCatalog(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, authErr := serverfns.RequireAuth(authSvc, r)
+		isAuth := (authErr == nil)
+
+		q := db.SanitizeSearchQuery(r.URL.Query().Get("q"))
+		var selectedTags []string
+		for _, rawTag := range r.URL.Query()["tag"] {
+			if norm := db.FormatTagTitleCase(rawTag); norm != "" {
+				if _, ok := db.ValidateTagChars(norm); ok {
+					selectedTags = append(selectedTags, norm)
+				}
+			}
+		}
+
+		var entries []db.Journal
+		var allTags []string
+		if store != nil {
+			var err error
+			entries, err = store.ListFiltered(r.Context(), db.ListFilter{
+				IncludeUnpublished: isAuth,
+				Query:              q,
+				Tags:               selectedTags,
+			})
+			if err != nil {
+				renderInternalError(w, r, http.StatusInternalServerError, err)
+				return
+			}
+			allTags, _ = store.DistinctTags(r.Context(), isAuth)
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = journals.CatalogPage(isAuth, journals.CatalogView{
+			Entries:      journals.RenderEntries(entries),
+			AllTags:      allTags,
+			Query:        q,
+			SelectedTags: selectedTags,
+		}).Render(w)
+	}
+}
+
+func handleJournalNew(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, authErr := serverfns.RequireAuth(authSvc, r)
+		isAuth := (authErr == nil)
+
+		var existingTags []string
+		if store != nil {
+			// Only include unpublished tags if the caller is authenticated (prevents draft tag leakage)
+			existingTags, _ = store.DistinctTags(r.Context(), isAuth)
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = editor.FormPage(isAuth, editor.FormData{
+			Published:    true,
+			Body:         editor.DefaultBody,
+			ExistingTags: existingTags,
+		}).Render(w)
+	}
+}
+
+func handleJournalEntry(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, ok := parseEntryID(r)
+		if !ok {
+			errorpage.Render(w, http.StatusNotFound, "")
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+		_, authErr := serverfns.RequireAuth(authSvc, r)
+		isAuth := (authErr == nil)
+
+		entry, err := store.Get(r.Context(), id, isAuth)
+		if err != nil {
+			if errors.Is(err, db.ErrNotFound) {
+				errorpage.Render(w, http.StatusNotFound, "")
+				return
+			}
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = journals.EntryPage(isAuth, journals.RenderSingle(*entry)).Render(w)
+	}
+}
+
+func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAdminOrRedirect(w, r, authSvc) {
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+
+		in, formData := parseJournalForm(r)
+		if _, err := store.Create(r.Context(), in); err != nil {
+			if errors.Is(err, db.ErrInvalidInput) {
+				formData.ErrorMsg = err.Error()
+				formData.ExistingTags, _ = store.DistinctTags(r.Context(), true)
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.WriteHeader(http.StatusUnprocessableEntity)
+				_ = editor.FormPage(true, formData).Render(w)
+				return
+			}
+			if errors.Is(err, db.ErrQuotaExceeded) {
+				store.SetPendingSubmission(&db.PendingSubmission{
+					IsEdit:     false,
+					MediaURL:   formData.MediaURL,
+					TagsRaw:    formData.Tags,
+					Body:       formData.Body,
+					Published:  formData.Published,
+					Bookmarked: formData.Bookmarked,
+					EntryBytes: db.EstimateInputBytes(in),
+				})
+				http.Redirect(w, r, "/journals/vacate-space/", http.StatusSeeOther)
+				return
+			}
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		http.Redirect(w, r, "/journals", http.StatusSeeOther)
+	}
+}
+
+func handleJournalEditForm(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAdminOrRedirect(w, r, authSvc) {
+			return
+		}
+		id, ok := parseEntryID(r)
+		if !ok {
+			errorpage.Render(w, http.StatusNotFound, "")
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+		entry, err := store.Get(r.Context(), id, true)
+		if err != nil {
+			if errors.Is(err, db.ErrNotFound) {
+				errorpage.Render(w, http.StatusNotFound, "")
+				return
+			}
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		existingTags, _ := store.DistinctTags(r.Context(), true)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = editor.FormPage(true, editor.FormData{
+			IsEdit:       true,
+			EntryID:      entry.ID,
+			MediaURL:     entry.MediaURL,
+			Tags:         entry.TagsString(),
+			Body:         entry.Body,
+			Bookmarked:   entry.Bookmarked,
+			Published:    entry.Published,
+			ExistingTags: existingTags,
+		}).Render(w)
+	}
+}
+
+func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAdminOrRedirect(w, r, authSvc) {
+			return
+		}
+		id, ok := parseEntryID(r)
+		if !ok {
+			errorpage.Render(w, http.StatusNotFound, "")
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+		in, formData := parseJournalForm(r)
+		formData.IsEdit = true
+		formData.EntryID = id
+		if err := store.Update(r.Context(), id, in); err != nil {
+			if errors.Is(err, db.ErrInvalidInput) {
+				formData.ErrorMsg = err.Error()
+				formData.ExistingTags, _ = store.DistinctTags(r.Context(), true)
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.WriteHeader(http.StatusUnprocessableEntity)
+				_ = editor.FormPage(true, formData).Render(w)
+				return
+			}
+			if errors.Is(err, db.ErrNotFound) {
+				errorpage.Render(w, http.StatusNotFound, "")
+				return
+			}
+			if errors.Is(err, db.ErrQuotaExceeded) {
+				store.SetPendingSubmission(&db.PendingSubmission{
+					IsEdit:     true,
+					EntryID:    id,
+					MediaURL:   formData.MediaURL,
+					TagsRaw:    formData.Tags,
+					Body:       formData.Body,
+					Published:  formData.Published,
+					Bookmarked: formData.Bookmarked,
+					EntryBytes: db.EstimateInputBytes(in),
+				})
+				http.Redirect(w, r, "/journals/vacate-space/", http.StatusSeeOther)
+				return
+			}
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		http.Redirect(w, r, "/journals", http.StatusSeeOther)
+	}
+}
+
+func handleJournalVacateSpacePage(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAdminOrRedirect(w, r, authSvc) {
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+		entries, err := store.List(r.Context(), true)
+		if err != nil {
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		requiredBytes, entryBytes, usedBytes, limitBytes, err := store.RequiredBytesForPending(r.Context())
+		if err != nil {
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		autoPlan, err := store.PreviewAutoVacate(r.Context(), requiredBytes)
+		if err != nil {
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		pendingSub := store.GetPendingSubmission()
+		autoResubmit := r.URL.Query().Get("vacated") == "1" && requiredBytes <= 0 && pendingSub != nil
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = journals.VacateSpacePage(journals.VacateSpaceView{
+			Entries:           journals.RenderEntries(entries),
+			RequiredBytes:     requiredBytes,
+			PendingEntryBytes: entryBytes,
+			UsedBytes:         usedBytes,
+			LimitBytes:        limitBytes,
+			AutoPlan:          autoPlan,
+			PendingSub:        pendingSub,
+			AutoResubmitReady: autoResubmit,
+		}).Render(w)
+	}
+}
+
+func handleJournalVacateSpaceSubmit(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAdminOrRedirect(w, r, authSvc) {
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+		_ = r.ParseForm()
+		action := r.FormValue("action")
+
+		switch action {
+		case "auto_vacate":
+			requiredBytes, _, _, _, err := store.RequiredBytesForPending(r.Context())
+			if err != nil {
+				renderInternalError(w, r, http.StatusInternalServerError, err)
+				return
+			}
+			if requiredBytes <= 0 {
+				if rawReq := r.FormValue("required_bytes"); rawReq != "" {
+					if parsed, parseErr := strconv.ParseInt(rawReq, 10, 64); parseErr == nil && parsed > 0 {
+						requiredBytes = parsed
+					}
+				}
+			}
+			if _, err := store.AutoVacateBytes(r.Context(), requiredBytes); err != nil {
+				renderInternalError(w, r, http.StatusInternalServerError, err)
+				return
+			}
+		case "delete_selected":
+			var ids []int64
+			for _, rawID := range r.Form["ids"] {
+				if id, err := strconv.ParseInt(rawID, 10, 64); err == nil && id > 0 {
+					ids = append(ids, id)
+				}
+			}
+			if err := store.Delete(r.Context(), ids); err != nil {
+				renderInternalError(w, r, http.StatusInternalServerError, err)
+				return
+			}
+		default:
+			errorpage.Render(w, http.StatusBadRequest, "")
+			return
+		}
+
+		http.Redirect(w, r, "/journals/vacate-space/?vacated=1", http.StatusSeeOther)
+	}
+}
+
+func handleJournalDelete(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAdminOrRedirect(w, r, authSvc) {
+			return
+		}
+		id, ok := parseEntryID(r)
+		if !ok {
+			errorpage.Render(w, http.StatusNotFound, "")
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+		if err := store.Delete(r.Context(), []int64{id}); err != nil {
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		http.Redirect(w, r, "/journals", http.StatusSeeOther)
+	}
+}
+
+func handleJournalPublish(store *db.Store, authSvc *auth.Service, published bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAdminOrRedirect(w, r, authSvc) {
+			return
+		}
+		id, ok := parseEntryID(r)
+		if !ok {
+			errorpage.Render(w, http.StatusNotFound, "")
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+		if err := store.SetPublished(r.Context(), []int64{id}, published); err != nil {
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		http.Redirect(w, r, entryReturnTarget(r, id), http.StatusSeeOther)
+	}
+}
+
+func handleJournalBookmark(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAdminOrRedirect(w, r, authSvc) {
+			return
+		}
+		id, ok := parseEntryID(r)
+		if !ok {
+			errorpage.Render(w, http.StatusNotFound, "")
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+		if _, err := store.ToggleBookmark(r.Context(), id); err != nil {
+			if errors.Is(err, db.ErrNotFound) {
+				errorpage.Render(w, http.StatusNotFound, "")
+				return
+			}
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		http.Redirect(w, r, entryReturnTarget(r, id), http.StatusSeeOther)
+	}
+}
+
+func handleJournalBatch(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAdminOrRedirect(w, r, authSvc) {
+			return
+		}
+		if store == nil {
+			errorpage.Render(w, http.StatusServiceUnavailable, "")
+			return
+		}
+		_ = r.ParseForm()
+		action := r.FormValue("action")
+		var ids []int64
+		for _, rawID := range r.Form["ids"] {
+			if id, err := strconv.ParseInt(rawID, 10, 64); err == nil && id > 0 {
+				ids = append(ids, id)
+			}
+		}
+
+		var err error
+		switch action {
+		case "publish_selected":
+			err = store.SetPublished(r.Context(), ids, true)
+		case "unpublish_selected":
+			err = store.SetPublished(r.Context(), ids, false)
+		case "delete_selected":
+			err = store.Delete(r.Context(), ids)
+		case "unpublish_all":
+			err = store.SetAllPublished(r.Context(), false)
+		case "delete_all":
+			err = store.DeleteAll(r.Context())
+		default:
+			errorpage.Render(w, http.StatusBadRequest, "")
+			return
+		}
+		if err != nil {
+			renderInternalError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		http.Redirect(w, r, "/journals", http.StatusSeeOther)
+	}
+}
+
+func parseEntryID(r *http.Request) (int64, bool) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	return id, err == nil && id > 0
+}
+
+func parseJournalForm(r *http.Request) (db.JournalInput, editor.FormData) {
+	_ = r.ParseForm()
+	mediaURL := r.FormValue("media_url")
+	tagsRaw := r.FormValue("tags")
+	body := r.FormValue("body")
+	published := r.FormValue("published") == "1"
+	bookmarked := r.FormValue("bookmarked") == "1"
+
+	in := db.JournalInput{
+		MediaURL:   mediaURL,
+		Tags:       db.ParseTags(tagsRaw),
+		Body:       body,
+		Published:  published,
+		Bookmarked: bookmarked,
+	}
+	formData := editor.FormData{
+		MediaURL:   mediaURL,
+		Tags:       tagsRaw,
+		Body:       body,
+		Published:  published,
+		Bookmarked: bookmarked,
+	}
+	return in, formData
+}
+
+func entryReturnTarget(r *http.Request, id int64) string {
+	ref := r.Header.Get("Referer")
+	entryPath := fmt.Sprintf("/journals/%d", id)
+	if strings.Contains(ref, entryPath) {
+		return entryPath
+	}
+	return "/journals"
+}

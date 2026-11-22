@@ -14,8 +14,11 @@ import (
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/serverfns"
 	"github.com/oxri/oxri-go/views/booki"
+	"github.com/oxri/oxri-go/views/editor"
 	"github.com/oxri/oxri-go/views/errorpage"
+	"github.com/oxri/oxri-go/views/journals"
 	"github.com/oxri/oxri-go/views/landing"
+	"github.com/oxri/oxri-go/views/loading"
 	"github.com/oxri/oxri-go/views/login"
 	"github.com/oxri/oxri-go/views/pilot"
 )
@@ -49,6 +52,9 @@ func NewRouter(cfg Config) http.Handler {
 	r.Get(booki.StylePath, serveCSS(booki.StyleCSS))
 	r.Get(login.StylePath, serveCSS(login.StyleCSS))
 	r.Get(pilot.StylePath, serveCSS(pilot.StyleCSS))
+	r.Get(journals.StylePath, serveCSS(journals.StyleCSS))
+	r.Get(editor.StylePath, serveCSS(editor.StyleCSS))
+	r.Get(loading.StylePath, serveCSS(loading.StyleCSS))
 
 	// 4. Static Assets (/assets/*)
 	assetsDir := cfg.AssetsDir
@@ -61,13 +67,31 @@ func NewRouter(cfg Config) http.Handler {
 	// 5. Public Page Routes
 	r.Get("/", handleLanding(cfg.AuthService))
 	r.Get("/book-i", handleBookI())
+	r.Get("/loading", handleLoadingPage())
 
-	// 6. Authentication Routes
+	// 6. Journals & Editor Routes
+	r.Get("/journals", handleJournalsCatalog(cfg.Store, cfg.AuthService))
+	r.Get("/journals/new", handleJournalNew(cfg.Store, cfg.AuthService))
+	r.Post("/journals", handleJournalCreate(cfg.Store, cfg.AuthService))
+	r.Post("/journals/batch", handleJournalBatch(cfg.Store, cfg.AuthService))
+	r.Get("/journals/vacate-space", handleJournalVacateSpacePage(cfg.Store, cfg.AuthService))
+	r.Get("/journals/vacate-space/", handleJournalVacateSpacePage(cfg.Store, cfg.AuthService))
+	r.Post("/journals/vacate-space", handleJournalVacateSpaceSubmit(cfg.Store, cfg.AuthService))
+	r.Post("/journals/vacate-space/", handleJournalVacateSpaceSubmit(cfg.Store, cfg.AuthService))
+	r.Get("/journals/{id}", handleJournalEntry(cfg.Store, cfg.AuthService))
+	r.Get("/journals/{id}/edit", handleJournalEditForm(cfg.Store, cfg.AuthService))
+	r.Post("/journals/{id}", handleJournalUpdate(cfg.Store, cfg.AuthService))
+	r.Post("/journals/{id}/delete", handleJournalDelete(cfg.Store, cfg.AuthService))
+	r.Post("/journals/{id}/publish", handleJournalPublish(cfg.Store, cfg.AuthService, true))
+	r.Post("/journals/{id}/unpublish", handleJournalPublish(cfg.Store, cfg.AuthService, false))
+	r.Post("/journals/{id}/bookmark", handleJournalBookmark(cfg.Store, cfg.AuthService))
+
+	// 7. Authentication Routes
 	r.Get("/login", handleLogin(cfg.AuthService))
 	r.Get("/auth/status", handleAuthStatus(cfg.AuthService))
 	r.HandleFunc("/logout", handleLogout(cfg.AuthService)) // Handles both GET and POST
 
-	// 7. Protected Profile / Pilot Settings Routes
+	// 8. Protected Profile / Pilot Settings Routes
 	r.Get("/pilot/user/settings", handlePilotSettings(cfg.AuthService))
 
 	return r
