@@ -93,7 +93,13 @@ func TestAuthService_FullLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("client.NewSession failed: %v", err)
 	}
-	_ = session.Run(token)
+	if err := session.RequestPty("xterm", 80, 40, ssh.TerminalModes{}); err != nil {
+		t.Fatalf("RequestPty should be silently acknowledged without error, got: %v", err)
+	}
+	if err := session.Shell(); err != nil {
+		t.Fatalf("Shell failed: %v", err)
+	}
+	_ = session.Wait()
 	_ = session.Close()
 
 	// 5. Redemption succeeds with correct binding

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/oxri/oxri-go/internal/auth"
+	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/routes"
 )
 
@@ -29,7 +30,7 @@ func main() {
 		filepath.Join("..", "db.env"),
 		filepath.Join("..", ".env"),
 	}
-	_ = auth.LoadEnvFiles(envFiles...)
+	_ = db.LoadEnvFiles(envFiles...)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -77,9 +78,31 @@ func main() {
 		fmt.Println("Notice: ADMIN_SSH_PUBKEY not configured; running in read-only public mode.")
 	}
 
+	var store *db.Store
+	dbURL := os.Getenv("TURSO_DATABASE_URL")
+	dbToken := os.Getenv("TURSO_AUTH_TOKEN")
+	if dbURL != "" {
+		dbCtx, dbCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		var err error
+		store, err = db.Open(dbCtx, dbURL, dbToken)
+		if err != nil {
+			dbCancel()
+			fmt.Fprintf(os.Stderr, "Error: failed to connect to remote Turso database: %v\n", err)
+			os.Exit(1)
+		}
+		used, _ := store.UsedStorageBytes(dbCtx)
+		schemaVer, _ := store.SchemaVersion(dbCtx)
+		dbCancel()
+		fmt.Printf("Connected to remote Turso database (schema v%d, used %d / %d bytes)\n",
+			schemaVer, used, store.MaxStorageBytes())
+	} else {
+		fmt.Println("Notice: TURSO_DATABASE_URL not configured.")
+	}
+
 	handler := routes.NewRouter(routes.Config{
 		AssetsDir:   assetsDir,
 		AuthService: authSvc,
+		Store:       store,
 	})
 
 	server := &http.Server{
@@ -109,6 +132,9 @@ func main() {
 
 	if authSvc != nil {
 		_ = authSvc.Close()
+	}
+	if store != nil {
+		_ = store.Close()
 	}
 	_ = server.Shutdown(ctx)
 	fmt.Println("Server gracefully stopped.")
