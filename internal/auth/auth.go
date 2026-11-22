@@ -69,6 +69,7 @@ type ServiceOptions struct {
 type Service struct {
 	mu               sync.RWMutex
 	pendingTOTP      map[string]*PendingTOTPVerification
+	pendingWebAuthn  map[string]*pendingWebAuthnCeremony
 	activeSessions   map[string]*UserSession
 	totpSecret       string
 	passwordHash     string
@@ -121,6 +122,7 @@ func NewServiceWithOptions(opts ServiceOptions) (*Service, error) {
 
 	return &Service{
 		pendingTOTP:      make(map[string]*PendingTOTPVerification),
+		pendingWebAuthn:  make(map[string]*pendingWebAuthnCeremony),
 		activeSessions:   make(map[string]*UserSession),
 		totpSecret:       totpSecret,
 		passwordHash:     passwordHash,
@@ -390,6 +392,25 @@ func (s *Service) Authenticate(sessionID string) (domain.AdminCap, bool) {
 	return s.capMinter(), true
 }
 
+// CreateSession mints a new 256-bit random authenticated session and stores it.
+func (s *Service) CreateSession() (string, error) {
+	sessBytes := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, sessBytes); err != nil {
+		return "", err
+	}
+	sessionID := hex.EncodeToString(sessBytes)
+	now := time.Now().UTC()
+
+	s.mu.Lock()
+	s.activeSessions[sessionID] = &UserSession{
+		SessionID: sessionID,
+		CreatedAt: now,
+		ExpiresAt: now.Add(SessionDuration),
+	}
+	s.mu.Unlock()
+	return sessionID, nil
+}
+
 // RevokeSession invalidates an active session.
 func (s *Service) RevokeSession(sessionID string) {
 	s.mu.Lock()
@@ -402,6 +423,7 @@ func (s *Service) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	clear(s.pendingTOTP)
+	clear(s.pendingWebAuthn)
 	clear(s.activeSessions)
 	return nil
 }
@@ -411,6 +433,11 @@ func (s *Service) cleanupExpiredLocked() {
 	for id, pending := range s.pendingTOTP {
 		if now.After(pending.ExpiresAt) {
 			delete(s.pendingTOTP, id)
+		}
+	}
+	for id, ceremony := range s.pendingWebAuthn {
+		if now.After(ceremony.ExpiresAt) {
+			delete(s.pendingWebAuthn, id)
 		}
 	}
 	for sessID, sess := range s.activeSessions {
