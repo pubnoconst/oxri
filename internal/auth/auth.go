@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -197,9 +198,11 @@ func (s *Service) StartTOTPVerification(password, code, redirectURL string) (ver
 		matchedStep, totpOK := VerifyTOTP(s.totpSecret, code, now)
 		switch {
 		case !pwOK || !totpOK:
+			log.Printf("[AUTH] login rejected (pwOK=%t, totpOK=%t, failures=%d)", pwOK, totpOK, len(s.totpFailures)+1)
 			s.totpFailures = append(s.totpFailures, now)
 			failureErr = ErrTOTPInvalid
 		case matchedStep <= s.lastUsedTOTPStep:
+			log.Printf("[AUTH] login rejected (replayed TOTP step)")
 			failureErr = ErrTOTPReplayed
 		default:
 			s.lastUsedTOTPStep = matchedStep

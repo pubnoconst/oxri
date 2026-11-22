@@ -3,6 +3,7 @@ package routes
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -133,6 +134,7 @@ func handlePasskeyRegisterFinish(store *db.Store, authSvc *auth.Service) http.Ha
 			MaxAge:   -1,
 		})
 		if err != nil {
+			log.Printf("[PASSKEY] registration finish failed (rpID=%s): %v", rpID, err)
 			http.Error(w, "Passkey verification failed.", http.StatusBadRequest)
 			return
 		}
@@ -272,6 +274,7 @@ func handlePasskeyLoginFinish(store *db.Store, authSvc *auth.Service, limiter *i
 			MaxAge:   -1,
 		})
 		if err != nil {
+			log.Printf("[PASSKEY] login finish failed (rpID=%s): %v", rpID, err)
 			http.Error(w, "Passkey sign-in failed.", http.StatusUnauthorized)
 			return
 		}
