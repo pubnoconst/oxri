@@ -1,6 +1,6 @@
 # Next
 
-- **Latest Commit**: `06a591c` (`Merge pull request #12 from pubnoconst/v2-security-hardening`)
+- **Latest Commit**: `0ca7a44` (`docs: add comprehensive README for project overview and navigation`)
 - **Active Branch**: `main` (promoted from `v2`; previous generation archived at `v1` @ `53b509e`)
 - **Active Experiment / Undo Instructions**: None.
 
