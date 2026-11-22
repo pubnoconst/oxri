@@ -64,6 +64,56 @@
   opacity: 0.66;
 }
 
+/* Fluid async catalog arrival (HTMX /journals/content) */
+#journals-catalog-stage {
+  transition: opacity 120ms ease-out;
+}
+
+#journals-catalog-stage.htmx-swapping {
+  opacity: 0;
+}
+
+@keyframes journals-loading-breathe {
+  0%, 100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 0.78;
+  }
+}
+
+.journals-loading-placeholder {
+  animation: journals-loading-breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes catalog-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#journals-catalog-stage > .journals-filter-bar,
+#journals-catalog-stage > .journals-batch-bar,
+#journals-catalog-stage > .journals-empty:not(.journals-loading-placeholder) {
+  animation: catalog-item-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+#journals-catalog-stage .journal-card {
+  animation: catalog-item-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+#journals-catalog-stage .journal-card:nth-child(1) { animation-delay: 20ms; }
+#journals-catalog-stage .journal-card:nth-child(2) { animation-delay: 55ms; }
+#journals-catalog-stage .journal-card:nth-child(3) { animation-delay: 90ms; }
+#journals-catalog-stage .journal-card:nth-child(4) { animation-delay: 125ms; }
+#journals-catalog-stage .journal-card:nth-child(5) { animation-delay: 160ms; }
+#journals-catalog-stage .journal-card:nth-child(n+6) { animation-delay: 195ms; }
+
 /* Search & Tag Filter Bar */
 .journals-filter-bar {
   display: flex;

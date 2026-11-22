@@ -20,9 +20,10 @@
   }
 
   function showTweetFallback(container, username, tweetId, isLoading) {
+    container.style.height = "";
     container.replaceChildren();
     const card = document.createElement("div");
-    card.className = "tweet-fallback-card";
+    card.className = isLoading ? "tweet-fallback-card is-loading" : "tweet-fallback-card";
 
     const badge = document.createElement("span");
     badge.className = "tweet-fallback-badge";
@@ -36,6 +37,7 @@
 
     card.append(badge, link);
     container.append(card);
+    return card;
   }
 
   let twitterScriptInjected = false;
@@ -53,22 +55,81 @@
     document.head.appendChild(s);
   }
 
+  function revealTweetFluidly(container, fallbackCard, stage) {
+    const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      if (fallbackCard && fallbackCard.parentNode === container) {
+        fallbackCard.remove();
+      }
+      stage.classList.remove("is-staging");
+      stage.classList.add("is-ready");
+      container.style.height = "";
+      return;
+    }
+
+    const startHeight = container.getBoundingClientRect().height;
+    container.style.height = `${startHeight}px`;
+
+    if (fallbackCard && fallbackCard.parentNode === container) {
+      fallbackCard.remove();
+    }
+    stage.classList.remove("is-staging");
+
+    // Measure target height (clamped by any CSS max-height such as 22rem in collage mode)
+    const computedMax = parseFloat(window.getComputedStyle(container).maxHeight);
+    let targetHeight = container.scrollHeight;
+    if (Number.isFinite(computedMax) && computedMax > 0) {
+      targetHeight = Math.min(targetHeight, computedMax);
+    }
+
+    // Force layout flush so the height transition starts cleanly from startHeight
+    void container.offsetHeight;
+
+    requestAnimationFrame(() => {
+      container.style.height = `${targetHeight}px`;
+      stage.classList.add("is-ready");
+    });
+
+    let settled = false;
+    const cleanup = () => {
+      if (settled) return;
+      settled = true;
+      container.style.height = "";
+    };
+    container.addEventListener("transitionend", (e) => {
+      if (e.target === container && e.propertyName === "height") {
+        cleanup();
+      }
+    }, { once: true });
+    setTimeout(cleanup, 460);
+  }
+
   function renderTweet(container, username, tweetId) {
     ensureTwitterWidgetsScript();
     const theme = getActiveTheme();
 
+    // Always render the quiet loading placeholder immediately so the card never collapses to 0px
+    const fallbackCard = showTweetFallback(container, username, tweetId, true);
+
     const doCreate = (twttr) => {
-      container.replaceChildren();
-      twttr.widgets.createTweet(tweetId, container, {
+      const stage = document.createElement("div");
+      stage.className = "tweet-embed-stage is-staging";
+      container.append(stage);
+
+      twttr.widgets.createTweet(tweetId, stage, {
         theme: theme,
         dnt: true,
         align: "center",
         conversation: "none",
       }).then((el) => {
         if (!el) {
+          stage.remove();
           showTweetFallback(container, username, tweetId, false);
+          return;
         }
+        revealTweetFluidly(container, fallbackCard, stage);
       }).catch(() => {
+        stage.remove();
         showTweetFallback(container, username, tweetId, false);
       });
     };
@@ -77,8 +138,6 @@
       doCreate(window.twttr);
       return;
     }
-
-    showTweetFallback(container, username, tweetId, true);
 
     if (window.twttr && window.twttr.ready) {
       window.twttr.ready(doCreate);
@@ -97,6 +156,17 @@
     }
   }
 
+  function bindMediaFadeIn(el) {
+    el.classList.add("media-fade-in");
+    const reveal = () => el.classList.add("is-loaded");
+    if (el.tagName === "IMG" && el.complete && el.naturalWidth > 0) {
+      requestAnimationFrame(reveal);
+      return;
+    }
+    el.addEventListener("load", reveal, { once: true });
+    el.addEventListener("error", reveal, { once: true });
+  }
+
   function createMedia(url) {
     const host = url.hostname.toLowerCase().replace(/^www\./, "");
     const path = url.pathname.toLowerCase();
@@ -108,6 +178,7 @@
       iframe.loading = "lazy";
       iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
       iframe.allowFullscreen = true;
+      bindMediaFadeIn(iframe);
       return iframe;
     };
 
@@ -162,6 +233,7 @@
       image.src = url.href;
       image.alt = "Journal media";
       image.loading = "lazy";
+      bindMediaFadeIn(image);
       return image;
     }
 

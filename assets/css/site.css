@@ -285,12 +285,36 @@ a {
 }
 
 .journal-preview-media .tweet-embed-container {
+  position: relative;
   display: flex;
   justify-content: center;
   width: 100%;
   background: transparent;
   padding: 0.25rem 0;
+  overflow: hidden;
   filter: drop-shadow(0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent));
+  transition: height 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tweet-embed-stage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1), transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tweet-embed-stage.is-ready {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tweet-embed-stage.is-staging {
+  position: absolute;
+  inset: 0 auto auto 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .journal-preview-media .tweet-embed-container iframe,
@@ -318,6 +342,29 @@ a {
   background: var(--surface-card);
   box-shadow: var(--shadow-card);
   text-align: center;
+  transition: opacity 220ms ease;
+}
+
+.tweet-fallback-card.is-loading .tweet-fallback-badge {
+  animation: media-loading-breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes media-loading-breathe {
+  0%, 100% {
+    opacity: 0.38;
+  }
+  50% {
+    opacity: 0.78;
+  }
+}
+
+.media-fade-in {
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.media-fade-in.is-loaded {
+  opacity: 1;
 }
 
 .tweet-fallback-badge {
