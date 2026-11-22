@@ -2,7 +2,6 @@ package serverfns
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -13,7 +12,7 @@ import (
 
 var (
 	ErrUnauthenticated = errors.New("serverfns: unauthenticated session")
-	ErrInvalidRedirect  = errors.New("serverfns: invalid redirect URL")
+	ErrInvalidRedirect = errors.New("serverfns: invalid redirect URL")
 )
 
 // Allowed redirect targets to prevent open-redirect vulnerabilities
@@ -68,22 +67,4 @@ func RequireAuth(svc *auth.Service, r *http.Request) (domain.AdminCap, error) {
 	}
 
 	return cap, nil
-}
-
-// BuildSSHCommand generates the terminal command for the user to execute.
-func BuildSSHCommand(token, sshAddr string) string {
-	// Parse port from sshAddr (e.g. "127.0.0.1:2222" -> "2222")
-	port := "2222"
-	if _, p, err := parseHostPort(sshAddr); err == nil && p != "" {
-		port = p
-	}
-	return fmt.Sprintf("ssh -p %s %s@localhost", port, token)
-}
-
-func parseHostPort(addr string) (string, string, error) {
-	if !strings.Contains(addr, ":") {
-		return addr, "2222", nil
-	}
-	parts := strings.Split(addr, ":")
-	return parts[0], parts[1], nil
 }

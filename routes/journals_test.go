@@ -6,68 +6,40 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/db"
-	"golang.org/x/crypto/ssh"
 )
 
-func createAuthenticatedSessionCookie(t *testing.T, router http.Handler, signer ssh.Signer, sshAddr string) *http.Cookie {
+func createTestTOTPAuth(t *testing.T) (*auth.Service, *http.Cookie) {
 	t.Helper()
-	reqLogin := httptest.NewRequest(http.MethodGet, "/login?next=/journals", nil)
-	recLogin := httptest.NewRecorder()
-	router.ServeHTTP(recLogin, reqLogin)
-
-	re := regexp.MustCompile(`token=([0-9]{6})`)
-	matches := re.FindStringSubmatch(recLogin.Body.String())
-	if len(matches) < 2 {
-		t.Fatalf("failed to extract token from login page")
-	}
-	token := matches[1]
-
-	var bindingCookie *http.Cookie
-	for _, c := range recLogin.Result().Cookies() {
-		if c.Name == auth.BindingCookieName {
-			bindingCookie = c
-			break
-		}
-	}
-
-	clientConfig := &ssh.ClientConfig{
-		User:            token,
-		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         5 * time.Second,
-	}
-	client, err := ssh.Dial("tcp", sshAddr, clientConfig)
+	secret, err := auth.GenerateTOTPSecret()
 	if err != nil {
-		t.Fatalf("ssh.Dial failed: %v", err)
+		t.Fatalf("GenerateTOTPSecret failed: %v", err)
 	}
-	defer func() { _ = client.Close() }()
-
-	sess, err := client.NewSession()
+	authSvc, err := auth.NewServiceWithOptions(auth.ServiceOptions{
+		TOTPSecret:       secret,
+		TOTPConfirmDelay: 50 * time.Millisecond,
+	})
 	if err != nil {
-		t.Fatalf("NewSession failed: %v", err)
+		t.Fatalf("NewServiceWithOptions failed: %v", err)
 	}
-	_ = sess.Run(token)
-	_ = sess.Close()
-
-	reqPoll := httptest.NewRequest(http.MethodGet, "/auth/status?token="+token+"&next=/journals", nil)
-	reqPoll.AddCookie(bindingCookie)
-	recPoll := httptest.NewRecorder()
-	router.ServeHTTP(recPoll, reqPoll)
-
-	for _, c := range recPoll.Result().Cookies() {
-		if c.Name == auth.SessionCookieName {
-			return c
-		}
+	code, err := auth.GenerateTOTPCode(secret, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("GenerateTOTPCode failed: %v", err)
 	}
-	t.Fatalf("failed to acquire session cookie")
-	return nil
+	sessID, err := authSvc.AuthenticateTOTP(code)
+	if err != nil {
+		t.Fatalf("AuthenticateTOTP failed: %v", err)
+	}
+	return authSvc, &http.Cookie{
+		Name:  auth.SessionCookieName,
+		Value: sessID,
+		Path:  "/",
+	}
 }
 
 func TestJournalsEditorVacateAndLoadingFlow(t *testing.T) {
@@ -78,16 +50,8 @@ func TestJournalsEditorVacateAndLoadingFlow(t *testing.T) {
 	}
 	defer func() { _ = store.Close() }()
 
-	signer, pubKeyStr := generateTestKeys(t)
-	sshAddr := getFreePort(t)
-	authSvc, err := auth.NewService(pubKeyStr, "", sshAddr)
-	if err != nil {
-		t.Fatalf("auth.NewService failed: %v", err)
-	}
+	authSvc, sessionCookie := createTestTOTPAuth(t)
 	defer func() { _ = authSvc.Close() }()
-	if err := authSvc.StartSSHListener(); err != nil {
-		t.Fatalf("StartSSHListener failed: %v", err)
-	}
 
 	router := NewRouter(Config{
 		AssetsDir:   "../assets",
@@ -116,8 +80,8 @@ func TestJournalsEditorVacateAndLoadingFlow(t *testing.T) {
 		t.Fatalf("expected /loading to render Confirming, please wait.")
 	}
 
-	// 2. Authenticate admin session
-	sessCookie := createAuthenticatedSessionCookie(t, router, signer, sshAddr)
+	// 2. Authenticated admin session ready from createTestTOTPAuth
+	sessCookie := sessionCookie
 
 	// 3. Create an unpublished entry with tag "Wip" and a published entry with tag "Log"
 	formDraft := url.Values{

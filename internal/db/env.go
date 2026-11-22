@@ -30,7 +30,7 @@ func loadSingleEnvFile(path string) error {
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+		line := strings.TrimSpace(strings.TrimPrefix(scanner.Text(), "\uFEFF"))
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/db"
 )
 
@@ -70,24 +69,14 @@ func TestCSRFProtectionAndServerSideInputSanitization(t *testing.T) {
 	}
 	defer func() { _ = store.Close() }()
 
-	signer, pubKeyStr := generateTestKeys(t)
-	sshAddr := getFreePort(t)
-	authSvc, err := auth.NewService(pubKeyStr, "", sshAddr)
-	if err != nil {
-		t.Fatalf("auth.NewService failed: %v", err)
-	}
+	authSvc, sessCookie := createTestTOTPAuth(t)
 	defer func() { _ = authSvc.Close() }()
-	if err := authSvc.StartSSHListener(); err != nil {
-		t.Fatalf("StartSSHListener failed: %v", err)
-	}
 
 	router := NewRouter(Config{
 		AssetsDir:   "../assets",
 		AuthService: authSvc,
 		Store:       store,
 	})
-
-	sessCookie := createAuthenticatedSessionCookie(t, router, signer, sshAddr)
 
 	// 1. Cross-Site POST blocked by Sec-Fetch-Site
 	crossReq := httptest.NewRequest(http.MethodPost, "/journals", strings.NewReader("media_url=https://example.com/a.png&body=Test"))

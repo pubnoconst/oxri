@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -16,19 +15,13 @@ import (
 	"github.com/oxri/oxri-go/routes"
 )
 
-func resolveDefaultHostKeyPath() string {
-	parentDir := filepath.Join("..", "oxri-parent")
-	if info, err := os.Stat(parentDir); err == nil && info.IsDir() {
-		return filepath.Join(parentDir, ".ssh_host_key")
-	}
-	return filepath.Join("..", ".ssh_host_key")
-}
-
 func main() {
 	envFiles := []string{
 		filepath.Join("..", "oxri-parent", "db.env"),
+		filepath.Join("..", "oxri-parent", "pw.env"),
 		filepath.Join("..", "oxri-parent", ".env"),
 		filepath.Join("..", "db.env"),
+		filepath.Join("..", "pw.env"),
 		filepath.Join("..", ".env"),
 	}
 	_ = db.LoadEnvFiles(envFiles...)
@@ -42,52 +35,29 @@ func main() {
 		addr = "127.0.0.1:" + port
 	}
 
-	sshPort := os.Getenv("SSH_PORT")
-	if sshPort == "" {
-		sshPort = "2222"
-	}
-	sshAddr := os.Getenv("SSH_ADDR")
-	if sshAddr == "" {
-		sshAddr = "127.0.0.1:" + sshPort
-	}
-
 	assetsDir := os.Getenv("ASSETS_DIR")
 	if assetsDir == "" {
 		assetsDir = "assets"
 	}
 
-	adminPubKey := os.Getenv("ADMIN_SSH_PUBKEY")
 	adminTOTPSecret := os.Getenv("ADMIN_TOTP_SECRET")
-	hostKeyPath := os.Getenv("SSH_HOST_KEY_PATH")
-	if hostKeyPath == "" {
-		hostKeyPath = resolveDefaultHostKeyPath()
-	}
-
+	adminPasswordHash := os.Getenv("ADMIN_PASSWORD_HASH")
 	var authSvc *auth.Service
-	if adminPubKey != "" || adminTOTPSecret != "" {
+	if adminTOTPSecret != "" {
 		var err error
 		authSvc, err = auth.NewServiceWithOptions(auth.ServiceOptions{
-			AuthorizedKey: adminPubKey,
-			HostKeyPath:   hostKeyPath,
-			SSHAddr:       sshAddr,
-			TOTPSecret:    adminTOTPSecret,
+			TOTPSecret:   adminTOTPSecret,
+			PasswordHash: adminPasswordHash,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to initialize auth service: %v\n", err)
+		} else if authSvc.HasPassword() {
+			fmt.Println("Res Imperii 2FA enabled (Argon2id Password + RFC 6238 TOTP)")
 		} else {
-			if authSvc.HasTOTP() {
-				fmt.Println("Res Imperii TOTP authentication enabled")
-			}
-			if authSvc.HasSSH() && !strings.EqualFold(os.Getenv("DISABLE_SSH_AUTH"), "true") {
-				if err := authSvc.StartSSHListener(); err != nil {
-					fmt.Fprintf(os.Stderr, "Warning: failed to start SSH listener on %s: %v\n", sshAddr, err)
-				} else {
-					fmt.Printf("Res Imperii SSH auth gateway listening on %s\n", sshAddr)
-				}
-			}
+			fmt.Println("Res Imperii TOTP authentication enabled")
 		}
 	} else {
-		fmt.Println("Notice: Neither ADMIN_TOTP_SECRET nor ADMIN_SSH_PUBKEY configured; running in read-only public mode.")
+		fmt.Println("Notice: ADMIN_TOTP_SECRET not configured; running in read-only public mode.")
 	}
 
 	var store *db.Store

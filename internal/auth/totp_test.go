@@ -71,9 +71,6 @@ func TestServiceAuthenticateTOTP_ReplayAndLockout(t *testing.T) {
 	if !svc.HasTOTP() {
 		t.Fatalf("expected HasTOTP() to be true")
 	}
-	if svc.HasSSH() {
-		t.Fatalf("expected HasSSH() to be false when no SSH pubkey configured")
-	}
 
 	// Valid TOTP code produces a session
 	code, err := GenerateTOTPCode(secret, time.Now().UTC())
@@ -131,7 +128,7 @@ func TestServicePendingTOTPVerification_CooldownAndSingleInFlight(t *testing.T) 
 	defer svc.Close()
 
 	// 1. Invalid code still enters cooldown and does not reveal failure early
-	badID, badBind, _, err := svc.StartTOTPVerification("000000", "/journals")
+	badID, badBind, _, err := svc.StartTOTPVerification("", "000000", "/journals")
 	if err != nil {
 		t.Fatalf("StartTOTPVerification(bad): %v", err)
 	}
@@ -139,7 +136,7 @@ func TestServicePendingTOTPVerification_CooldownAndSingleInFlight(t *testing.T) 
 		t.Fatalf("expected ErrTOTPConfirming before cooldown elapses, got %v", err)
 	}
 	// Parallel attempt while one is cooling down must be rejected
-	if _, _, _, err := svc.StartTOTPVerification("000000", "/journals"); err != ErrTOTPPending {
+	if _, _, _, err := svc.StartTOTPVerification("", "000000", "/journals"); err != ErrTOTPPending {
 		t.Fatalf("expected ErrTOTPPending for concurrent attempt, got %v", err)
 	}
 	time.Sleep(75 * time.Millisecond)
@@ -152,7 +149,7 @@ func TestServicePendingTOTPVerification_CooldownAndSingleInFlight(t *testing.T) 
 	if err != nil {
 		t.Fatalf("GenerateTOTPCode: %v", err)
 	}
-	goodID, goodBind, _, err := svc.StartTOTPVerification(validCode, "/journals")
+	goodID, goodBind, _, err := svc.StartTOTPVerification("", validCode, "/journals")
 	if err != nil {
 		t.Fatalf("StartTOTPVerification(good): %v", err)
 	}

@@ -1,47 +1,16 @@
 package routes
 
 import (
-	"crypto/ed25519"
-	"crypto/rand"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/oxri/oxri-go/internal/auth"
-	"golang.org/x/crypto/ssh"
 )
-
-func generateTestKeys(t *testing.T) (ssh.Signer, string) {
-	t.Helper()
-	_, priv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatalf("failed to generate ed25519 key: %v", err)
-	}
-
-	signer, err := ssh.NewSignerFromKey(priv)
-	if err != nil {
-		t.Fatalf("failed to create signer: %v", err)
-	}
-
-	pubKeyStr := string(ssh.MarshalAuthorizedKey(signer.PublicKey()))
-	return signer, pubKeyStr
-}
-
-func getFreePort(t *testing.T) string {
-	t.Helper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("failed to get free port: %v", err)
-	}
-	defer func() { _ = l.Close() }()
-	return l.Addr().String()
-}
 
 func TestLandingPageAndComponentCSS(t *testing.T) {
 	router := NewRouter(Config{AssetsDir: "../assets"})
@@ -270,180 +239,6 @@ func TestBookICSS(t *testing.T) {
 	}
 }
 
-func TestAuthRoutes_FullFlow(t *testing.T) {
-	signer, pubKeyStr := generateTestKeys(t)
-	sshAddr := getFreePort(t)
-
-	authSvc, err := auth.NewService(pubKeyStr, "", sshAddr)
-	if err != nil {
-		t.Fatalf("NewService failed: %v", err)
-	}
-	defer func() { _ = authSvc.Close() }()
-
-	if err := authSvc.StartSSHListener(); err != nil {
-		t.Fatalf("StartSSHListener failed: %v", err)
-	}
-
-	router := NewRouter(Config{AssetsDir: "../assets", AuthService: authSvc})
-
-	// 1. Unauthenticated /pilot/user/settings redirects to /login
-	reqSettings := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
-	recSettings := httptest.NewRecorder()
-	router.ServeHTTP(recSettings, reqSettings)
-	if recSettings.Code != http.StatusSeeOther {
-		t.Fatalf("expected 303 redirect on unauthenticated /pilot/user/settings, got %d", recSettings.Code)
-	}
-	if loc := recSettings.Header().Get("Location"); !strings.Contains(loc, "/login") {
-		t.Errorf("expected redirect to /login, got %q", loc)
-	}
-
-	// 2. Request /login?next=/pilot/user/settings
-	reqLogin := httptest.NewRequest(http.MethodGet, "/login?next=/pilot/user/settings", nil)
-	recLogin := httptest.NewRecorder()
-	router.ServeHTTP(recLogin, reqLogin)
-
-	if recLogin.Code != http.StatusOK {
-		t.Fatalf("expected 200 on /login, got %d", recLogin.Code)
-	}
-	loginBody := recLogin.Body.String()
-	if !strings.Contains(loginBody, "AUTHENTICATION") || !strings.Contains(loginBody, "Copy Command") {
-		t.Errorf("login markup missing expected headers or copy button")
-	}
-
-	// Extract token from login HTML
-	re := regexp.MustCompile(`token=([0-9]{6})`)
-	matches := re.FindStringSubmatch(loginBody)
-	if len(matches) < 2 {
-		t.Fatalf("failed to extract 6-digit token from login body: %s", loginBody)
-	}
-	token := matches[1]
-
-	// Extract binding cookie
-	var bindingCookie *http.Cookie
-	for _, c := range recLogin.Result().Cookies() {
-		if c.Name == auth.BindingCookieName {
-			bindingCookie = c
-			break
-		}
-	}
-	if bindingCookie == nil || bindingCookie.Value == "" {
-		t.Fatalf("expected %s cookie in /login response", auth.BindingCookieName)
-	}
-
-	// 3. Poll /auth/status before approval returns 204 No Content
-	reqPoll := httptest.NewRequest(http.MethodGet, "/auth/status?token="+token+"&next=/pilot/user/settings", nil)
-	reqPoll.AddCookie(bindingCookie)
-	recPoll := httptest.NewRecorder()
-	router.ServeHTTP(recPoll, reqPoll)
-	if recPoll.Code != http.StatusNoContent {
-		t.Fatalf("expected 204 before approval, got %d", recPoll.Code)
-	}
-
-	// 4. Client signs the challenge via SSH
-	clientConfig := &ssh.ClientConfig{
-		User: token,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         5 * time.Second,
-	}
-
-	client, err := ssh.Dial("tcp", sshAddr, clientConfig)
-	if err != nil {
-		t.Fatalf("ssh.Dial failed: %v", err)
-	}
-	defer func() { _ = client.Close() }()
-
-	session, err := client.NewSession()
-	if err != nil {
-		t.Fatalf("client.NewSession failed: %v", err)
-	}
-	_ = session.Run(token)
-	_ = session.Close()
-
-	// 5. Poll /auth/status after approval returns HX-Redirect
-	reqPollApproved := httptest.NewRequest(http.MethodGet, "/auth/status?token="+token+"&next=/pilot/user/settings", nil)
-	reqPollApproved.Header.Set("HX-Request", "true")
-	reqPollApproved.AddCookie(bindingCookie)
-	recPollApproved := httptest.NewRecorder()
-	router.ServeHTTP(recPollApproved, reqPollApproved)
-
-	if recPollApproved.Code != http.StatusOK {
-		t.Fatalf("expected 200 on HX-Request approval, got %d", recPollApproved.Code)
-	}
-	if hxRedir := recPollApproved.Header().Get("HX-Redirect"); hxRedir != "/pilot/user/settings" {
-		t.Errorf("expected HX-Redirect /pilot/user/settings, got %q", hxRedir)
-	}
-
-	// Extract authenticated session cookie
-	var sessionCookie *http.Cookie
-	for _, c := range recPollApproved.Result().Cookies() {
-		if c.Name == auth.SessionCookieName {
-			sessionCookie = c
-			break
-		}
-	}
-	if sessionCookie == nil || sessionCookie.Value == "" {
-		t.Fatalf("expected %s cookie in approval response", auth.SessionCookieName)
-	}
-
-	// 6. Access /pilot/user/settings with session cookie returns 200 OK
-	reqSettingsAuth := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
-	reqSettingsAuth.AddCookie(sessionCookie)
-	recSettingsAuth := httptest.NewRecorder()
-	router.ServeHTTP(recSettingsAuth, reqSettingsAuth)
-
-	if recSettingsAuth.Code != http.StatusOK {
-		t.Fatalf("expected 200 on authenticated /pilot/user/settings, got %d", recSettingsAuth.Code)
-	}
-	settingsBody := recSettingsAuth.Body.String()
-	for _, expected := range []string{
-		"PILOT / EXPERIMENTAL · SETTINGS",
-		"Security",
-		"Authentication",
-		"Administrative Session Active",
-		"Loopback SSH Key",
-		"Passkeys (FIDO2 / WebAuthn)",
-		"Log out",
-	} {
-		if !strings.Contains(settingsBody, expected) {
-			t.Errorf("missing %q in settings page", expected)
-		}
-	}
-
-	// 7. Landing page with session cookie reflects authenticated state
-	reqLandingAuth := httptest.NewRequest(http.MethodGet, "/", nil)
-	reqLandingAuth.AddCookie(sessionCookie)
-	recLandingAuth := httptest.NewRecorder()
-	router.ServeHTTP(recLandingAuth, reqLandingAuth)
-
-	landingBody := recLandingAuth.Body.String()
-	if !strings.Contains(landingBody, "Settings") || !strings.Contains(landingBody, "Log out") {
-		t.Errorf("authenticated landing page missing Settings or Log out link")
-	}
-
-	// 8. Logout revokes session and redirects to /
-	reqLogout := httptest.NewRequest(http.MethodPost, "/logout", nil)
-	reqLogout.AddCookie(sessionCookie)
-	recLogout := httptest.NewRecorder()
-	router.ServeHTTP(recLogout, reqLogout)
-
-	if recLogout.Code != http.StatusSeeOther {
-		t.Fatalf("expected 303 redirect on logout, got %d", recLogout.Code)
-	}
-
-	// 9. After logout, /pilot/user/settings again redirects to /login
-	reqSettingsPostLogout := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
-	reqSettingsPostLogout.AddCookie(sessionCookie)
-	recSettingsPostLogout := httptest.NewRecorder()
-	router.ServeHTTP(recSettingsPostLogout, reqSettingsPostLogout)
-
-	if recSettingsPostLogout.Code != http.StatusSeeOther {
-		t.Fatalf("expected 303 redirect after logout, got %d", recSettingsPostLogout.Code)
-	}
-}
-
 func TestAuthRoutes_CSS(t *testing.T) {
 	router := NewRouter(Config{AssetsDir: "../assets"})
 
@@ -608,5 +403,23 @@ func TestTOTPAuthRoutes_FullFlow(t *testing.T) {
 	}
 	if !strings.Contains(recSettings.Body.String(), "TOTP (RFC 6238)") {
 		t.Errorf("expected TOTP (RFC 6238) in pilot settings page")
+	}
+
+	// 5. Logout revokes session and redirects to /
+	reqLogout := httptest.NewRequest(http.MethodPost, "/logout", nil)
+	reqLogout.AddCookie(sessionCookie)
+	recLogout := httptest.NewRecorder()
+	router.ServeHTTP(recLogout, reqLogout)
+	if recLogout.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 redirect on logout, got %d", recLogout.Code)
+	}
+
+	// 6. After logout, /pilot/user/settings redirects to /login
+	reqAfterLogout := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
+	reqAfterLogout.AddCookie(sessionCookie)
+	recAfterLogout := httptest.NewRecorder()
+	router.ServeHTTP(recAfterLogout, reqAfterLogout)
+	if recAfterLogout.Code != http.StatusSeeOther {
+		t.Fatalf("expected 303 redirect after logout, got %d", recAfterLogout.Code)
 	}
 }
