@@ -108,11 +108,27 @@
 }
 
 /* 30-second TOTP confirmation cooldown card */
+.water-refract-svg {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.auth-page.is-submerged {
+  filter: url(#water-surface-refract);
+}
+
 .card-water-ripple.is-pagewide {
   position: fixed;
   inset: 0;
   border-radius: 0;
-  z-index: 3;
+  z-index: 50;
+}
+
+.card-water-ripple.is-pagewide .card-water-wave {
+  -webkit-backdrop-filter: blur(2.6px) brightness(1.12) contrast(1.1);
+  backdrop-filter: blur(2.6px) brightness(1.12) contrast(1.1);
 }
 
 .auth-confirm-card {
@@ -291,5 +307,8 @@
   .auth-pulse-dot {
     animation: none;
     opacity: 0.8;
+  }
+  .auth-page.is-submerged {
+    filter: none;
   }
 }

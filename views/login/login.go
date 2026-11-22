@@ -32,16 +32,23 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 	barStyle := fmt.Sprintf("--cooldown-ms:%dms;--cooldown-start:%.4f;", remainingMs, startRatio)
 	rippleStyle := "--ripple-x:50%;--ripple-y:46%;--ripple-diameter:150vmax;"
 
+	// Inline SVG optical water-refraction filter (zero JS, strict-CSP safe):
+	// gently bends submerged text as if viewed beneath a calm sunlit water surface.
+	waterFilterSVG := `<svg class="water-refract-svg" aria-hidden="true" width="0" height="0" focusable="false">` +
+		`<defs><filter id="water-surface-refract" x="-5%" y="-5%" width="110%" height="110%">` +
+		`<feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="2" seed="3" result="noise">` +
+		`<animate attributeName="baseFrequency" dur="5.4s" values="0.011 0.017;0.016 0.023;0.011 0.017" repeatCount="indefinite"/>` +
+		`</feTurbulence>` +
+		`<feDisplacementMap in="SourceGraphic" in2="noise" scale="2.6" xChannelSelector="R" yChannelSelector="G">` +
+		`<animate attributeName="scale" dur="2.7s" values="1.4;3.2;1.8;2.8;1.4" repeatCount="indefinite"/>` +
+		`</feDisplacementMap>` +
+		`</filter></defs></svg>`
+
 	return layout.Doc(
 		"Confirming - RES IMPERII",
-		StylePath+"?v=4",
-		h.Div(h.Class("card-water-ripple is-pagewide"), g.Attr("style", rippleStyle), g.Attr("aria-hidden", "true"),
-			h.Span(h.Class("card-water-drop")),
-			h.Span(h.Class("card-water-wave wave-1")),
-			h.Span(h.Class("card-water-wave wave-2")),
-			h.Span(h.Class("card-water-wave wave-3")),
-		),
-		h.Main(h.Class("auth-page"),
+		StylePath+"?v=5",
+		g.Raw(waterFilterSVG),
+		h.Main(h.Class("auth-page is-submerged"),
 			h.Header(h.Class("auth-header"),
 				layout.BackLink("/login", "Back"),
 				h.H1(g.Text("AUTHENTICATION")),
@@ -58,6 +65,12 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 				g.Attr("hx-trigger", "every 1s"),
 				g.Attr("hx-swap", "none"),
 			),
+		),
+		h.Div(h.Class("card-water-ripple is-pagewide"), g.Attr("style", rippleStyle), g.Attr("aria-hidden", "true"),
+			h.Span(h.Class("card-water-drop")),
+			h.Span(h.Class("card-water-wave wave-1")),
+			h.Span(h.Class("card-water-wave wave-2")),
+			h.Span(h.Class("card-water-wave wave-3")),
 		),
 	)
 }
@@ -104,7 +117,7 @@ func TOTPPage(nextURL, errMsg, sshToken, sshCommand, sshPort string) g.Node {
 
 	return layout.Doc(
 		"Authentication - RES IMPERII",
-		StylePath+"?v=4",
+		StylePath+"?v=5",
 		h.Main(h.Class("auth-page"),
 			h.Header(h.Class("auth-header"),
 				layout.BackLink("/", "Home"),
