@@ -86,35 +86,7 @@
   margin-top: 0.25rem;
 }
 
-.auth-alt-ssh {
-  margin-top: 1.5rem;
-  padding-top: 1.15rem;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.auth-alt-summary {
-  cursor: pointer;
-  font-size: 0.92rem;
-  opacity: 0.62;
-  transition: opacity 150ms ease;
-}
-
-.auth-alt-summary:hover {
-  opacity: 0.95;
-}
-
-.auth-alt-body {
-  margin-top: 0.85rem;
-}
-
 /* 30-second TOTP confirmation cooldown card */
-.water-refract-svg {
-  position: absolute;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
 .auth-water-stage {
   position: relative;
   min-height: 100svh;
@@ -123,19 +95,6 @@
 /* Applied by water-ripple.js once the refraction map is ready */
 .auth-water-stage.is-submerged {
   filter: url(#water-surface-refract);
-}
-
-.card-water-ripple.is-pagewide {
-  position: fixed;
-  inset: 0;
-  border-radius: 0;
-  z-index: 50;
-}
-
-/* Distortion comes from the SVG displacement filter; the rings only carry the sunlit sheen */
-.card-water-ripple.is-pagewide .card-water-wave {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
 }
 
 .auth-confirm-card {
@@ -189,132 +148,7 @@
   }
 }
 
-.auth-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.auth-steps li {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.auth-steps li:last-child {
-  margin-bottom: 0.5rem;
-}
-
-.step-num {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  border: 1px solid var(--border-input);
-  font-size: 0.82rem;
-  font-family: var(--font-serif);
-  opacity: 0.7;
-  flex-shrink: 0;
-  margin-top: 0.15rem;
-}
-
-.step-content {
-  flex: 1;
-}
-
-.step-title {
-  margin: 0 0 0.25rem;
-  font-size: 1.05rem;
-  font-weight: 400;
-}
-
-.step-desc {
-  margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.45;
-  opacity: 0.65;
-}
-
-.auth-command-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: var(--surface-subtle);
-  border: 1px solid var(--border-input);
-  border-radius: var(--radius-control);
-  margin: 0.75rem 0 0.5rem;
-}
-
-.auth-command {
-  font-family: var(--font-mono);
-  font-size: 0.95rem;
-  color: inherit;
-  user-select: all;
-  word-break: break-all;
-}
-
-.auth-copy-button {
-  white-space: nowrap;
-  font-family: var(--font-serif);
-}
-
-.auth-status-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 1.5rem 0 1rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--border-subtle);
-  font-size: 0.95rem;
-  opacity: 0.8;
-}
-
-.auth-pulse-dot {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  background-color: var(--accent-warn);
-  display: inline-block;
-  animation: authPulse 2s infinite ease-in-out;
-}
-
-@keyframes authPulse {
-  0% {
-    transform: scale(0.9);
-    opacity: 0.4;
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(0.9);
-    opacity: 0.4;
-  }
-}
-
-.auth-meta {
-  margin-top: 1.5rem;
-  font-size: 0.88rem;
-  line-height: 1.5;
-  opacity: 0.6;
-}
-
-.auth-meta code {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .auth-pulse-dot {
-    animation: none;
-    opacity: 0.8;
-  }
   .auth-water-stage.is-submerged {
     filter: none;
   }

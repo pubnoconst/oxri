@@ -98,7 +98,6 @@ func NewRouter(cfg Config) http.Handler {
 	r.Get("/login", handleLogin(cfg.AuthService, loginLimiter))
 	r.Post("/login", handleLoginSubmit(cfg.AuthService, totpSubmitLimiter))
 	r.Get("/login/confirm", handleTOTPConfirm(cfg.AuthService))
-	r.Get("/auth/status", handleAuthStatus(cfg.AuthService, statusLimiter))
 	r.Get("/auth/totp-status", handleTOTPStatus(cfg.AuthService, statusLimiter))
 	r.HandleFunc("/logout", handleLogout(cfg.AuthService)) // Handles both GET and POST
 
@@ -142,54 +141,12 @@ func handleBookI() http.HandlerFunc {
 	}
 }
 
-func isValidSixDigitToken(token string) bool {
-	if len(token) != 6 {
-		return false
-	}
-	for i := 0; i < 6; i++ {
-		if token[i] < '0' || token[i] > '9' {
-			return false
-		}
-	}
-	return true
-}
-
-func renderLoginView(w http.ResponseWriter, r *http.Request, authSvc *auth.Service, next, errMsg string, status int) {
-	secure := isHTTPSRequest(r)
-
-	var sshToken, sshCmd, sshPort string
-	if authSvc.HasSSH() {
-		token, bindingCookie, err := authSvc.CreateChallenge(r.RemoteAddr, next)
-		if err != nil {
-			errorpage.Render(w, http.StatusInternalServerError, "Failed to create authentication challenge.")
-			return
-		}
-		http.SetCookie(w, &http.Cookie{
-			Name:     auth.BindingCookieName,
-			Value:    bindingCookie,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   secure,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   300,
-		})
-		sshToken = token
-		sshCmd = serverfns.BuildSSHCommand(token, authSvc.SSHAddr())
-		sshPort = "2222"
-		if parts := strings.Split(authSvc.SSHAddr(), ":"); len(parts) == 2 {
-			sshPort = parts[1]
-		}
-	}
-
+func renderLoginView(w http.ResponseWriter, next, errMsg string, status int) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if status != http.StatusOK {
 		w.WriteHeader(status)
 	}
-	if authSvc.HasTOTP() {
-		_ = login.TOTPPage(next, errMsg, sshToken, sshCmd, sshPort).Render(w)
-		return
-	}
-	_ = login.Page(sshToken, sshCmd, next, sshPort).Render(w)
+	_ = login.TOTPPage(next, errMsg).Render(w)
 }
 
 func isValidVerifyID(id string) bool {
@@ -239,7 +196,7 @@ func handleLogin(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc
 		}
 
 		errMsg := loginErrorMessage(r.URL.Query().Get("err"))
-		renderLoginView(w, r, authSvc, next, errMsg, http.StatusOK)
+		renderLoginView(w, next, errMsg, http.StatusOK)
 	}
 }
 
@@ -257,7 +214,7 @@ func handleLoginSubmit(authSvc *auth.Service, limiter *ipRateLimiter) http.Handl
 		}
 
 		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
-			renderLoginView(w, r, authSvc, next, "Too many attempts. Please wait a few minutes.", http.StatusTooManyRequests)
+			renderLoginView(w, next, "Too many attempts. Please wait a few minutes.", http.StatusTooManyRequests)
 			return
 		}
 
@@ -265,7 +222,7 @@ func handleLoginSubmit(authSvc *auth.Service, limiter *ipRateLimiter) http.Handl
 		verifyID, bindingCookie, _, err := authSvc.StartTOTPVerification(code, next)
 		if err != nil {
 			if errors.Is(err, auth.ErrTOTPPending) {
-				renderLoginView(w, r, authSvc, next, "A confirmation is already in progress. Please wait.", http.StatusTooManyRequests)
+				renderLoginView(w, next, "A confirmation is already in progress. Please wait.", http.StatusTooManyRequests)
 				return
 			}
 			errorpage.Render(w, http.StatusInternalServerError, "Failed to initiate authentication confirmation.")
@@ -400,75 +357,6 @@ func handleTOTPStatus(authSvc *auth.Service, limiter *ipRateLimiter) http.Handle
 	}
 }
 
-func handleAuthStatus(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if authSvc == nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			return
-		}
-
-		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
-			w.WriteHeader(http.StatusTooManyRequests)
-			return
-		}
-
-		token := strings.TrimSpace(r.URL.Query().Get("token"))
-		if !isValidSixDigitToken(token) {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		bindingCookie, err := r.Cookie(auth.BindingCookieName)
-		if err != nil || bindingCookie.Value == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		sessionID, redirectURL, err := authSvc.RedeemChallenge(token, bindingCookie.Value)
-		if err != nil {
-			if err == auth.ErrNotApproved {
-				// HTMX poller receives 204 No Content and continues polling
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		secure := isHTTPSRequest(r)
-
-		// Clear temporary binding cookie
-		http.SetCookie(w, &http.Cookie{
-			Name:     auth.BindingCookieName,
-			Value:    "",
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   secure,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   -1,
-		})
-
-		// Set authenticated session cookie
-		http.SetCookie(w, &http.Cookie{
-			Name:     auth.SessionCookieName,
-			Value:    sessionID,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   secure,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   int(auth.SessionDuration.Seconds()),
-		})
-
-		target := serverfns.SanitizeRedirect(redirectURL)
-		if r.Header.Get("HX-Request") == "true" {
-			w.Header().Set("HX-Redirect", target)
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		http.Redirect(w, r, target, http.StatusSeeOther)
-	}
-}
-
 func handlePilotSettings(authSvc *auth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if _, err := serverfns.RequireAuth(authSvc, r); err != nil {
@@ -476,20 +364,8 @@ func handlePilotSettings(authSvc *auth.Service) http.HandlerFunc {
 			return
 		}
 
-		keyType := "TOTP (RFC 6238)"
-		if authSvc != nil {
-			switch {
-			case authSvc.HasTOTP() && authSvc.HasSSH():
-				keyType = "TOTP (RFC 6238) + " + authSvc.KeyType()
-			case authSvc.HasTOTP():
-				keyType = "TOTP (RFC 6238)"
-			case authSvc.KeyType() != "":
-				keyType = authSvc.KeyType()
-			}
-		}
-
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = pilot.SettingsPage(keyType).Render(w)
+		_ = pilot.SettingsPage("TOTP (RFC 6238)").Render(w)
 	}
 }
 

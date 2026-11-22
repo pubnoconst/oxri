@@ -1,4 +1,4 @@
-// Package login provides the Gomponents authentication view for Res Imperii.
+// Package login provides the Gomponents authentication views for Res Imperii.
 package login
 
 import (
@@ -18,7 +18,7 @@ var StyleCSS string
 const StylePath = "/views/login/login.css"
 
 // TOTPConfirmPage renders the 30-second anti-bruteforce confirmation cooldown screen
-// featuring the full-card sunlit water-drop ripple, a smooth progress bar, and "Confirming, wait.".
+// featuring the pagewide sunlit water-drop ripple, a smooth progress bar, and "Confirming, wait.".
 func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 	if totalMs <= 0 {
 		totalMs = 30000
@@ -54,7 +54,7 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 
 	return layout.Doc(
 		"Confirming - RES IMPERII",
-		StylePath+"?v=6",
+		StylePath+"?v=7",
 		g.Raw(filterSVG.String()),
 		h.Div(h.Class("auth-water-stage"), g.Attr("data-water-stage", ""),
 			h.Main(h.Class("auth-page"),
@@ -86,49 +86,16 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 	)
 }
 
-// TOTPPage renders the quiet 6-digit RFC 6238 TOTP login screen, with an optional
-// collapsible loopback SSH fallback when SSH auth is also active locally.
-func TOTPPage(nextURL, errMsg, sshToken, sshCommand, sshPort string) g.Node {
+// TOTPPage renders the quiet 6-digit RFC 6238 TOTP login screen.
+func TOTPPage(nextURL, errMsg string) g.Node {
 	var errNode g.Node
 	if errMsg != "" {
 		errNode = h.P(h.Class("auth-error"), g.Attr("role", "alert"), g.Text(errMsg))
 	}
 
-	var sshFallback g.Node
-	if sshCommand != "" && sshToken != "" {
-		copyScript := "navigator.clipboard.writeText(this.dataset.cmd).then(() => { this.innerText='Copied!'; setTimeout(() => { this.innerText='Copy Command'; }, 2000); });"
-		sshFallback = g.Group([]g.Node{
-			h.Details(h.Class("auth-alt-ssh"),
-				h.Summary(h.Class("auth-alt-summary"), g.Text("Or verify via loopback SSH")),
-				h.Div(h.Class("auth-alt-body"),
-					h.Div(h.Class("auth-command-box"),
-						h.Code(h.Class("auth-command"), g.Text(sshCommand)),
-						h.Button(
-							h.Type("button"),
-							h.Class("auth-copy-button btn btn-neutral"),
-							g.Attr("data-cmd", sshCommand),
-							g.Attr("onclick", copyScript),
-							g.Text("Copy Command"),
-						),
-					),
-					h.Div(h.Class("auth-status-bar"),
-						h.Span(h.Class("auth-pulse-dot")),
-						h.Span(h.Class("auth-status-text"), g.Text(fmt.Sprintf("Listening on port %s · Waiting for SSH signature…", sshPort))),
-					),
-				),
-			),
-			h.Div(
-				h.ID("auth-poller"),
-				g.Attr("hx-get", fmt.Sprintf("/auth/status?token=%s&next=%s", sshToken, nextURL)),
-				g.Attr("hx-trigger", "every 1s"),
-				g.Attr("hx-swap", "none"),
-			),
-		})
-	}
-
 	return layout.Doc(
 		"Authentication - RES IMPERII",
-		StylePath+"?v=6",
+		StylePath+"?v=7",
 		h.Main(h.Class("auth-page"),
 			h.Header(h.Class("auth-header"),
 				layout.BackLink("/", "Home"),
@@ -156,69 +123,6 @@ func TOTPPage(nextURL, errMsg, sshToken, sshCommand, sshPort string) g.Node {
 					),
 					h.Button(h.Type("submit"), h.Class("btn btn-neutral auth-totp-submit"), g.Text("Verify")),
 				),
-				sshFallback,
-			),
-		),
-	)
-}
-
-// Page renders the cryptographic SSH authentication challenge screen.
-func Page(token, sshCommand, nextURL, sshPort string) g.Node {
-	copyScript := "navigator.clipboard.writeText(this.dataset.cmd).then(() => { this.innerText='Copied!'; setTimeout(() => { this.innerText='Copy Command'; }, 2000); });"
-
-	return layout.Doc(
-		"Authentication - RES IMPERII",
-		StylePath,
-		h.Main(h.Class("auth-page"),
-			h.Header(h.Class("auth-header"),
-				layout.BackLink("/", "Home"),
-				h.H1(g.Text("AUTHENTICATION")),
-				h.P(h.Class("auth-subtitle"), g.Text("Loopback SSH verification for Res Imperii")),
-			),
-			h.Section(h.Class("auth-card"),
-				h.Ol(h.Class("auth-steps"),
-					h.Li(
-						h.Span(h.Class("step-num"), g.Text("1")),
-						h.Div(h.Class("step-content"),
-							h.P(h.Class("step-title"), g.Text("Open your terminal")),
-							h.P(h.Class("step-desc"), g.Text("Use PowerShell, Windows Terminal, or your preferred shell where your SSH key is accessible.")),
-						),
-					),
-					h.Li(
-						h.Span(h.Class("step-num"), g.Text("2")),
-						h.Div(h.Class("step-content"),
-							h.P(h.Class("step-title"), g.Text("Run the authentication command")),
-							h.Div(h.Class("auth-command-box"),
-								h.Code(h.Class("auth-command"), g.Text(sshCommand)),
-								h.Button(
-									h.Type("button"),
-									h.Class("auth-copy-button btn btn-neutral"),
-									g.Attr("data-cmd", sshCommand),
-									g.Attr("onclick", copyScript),
-									g.Text("Copy Command"),
-								),
-							),
-						),
-					),
-					h.Li(
-						h.Span(h.Class("step-num"), g.Text("3")),
-						h.Div(h.Class("step-content"),
-							h.P(h.Class("step-title"), g.Text("Identity verification")),
-							h.P(h.Class("step-desc"), g.Text("Your private key signs the loopback challenge. Upon verification, this page automatically unlocks and returns you to your destination.")),
-						),
-					),
-				),
-				h.Div(h.Class("auth-status-bar"),
-					h.Span(h.Class("auth-pulse-dot")),
-					h.Span(h.Class("auth-status-text"), g.Text(fmt.Sprintf("Listening on port %s · Waiting for SSH signature...", sshPort))),
-				),
-			),
-			// HTMX Poller: checks /auth/status every 1s; receives HX-Redirect when approved
-			h.Div(
-				h.ID("auth-poller"),
-				g.Attr("hx-get", fmt.Sprintf("/auth/status?token=%s&next=%s", token, nextURL)),
-				g.Attr("hx-trigger", "every 1s"),
-				g.Attr("hx-swap", "none"),
 			),
 		),
 	)

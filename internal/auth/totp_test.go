@@ -71,9 +71,6 @@ func TestServiceAuthenticateTOTP_ReplayAndLockout(t *testing.T) {
 	if !svc.HasTOTP() {
 		t.Fatalf("expected HasTOTP() to be true")
 	}
-	if svc.HasSSH() {
-		t.Fatalf("expected HasSSH() to be false when no SSH pubkey configured")
-	}
 
 	// Valid TOTP code produces a session
 	code, err := GenerateTOTPCode(secret, time.Now().UTC())
