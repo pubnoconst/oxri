@@ -115,7 +115,7 @@ func VacateSpacePage(view VacateSpaceView) g.Node {
 		if view.RequiredBytes > 0 {
 			btnAttrs = append(btnAttrs, h.Disabled())
 		}
-		btnAttrs = append(btnAttrs, g.Text("Save Entry Now"))
+		btnAttrs = append(btnAttrs, g.Text("Save entry now"))
 
 		resubmitForm = h.Form(
 			h.ID("resubmit-journal-form"),
@@ -161,7 +161,7 @@ func VacateSpacePage(view VacateSpaceView) g.Node {
 	if len(view.AutoPlan.CandidateIDs) == 0 {
 		autoBtnAttrs = append(autoBtnAttrs, h.Disabled())
 	}
-	autoBtnAttrs = append(autoBtnAttrs, g.Text("Clear Space Automatically"))
+	autoBtnAttrs = append(autoBtnAttrs, g.Text("Clear space automatically"))
 
 	manualBtnAttrs := []g.Node{
 		h.Type("submit"),
@@ -171,7 +171,7 @@ func VacateSpacePage(view VacateSpaceView) g.Node {
 	if view.RequiredBytes > 0 {
 		manualBtnAttrs = append(manualBtnAttrs, h.Disabled())
 	}
-	manualBtnAttrs = append(manualBtnAttrs, g.Text("Remove Selected & Save"))
+	manualBtnAttrs = append(manualBtnAttrs, g.Text("Remove selected & save"))
 
 	var manualEntriesNode g.Node
 	if len(view.Entries) == 0 {

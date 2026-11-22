@@ -39,7 +39,7 @@ func TestBookPageAndEditPage(t *testing.T) {
 		t.Fatalf("EditPage().Render failed: %v", err)
 	}
 	editHTML := buf.String()
-	if !strings.Contains(editHTML, `action="/book-ii"`) || !strings.Contains(editHTML, "Save Book II") {
+	if !strings.Contains(editHTML, `action="/book-ii"`) || !strings.Contains(editHTML, "Save changes") {
 		t.Errorf("rendered EditPage missing expected form action or submit button")
 	}
 }

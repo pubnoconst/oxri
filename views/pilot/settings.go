@@ -86,14 +86,14 @@ func SettingsPage(data SettingsData) g.Node {
 					g.Attr("maxlength", "32"),
 					g.Attr("aria-label", "Passkey label"),
 				),
-				h.Button(h.Type("button"), h.ID("add-passkey-btn"), h.Class("btn btn-encouraged"), g.Text("Add Passkey")),
+				h.Button(h.Type("button"), h.ID("add-passkey-btn"), h.Class("btn btn-encouraged"), g.Text("Add passkey")),
 			),
 			h.P(h.ID("passkey-register-status"), h.Class("passkey-status"), g.Attr("role", "status"), g.Attr("hidden", "")),
 		)
 	} else {
 		footerControls = h.Div(h.Class("methods-footer"),
 			h.Div(h.Class("action-buttons"),
-				h.Button(h.Type("button"), h.Class("btn btn-encouraged"), g.Attr("disabled", ""), g.Attr("aria-disabled", "true"), g.Text("Add Passkey")),
+				h.Button(h.Type("button"), h.Class("btn btn-encouraged"), g.Attr("disabled", ""), g.Attr("aria-disabled", "true"), g.Text("Add passkey")),
 			),
 			h.Div(h.Class("https-notice"), g.Attr("role", "note"),
 				h.Div(h.Class("notice-icon"), g.Text("ℹ")),

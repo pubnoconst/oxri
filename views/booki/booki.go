@@ -120,7 +120,7 @@ func EditPage(slug, title, markdownBody, errMsg string) g.Node {
 					),
 				),
 				h.Div(h.Class("book-editor-actions"),
-					h.Button(h.Type("submit"), h.Class("btn btn-encouraged"), g.Text("Save "+title)),
+					h.Button(h.Type("submit"), h.Class("btn btn-encouraged"), g.Text("Save changes")),
 					h.A(h.Class("btn btn-neutral"), h.Href("/"+slug), g.Text("Cancel")),
 				),
 			),
