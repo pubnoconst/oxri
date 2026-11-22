@@ -46,7 +46,26 @@ func handleLoadingPage() http.HandlerFunc {
 	}
 }
 
-func handleJournalsCatalog(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+// handleJournalsCatalog renders the /journals page frame immediately (0ms, independent of DB).
+// The browser then fetches /journals/content asynchronously via HTMX to populate the catalog.
+func handleJournalsCatalog(authSvc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, authErr := serverfns.RequireAuth(authSvc, r)
+		isAuth := (authErr == nil)
+
+		contentURL := "/journals/content"
+		if r.URL.RawQuery != "" {
+			contentURL += "?" + r.URL.RawQuery
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = journals.CatalogShellPage(isAuth, contentURL).Render(w)
+	}
+}
+
+// handleJournalsCatalogContent queries the remote Turso DB and renders the catalog fragment
+// swapped into #journals-catalog-stage by HTMX.
+func handleJournalsCatalogContent(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, authErr := serverfns.RequireAuth(authSvc, r)
 		isAuth := (authErr == nil)
@@ -78,7 +97,7 @@ func handleJournalsCatalog(store *db.Store, authSvc *auth.Service) http.HandlerF
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = journals.CatalogPage(isAuth, journals.CatalogView{
+		_ = journals.CatalogContentFragment(isAuth, journals.CatalogView{
 			Entries:      journals.RenderEntries(entries),
 			AllTags:      allTags,
 			Query:        q,
@@ -94,8 +113,8 @@ func handleJournalNew(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 
 		var existingTags []string
 		if store != nil {
-			// Only include unpublished tags if the caller is authenticated (prevents draft tag leakage)
-			existingTags, _ = store.DistinctTags(r.Context(), isAuth)
+			// Non-blocking read of cached tags (never blocks page load on remote DB)
+			existingTags = store.DistinctTagsCachedOnly(isAuth)
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

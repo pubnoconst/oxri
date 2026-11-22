@@ -95,8 +95,14 @@ func Open(ctx context.Context, dbURL, authToken string) (*Store, error) {
 		return nil, fmt.Errorf("schema initialization failed: %w", err)
 	}
 
-	// Pre-warm the read cache at startup so initial /journals navigation is instant
-	_, _ = store.allEntriesCached(ctx)
+	// Warm the read cache asynchronously for remote databases so startup and initial /journals/content are fast
+	if dbURL != ":memory:" {
+		go func() {
+			warmCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_, _ = store.allEntriesCached(warmCtx)
+		}()
+	}
 
 	return store, nil
 }

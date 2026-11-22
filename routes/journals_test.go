@@ -161,18 +161,29 @@ func TestJournalsEditorVacateAndLoadingFlow(t *testing.T) {
 		t.Errorf("SECURITY LEAK: public /journals/new leaked unpublished tag 'Wip'")
 	}
 
-	// 5. Verify public GET /journals shows only published entry
-	reqCatPublic := httptest.NewRequest(http.MethodGet, "/journals", nil)
+	// 5. Verify public GET /journals renders the instant DB-independent shell,
+	// and GET /journals/content populates only the published entry
+	reqCatShell := httptest.NewRequest(http.MethodGet, "/journals", nil)
+	recCatShell := httptest.NewRecorder()
+	router.ServeHTTP(recCatShell, reqCatShell)
+	if recCatShell.Code != http.StatusOK {
+		t.Fatalf("expected 200 on /journals shell, got %d", recCatShell.Code)
+	}
+	if !strings.Contains(recCatShell.Body.String(), `hx-get="/journals/content"`) {
+		t.Errorf("expected /journals shell to wire hx-get=\"/journals/content\"")
+	}
+
+	reqCatPublic := httptest.NewRequest(http.MethodGet, "/journals/content", nil)
 	recCatPublic := httptest.NewRecorder()
 	router.ServeHTTP(recCatPublic, reqCatPublic)
 	if recCatPublic.Code != http.StatusOK {
-		t.Fatalf("expected 200 on /journals, got %d", recCatPublic.Code)
+		t.Fatalf("expected 200 on /journals/content, got %d", recCatPublic.Code)
 	}
 	if !strings.Contains(recCatPublic.Body.String(), "Published journal entry") {
-		t.Errorf("expected published entry on public catalog")
+		t.Errorf("expected published entry on public catalog content")
 	}
 	if strings.Contains(recCatPublic.Body.String(), "Unpublished draft entry") {
-		t.Errorf("expected unpublished draft to be hidden on public catalog")
+		t.Errorf("expected unpublished draft to be hidden on public catalog content")
 	}
 
 	// 6. Cap storage to current used bytes so next create redirects to /journals/vacate-space/

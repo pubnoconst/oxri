@@ -72,7 +72,8 @@ func NewRouter(cfg Config) http.Handler {
 	r.Get("/loading", handleLoadingPage())
 
 	// 6. Journals & Editor Routes
-	r.Get("/journals", handleJournalsCatalog(cfg.Store, cfg.AuthService))
+	r.Get("/journals", handleJournalsCatalog(cfg.AuthService))
+	r.Get("/journals/content", handleJournalsCatalogContent(cfg.Store, cfg.AuthService))
 	r.Get("/journals/new", handleJournalNew(cfg.Store, cfg.AuthService))
 	r.Post("/journals", handleJournalCreate(cfg.Store, cfg.AuthService))
 	r.Post("/journals/batch", handleJournalBatch(cfg.Store, cfg.AuthService))

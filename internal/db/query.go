@@ -143,6 +143,47 @@ func (s *Store) DistinctTags(ctx context.Context, includeUnpublished bool) ([]st
 	return tags, nil
 }
 
+// DistinctTagsCachedOnly returns distinct tags if the in-memory read cache is currently warm,
+// without blocking on a remote network round-trip (and triggers an async cache warm if cold).
+func (s *Store) DistinctTagsCachedOnly(includeUnpublished bool) []string {
+	s.cacheMu.RLock()
+	valid := s.cacheValid && time.Since(s.cacheLoadedAt) < readCacheTTL
+	var snapshot []Journal
+	if valid {
+		snapshot = make([]Journal, len(s.cachedEntries))
+		copy(snapshot, s.cachedEntries)
+	}
+	s.cacheMu.RUnlock()
+
+	if !valid {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_, _ = s.allEntriesCached(ctx)
+		}()
+		return nil
+	}
+
+	seen := make(map[string]struct{})
+	var tags []string
+	for _, j := range snapshot {
+		if !includeUnpublished && !j.Published {
+			continue
+		}
+		for _, t := range []string{j.Tag1, j.Tag2, j.Tag3} {
+			if t == "" {
+				continue
+			}
+			if _, ok := seen[t]; !ok {
+				seen[t] = struct{}{}
+				tags = append(tags, t)
+			}
+		}
+	}
+	sort.Strings(tags)
+	return tags
+}
+
 // Get fetches a single entry by ID. Returns ErrNotFound if absent or hidden.
 func (s *Store) Get(ctx context.Context, id int64, includeUnpublished bool) (*Journal, error) {
 	all, err := s.allEntriesCached(ctx)

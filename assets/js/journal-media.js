@@ -187,11 +187,15 @@
     const slots = document.querySelectorAll("[data-media-url]");
     slots.forEach((slot) => {
       const raw = slot.getAttribute("data-media-url") || "";
+      if (slot.getAttribute("data-media-mounted") === raw && slot.childElementCount > 0) {
+        return;
+      }
       const url = safeUrl(raw);
       slot.replaceChildren();
       if (!url) return;
       const media = createMedia(url) || createLinkFallback(url);
       slot.append(media);
+      slot.setAttribute("data-media-mounted", raw);
     });
   }
 
@@ -208,6 +212,8 @@
   } else {
     mountCatalogSlots();
   }
+  document.addEventListener("htmx:afterSwap", mountCatalogSlots);
+  document.addEventListener("htmx:afterSettle", mountCatalogSlots);
 
   const themeObserver = new MutationObserver(() => {
     const slots = document.querySelectorAll("[data-media-url]");
