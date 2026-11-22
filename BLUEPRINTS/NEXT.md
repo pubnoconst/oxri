@@ -1,18 +1,14 @@
 # Next
 
-- **Latest Commit**: `40ed717` (`feat: implement journals catalog, editor, vacate-space page, and awaiting confirmation UI`)
-- **Active Branch**: `v2-journals-system` (PR open for review and UI test)
+- **Latest Commit**: `58a1ccb` (`feat(security): enforce independent server-side input sanitization, strict HTTP security headers, CSRF checks, and vendored editor scripts`)
+- **Active Branch**: `v2-security-hardening` (PR open for review and UI test)
 - **Active Experiment / Undo Instructions**: None.
 
 ## Next on Mind
 
-1. **Journals Catalog, Editor, Vacate-Space & Confirmation UI Review**:
+1. **Security Hardening & Independent Server-Side Sanitization Review**:
    - Keep Pull Request open for user UI testing and green light.
-   - Test `/journals`, `/journals/new`, `/journals/vacate-space/`, and `/loading`.
+   - Verify local editor script loading (`markdown-it.min.js`, `purify.min.js`), directory listing 404 on `/assets/`, and server-side input sanitization.
 
-2. **Security Headers, Request Body Caps & Rate-Limiting Hardening**:
-   - Strict HTTP security headers middleware (CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, `frame-ancestors 'none'`).
-   - Request body size cap (`1 MiB`) and per-IP rate limiting on authentication endpoints.
-
-3. **Future Milestone — Anti-AiTM Phishing-Resistant Auth (TOTP + Channel/Key Binding & WebAuthn)**:
+2. **Future Milestone — Anti-AiTM Phishing-Resistant Auth (TOTP + Channel/Key Binding & WebAuthn)**:
    - Bind TOTP / SSH challenges to client origin / WebAuthn passkeys to prevent live relay (Adversary-in-the-Middle) phishing.
