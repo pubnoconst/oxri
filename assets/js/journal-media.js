@@ -165,9 +165,62 @@
   //   ...later, tweets with photos/video send another resize(h') once media loads.
   // So there is no "settle" to wait for. As soon as a real height exists we push
   // the card body down to it and ease the tweet in; every later resize (Twitter's
-  // second phase, or a viewport-width change) retargets the same height
-  // transition, so the second phase is a smooth push, never a jump or a clip.
+  // second phase, or a viewport-width change) is pushed the same way.
+  //
+  // The push is FLIP (First, Last, Invert, Play), not an animated height: the
+  // slot takes its final height in ONE layout, then everything that moved is
+  // offset back with transform and animated home, and every card that grew is
+  // clipped back to its old height and unrolled. Transforms run on the GPU and
+  // the clip only repaints, so no frame re-lays-out the catalog (an animated
+  // height did, ~every frame for every revealing tweet: choppy on phones).
   const MIN_REAL_HEIGHT = 40; // below this Twitter hasn't laid the tweet out yet
+  const PUSH_MS = 460;
+  const PUSH_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
+  const flipAnimations = new WeakMap(); // element -> its running FLIP animation
+
+  // flipPush applies change() (a single layout change at the media slot) and
+  // animates everything it moved or grew from where it visually was.
+  function flipPush(container, change) {
+    const slot = container.closest(".journal-media-slot") || container;
+    const host = container.closest(".journal-card") || slot.parentElement;
+    const peers = host && host.parentElement ? Array.from(host.parentElement.children) : [];
+    const inner = [];
+    for (let n = slot.nextElementSibling; n; n = n.nextElementSibling) inner.push(n);
+    const els = peers.concat(inner).filter((el) => el instanceof HTMLElement);
+
+    // First: where things are now, including any in-flight FLIP offset.
+    const first = new Map(els.map((el) => [el, el.getBoundingClientRect()]));
+
+    change();
+
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || typeof Element.prototype.animate !== "function") return;
+
+    // Last: the settled layout (cancel running offsets so we measure layout).
+    els.forEach((el) => {
+      const running = flipAnimations.get(el);
+      if (running) running.cancel();
+    });
+    els.forEach((el) => {
+      const a = first.get(el);
+      const b = el.getBoundingClientRect();
+      const dy = a.top - b.top;
+      const grew = peers.includes(el) ? b.height - a.height : 0;
+      if (Math.abs(dy) < 0.5 && grew < 0.5) return;
+      // Clip only the bottom edge while a card unrolls; keep its side shadows.
+      const from = { transform: `translateY(${dy.toFixed(1)}px)` };
+      const to = { transform: "translateY(0)" };
+      if (grew >= 0.5) {
+        from.clipPath = `inset(-60px -60px ${grew.toFixed(1)}px -60px)`;
+        to.clipPath = "inset(-60px -60px 0px -60px)";
+      }
+      const anim = el.animate([from, to], { duration: PUSH_MS, easing: PUSH_EASING });
+      flipAnimations.set(el, anim);
+      anim.onfinish = anim.oncancel = () => {
+        if (flipAnimations.get(el) === anim) flipAnimations.delete(el);
+      };
+    });
+  }
   const TWEET_GIVE_UP_MS = 12000; // embed blocked/never rendered -> show the link card
 
   function expandAndRevealTweet(container, rippleHandle, stage) {
@@ -218,17 +271,18 @@
       const h = measure();
       if (h < MIN_REAL_HEIGHT || h === target) return;
 
-      if (target === 0) {
-        // Lock the slot at its current (ripple spacer) height, swap the spacer
-        // out, and from here drive the slot height explicitly.
-        container.style.height = `${container.getBoundingClientRect().height}px`;
-        container.classList.add("is-expanding");
-        if (rippleHandle) rippleHandle.removeSpacer();
-        void container.offsetHeight;
-      }
+      const firstTime = target === 0;
       target = h;
-      // CSS height transition = the body being pushed; retargets mid-flight.
-      container.style.height = `${h}px`;
+      // One layout change at the slot; flipPush animates the consequences.
+      flipPush(container, () => {
+        if (firstTime) {
+          // Swap the ripple spacer for the tweet; from here the slot height is
+          // driven explicitly (overflow clipped) and follows Twitter's resizes.
+          container.classList.add("is-expanding");
+          if (rippleHandle) rippleHandle.removeSpacer();
+        }
+        container.style.height = `${h}px`;
+      });
       reveal();
     };
 

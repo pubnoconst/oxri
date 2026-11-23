@@ -394,8 +394,11 @@ a {
   background: transparent;
   padding: 0;
   border-radius: 14px;
-  filter: drop-shadow(0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent));
-  transition: height 460ms cubic-bezier(0.22, 1, 0.36, 1);
+  /* box-shadow, not filter: drop-shadow(): a filter over the cross-origin tweet
+     iframe is recomputed whenever the tweet repaints. The rounded box matches
+     the tweet's 14px corners, so the shadow is identical. No height transition:
+     the push is a FLIP in journal-media.js (one layout, GPU-animated). */
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent);
 }
 
 /* Quiet empty space where the water drop originates while the tweet renders off-screen */
@@ -405,7 +408,8 @@ a {
   pointer-events: none;
 }
 
-/* Clip only while the slot height is driven by JS; afterwards height is auto and nothing is cut. */
+/* Once the tweet is revealed the slot height is driven by JS, always matching the
+   tweet (it follows every resize), so clipping overflow never cuts anything. */
 .journal-preview-media .tweet-embed-container.is-expanding {
   overflow: hidden;
 }
