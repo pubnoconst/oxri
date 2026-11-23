@@ -95,10 +95,11 @@
     }
     document.body.append(overlay);
 
-    const water = window.ResImperiiWater.attach(document.documentElement, overlay, {
+    // Refract the page's cloth (a fixed linen layer behind all content), never
+    // the content itself: see water-ripple.js getCloth / RATIONALE 039.
+    const water = window.ResImperiiWater.attach(window.ResImperiiWater.cloth(), overlay, {
       amplitude: AMPLITUDE,
       maxWaves: sources.length,
-      viewportRegion: true,
     });
 
     // Report how smoothly this run drew, so the governor can adapt.
@@ -159,6 +160,16 @@
       stop();
     }
   });
+
+  // The moment a navigation commits, the water stops: the outgoing page is
+  // snapshotted for the view transition (pageswap) and torn down (pagehide)
+  // with no filter running.
+  const stillWater = () => {
+    pulseUntil = 0;
+    stop();
+  };
+  window.addEventListener("pageswap", stillWater);
+  window.addEventListener("pagehide", stillWater);
 
   // Back/forward cache restore: the page must come back still.
   window.addEventListener("pageshow", (event) => {
