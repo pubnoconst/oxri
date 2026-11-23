@@ -322,7 +322,7 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 	return layout.Doc(
 		"Journals - RES IMPERII",
 		Style.URL(),
-		h.Div(h.Class("water-stage"), g.Attr("data-water-stage", ""),
+		h.Div(h.Class("water-stage"),
 			h.Main(h.Class("journals-page"),
 				renderJournalsHeader(isAuth),
 				h.Div(

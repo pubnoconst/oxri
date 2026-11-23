@@ -175,36 +175,23 @@
       const stageRect = inst.stage.getBoundingClientRect();
       if (stageRect.width <= 0 || stageRect.height <= 0) return;
 
-      if (inst.viewportRegion) {
-        // Root-element stage (touch ripple): only the visible viewport is ever
-        // refracted, so clip the filter region to it rather than filtering the
-        // whole (possibly very long) document every frame.
-        const x = Math.floor(-stageRect.left) - 20;
-        const y = Math.floor(-stageRect.top) - 20;
-        const w = window.innerWidth + 40;
-        const h = window.innerHeight + 40;
-        if (inst.lastX !== x || inst.lastY !== y || inst.lastW !== w || inst.lastH !== h) {
-          inst.filter.setAttribute("x", String(x));
-          inst.filter.setAttribute("y", String(y));
-          inst.filter.setAttribute("width", String(w));
-          inst.filter.setAttribute("height", String(h));
-          inst.lastX = x;
-          inst.lastY = y;
-          inst.lastW = w;
-          inst.lastH = h;
-        }
-      } else {
-        const w = Math.ceil(stageRect.width) + 40;
-        const h = Math.ceil(stageRect.height) + 40;
-        if (inst.lastW !== w || inst.lastH !== h) {
-          inst.filter.setAttribute("x", "-20");
-          inst.filter.setAttribute("y", "-20");
-          inst.filter.setAttribute("width", String(w));
-          inst.filter.setAttribute("height", String(h));
-          inst.lastW = w;
-          inst.lastH = h;
-        }
+      const w = Math.ceil(stageRect.width) + 40;
+      const h = Math.ceil(stageRect.height) + 40;
+      if (inst.lastW !== w || inst.lastH !== h) {
+        inst.filter.setAttribute("x", "-20");
+        inst.filter.setAttribute("y", "-20");
+        inst.filter.setAttribute("width", String(w));
+        inst.filter.setAttribute("height", String(h));
+        inst.lastW = w;
+        inst.lastH = h;
       }
+
+      // The stage's visible part, in stage coordinates (for culling below).
+      const vx0 = Math.max(0, -stageRect.left);
+      const vy0 = Math.max(0, -stageRect.top);
+      const vx1 = Math.min(stageRect.width, window.innerWidth - stageRect.left);
+      const vy1 = Math.min(stageRect.height, window.innerHeight - stageRect.top);
+      const stageVisible = vx1 > vx0 && vy1 > vy0;
 
       // Scale displacement smoothly down as the overlay fades out
       const overlayOpacity = parseFloat(window.getComputedStyle(inst.overlay).opacity);
@@ -236,26 +223,18 @@
         const cy = rect.top + rect.height / 2 - stageRect.top;
         const mapHalf = crestRadius / MAP_CREST;
 
-        if (inst.viewportRegion) {
-          // Skip a layer whose wave band (≈ 0.28–1.0 × mapHalf, see getMapURL)
-          // doesn't touch the viewport this frame: the viewport lies wholly
-          // inside the band's calm centre, or wholly outside the band.
-          const vx0 = -stageRect.left;
-          const vy0 = -stageRect.top;
-          const vx1 = vx0 + window.innerWidth;
-          const vy1 = vy0 + window.innerHeight;
-          const nearest = Math.hypot(
-            Math.max(vx0 - cx, 0, cx - vx1),
-            Math.max(vy0 - cy, 0, cy - vy1)
-          );
-          const farthest = Math.hypot(
-            Math.max(Math.abs(cx - vx0), Math.abs(cx - vx1)),
-            Math.max(Math.abs(cy - vy0), Math.abs(cy - vy1))
-          );
-          if (nearest > mapHalf || farthest < mapHalf * 0.28) {
-            hideLayer(layer);
-            continue;
-          }
+        // Skip a layer whose wave band (~0.28-1.0 x mapHalf, see getMapURL)
+        // misses the stage's visible part this frame: it lies wholly inside the
+        // band's calm centre, or wholly outside the band. Mirror-image echo
+        // sources start far outside the window, so this saves real work.
+        const nearest = Math.hypot(Math.max(vx0 - cx, 0, cx - vx1), Math.max(vy0 - cy, 0, cy - vy1));
+        const farthest = Math.hypot(
+          Math.max(Math.abs(cx - vx0), Math.abs(cx - vx1)),
+          Math.max(Math.abs(cy - vy0), Math.abs(cy - vy1))
+        );
+        if (!stageVisible || nearest > mapHalf || farthest < mapHalf * 0.28) {
+          hideLayer(layer);
+          continue;
         }
 
         layer.img.setAttribute("x", (cx - mapHalf).toFixed(1));
@@ -289,7 +268,6 @@
   const SLOW_P75_MS = 24; // slower than ~42 fps: step down at once
   const FAST_P75_MS = 18; // ~55 fps or better: counts towards stepping up
   const PROMOTE_AFTER = 3; // consecutive smooth runs before stepping up
-  const THROTTLED_P75_MS = 250; // covered/background window, not a slow device: ignore
 
   function isAppleWebKit() {
     const ua = navigator.userAgent || "";
@@ -339,7 +317,9 @@
 
     // observe feeds one run's 75th-percentile frame time into the governor.
     observe(p75) {
-      if (!(p75 > 0) || p75 >= THROTTLED_P75_MS) return; // throttled window: not evidence
+      // Huge stalls count: an SVG filter over cross-origin iframes once took
+      // ~1 s per frame (RATIONALE 039). Hidden tabs are excluded in measure().
+      if (!(p75 > 0)) return;
       if (p75 > SLOW_P75_MS) {
         if (this.level > 0) this.set(this.level - 1);
         return;
@@ -379,6 +359,23 @@
   };
   document.documentElement.classList.toggle("water-off", quality.level === 0);
 
+  // ---- The water lives under the cloth ------------------------------------
+  // A fixed, viewport-sized layer of page linen behind all content. Page-scale
+  // ripples (the press ripple, the /journals loading ripple) refract only this
+  // layer; cards stand on it. Content, and above all cross-origin tweet
+  // iframes, is never inside the filter: running the whole document (iframes
+  // included) through an SVG filter stalled Chrome to ~1 frame/s and hung a
+  // navigation started mid-ripple (RATIONALE 039).
+  let cloth = null;
+  function getCloth() {
+    if (cloth && cloth.isConnected) return cloth;
+    cloth = document.createElement("div");
+    cloth.className = "water-cloth";
+    cloth.setAttribute("aria-hidden", "true");
+    document.body.prepend(cloth);
+    return cloth;
+  }
+
   function attach(stage, overlay, opts = {}) {
     const noop = { detach() {}, fadeAndDetach() {} };
     if (!stage || !overlay || prefersReducedMotion() || quality.level === 0) return noop;
@@ -411,9 +408,6 @@
       filter,
       layers,
       amplitude,
-      viewportRegion: Boolean(opts.viewportRegion),
-      lastX: 0,
-      lastY: 0,
       lastW: 0,
       lastH: 0,
       detach() {
@@ -441,12 +435,12 @@
     return inst;
   }
 
-  window.ResImperiiWater = { attach, quality };
+  window.ResImperiiWater = { attach, quality, cloth: getCloth };
 
   function autoInitPagewide() {
-    const stage = document.querySelector("[data-water-stage]");
     const overlay = document.querySelector(".card-water-ripple.is-pagewide");
-    if (!stage || !overlay) return;
+    if (!overlay) return;
+    const stage = getCloth();
 
     const inst = attach(stage, overlay, { amplitude: DEFAULT_AMPLITUDE });
 

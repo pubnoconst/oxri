@@ -421,8 +421,19 @@ a {
 .water-stage {
   position: relative;
   min-height: 100svh;
-  /* Own copy of the page cloth so the pagewide ripple refracts the weave. */
+}
+
+/* The water lives under the cloth: a fixed, viewport-sized layer of page linen
+   behind all content (created by water-ripple.js getCloth). Page-scale ripples
+   refract only this layer, so cards, text and tweet iframes are never inside an
+   SVG filter (RATIONALE 039). It paints the same cloth as body, so at rest it is
+   invisible. */
+.water-cloth {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
   background: var(--fabric-page);
+  pointer-events: none;
 }
 
 .card-water-ripple {
