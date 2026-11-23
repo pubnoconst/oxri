@@ -124,6 +124,9 @@
   }
 
   function updateMedia() {
+    if (window.ResImperiiMedia && typeof window.ResImperiiMedia.cleanupSlot === "function") {
+      window.ResImperiiMedia.cleanupSlot(mediaPreview);
+    }
     mediaPreview.replaceChildren();
     const raw = mediaInput.value.trim();
     const len = Array.from(raw).length;

@@ -317,7 +317,7 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 
 	return layout.Doc(
 		"Journals - RES IMPERII",
-		StylePath+"?v=5",
+		StylePath+"?v=6",
 		h.Div(h.Class("water-stage"), g.Attr("data-water-stage", ""),
 			h.Main(h.Class("journals-page"),
 				renderJournalsHeader(isAuth),
@@ -341,7 +341,7 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 			h.Span(h.Class("card-water-wave wave-3")),
 		),
 		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=8")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=9")),
 		catalogScript,
 	)
 }
@@ -355,7 +355,7 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 
 	return layout.Doc(
 		"Journals - RES IMPERII",
-		StylePath+"?v=5",
+		StylePath+"?v=6",
 		h.Main(h.Class("journals-page"),
 			renderJournalsHeader(isAuth),
 			h.Div(h.ID("journals-catalog-stage"),
@@ -363,7 +363,7 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 			),
 		),
 		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=8")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=9")),
 		catalogScript,
 	)
 }
@@ -372,7 +372,7 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 	return layout.Doc(
 		"Journal Entry - RES IMPERII",
-		StylePath+"?v=5",
+		StylePath+"?v=6",
 		h.Main(h.Class("journals-page journals-single-page"),
 			h.Header(h.Class("journals-header"),
 				layout.BackLink("/journals", "Journals"),
@@ -382,7 +382,7 @@ func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 			),
 		),
 		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=8")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=9")),
 	)
 }
 

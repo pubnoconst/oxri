@@ -297,7 +297,6 @@ button.auth-action-link {
 
 .journal-card {
   position: relative;
-  overflow: hidden;
   padding: var(--space-card-pad);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);

@@ -14,9 +14,30 @@
   }
 
   function getActiveTheme() {
-    const override = document.documentElement.getAttribute("data-theme") || sessionStorage.getItem("theme-override");
+    const override = document.documentElement.getAttribute("data-theme") || sessionStorage.getItem("res-imperii-theme") || sessionStorage.getItem("theme-override");
     if (override === "dark" || override === "light") return override;
     return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+
+  function cleanupContainer(container) {
+    if (container && typeof container._oxriCleanup === "function") {
+      try {
+        container._oxriCleanup();
+      } catch (_) {
+        // Ignore cleanup errors on already-detached elements
+      }
+      container._oxriCleanup = null;
+    }
+  }
+
+  function cleanupSlot(slot) {
+    if (!slot) return;
+    slot.querySelectorAll(".tweet-embed-container").forEach(cleanupContainer);
+    const hostCard = slot.closest(".journal-card");
+    if (hostCard) {
+      const strayOverlay = hostCard.querySelector(":scope > .card-water-ripple");
+      if (strayOverlay) strayOverlay.remove();
+    }
   }
 
   function showRippleLoader(container) {
@@ -132,7 +153,8 @@
     document.head.appendChild(s);
   }
 
-  // Wait until Twitter's internal iframe resize and media layout settle before revealing.
+  // Wait until Twitter's internal iframe resize and media layout fully settle before revealing,
+  // preventing half-height / 2-phase partial reveals.
   function waitForStableHeight(el, onSettled) {
     let done = false;
     let settleTimer = null;
@@ -140,6 +162,7 @@
     let resizeObserver = null;
     let mutObserver = null;
     const iframe = el.querySelector("iframe");
+    const iframeId = iframe ? iframe.id : "";
     let lastHeight = -1;
 
     const measure = () => {
@@ -156,9 +179,15 @@
       if (resizeObserver) resizeObserver.disconnect();
       if (mutObserver) mutObserver.disconnect();
       if (iframe) iframe.removeEventListener("load", scheduleSettle);
+      window.removeEventListener("message", onTwitterMessage);
       if (shouldReveal && el.isConnected) {
         onSettled();
       }
+    };
+
+    const armQuietTimer = () => {
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => finish(true), 750);
     };
 
     const scheduleSettle = () => {
@@ -168,12 +197,41 @@
         return;
       }
       const h = Math.round(measure());
-      if (h <= 60) return;
+      if (h <= 80) return;
 
       if (Math.abs(h - lastHeight) > 1 || settleTimer === null) {
         lastHeight = h;
-        if (settleTimer) clearTimeout(settleTimer);
-        settleTimer = setTimeout(() => finish(true), 500);
+        armQuietTimer();
+      }
+    };
+
+    const onTwitterMessage = (ev) => {
+      if (done) return;
+      if (!el.isConnected) {
+        finish(false);
+        return;
+      }
+      if (ev.origin !== "https://platform.twitter.com" && ev.origin !== "https://syndication.twitter.com") {
+        return;
+      }
+      let raw = "";
+      if (typeof ev.data === "string") {
+        raw = ev.data;
+      } else if (ev.data && typeof ev.data === "object") {
+        try {
+          raw = JSON.stringify(ev.data);
+        } catch (_) {
+          raw = "";
+        }
+      }
+      if (!raw) return;
+      // If Twitter posts a resize/render message for this widget, reset the quiet settle window
+      if ((iframeId && raw.includes(iframeId)) || raw.includes("twttr.private.resize")) {
+        const h = Math.round(measure());
+        if (h > 80) {
+          lastHeight = h;
+          armQuietTimer();
+        }
       }
     };
 
@@ -189,90 +247,155 @@
     if (iframe) {
       iframe.addEventListener("load", scheduleSettle);
     }
+    window.addEventListener("message", onTwitterMessage);
 
     scheduleSettle();
-    maxTimer = setTimeout(() => finish(true), 4000);
+    maxTimer = setTimeout(() => finish(true), 5500);
+
+    return () => finish(false);
   }
 
-  function revealTweetFluidly(container, rippleHandle, stage) {
+  function revealTweetFluidly(container, rippleHandle, stage, onComplete) {
     if (!container.isConnected || !stage.isConnected) {
       if (rippleHandle) rippleHandle.cleanup();
-      return;
+      return () => {};
     }
 
     const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) {
+    if (prefersReducedMotion || !rippleHandle || !rippleHandle.spacer || !rippleHandle.spacer.isConnected) {
       if (rippleHandle) rippleHandle.cleanup();
       stage.classList.remove("is-staging");
-      container.classList.remove("is-animating-height");
-      container.style.height = "";
       stage.classList.add("is-ready");
-      return;
+      if (onComplete) onComplete();
+      return () => {};
     }
 
-    const startHeight = container.getBoundingClientRect().height;
-    const style = window.getComputedStyle(container);
-    const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
-    const stageHeight = stage.getBoundingClientRect().height;
-    const targetHeight = Math.ceil(Math.max(startHeight, stageHeight + padY));
-
-    // Step 1: Expand the slot cleanly while the tweet stays completely invisible (opacity: 0)
-    container.style.height = `${startHeight}px`;
-    container.classList.add("is-animating-height");
-
-    if (rippleHandle) {
-      rippleHandle.fadeOut();
-      rippleHandle.removeSpacer();
-    }
-    stage.classList.remove("is-staging");
+    const spacer = rippleHandle.spacer;
+    const startHeight = Math.round(spacer.getBoundingClientRect().height);
+    const targetHeight = Math.ceil(stage.getBoundingClientRect().height);
 
     let revealed = false;
-    const finishReveal = () => {
+    let fallbackTimer = null;
+
+    const finishReveal = (shouldReveal) => {
       if (revealed) return;
       revealed = true;
-      if (!container.isConnected || !stage.isConnected) {
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      spacer.removeEventListener("transitionend", onSpacerEnd);
+
+      if (!shouldReveal || !container.isConnected || !stage.isConnected) {
         if (rippleHandle) rippleHandle.cleanup();
         return;
       }
+
+      // Step 2: Swap settled tweet into flow at exact height and fade in all at once
       if (rippleHandle) rippleHandle.cleanup();
-      container.classList.remove("is-animating-height");
-      container.style.height = "";
-      // Step 2: Fade in the complete, unclipped tweet in a single motion
+      stage.classList.remove("is-staging");
       requestAnimationFrame(() => {
         if (stage.isConnected) {
           stage.classList.add("is-ready");
+          if (onComplete) onComplete();
         }
       });
     };
 
+    const onSpacerEnd = (e) => {
+      if (e.target === spacer && e.propertyName === "height") {
+        finishReveal(true);
+      }
+    };
+
     if (Math.abs(targetHeight - startHeight) <= 2) {
-      finishReveal();
-      return;
+      finishReveal(true);
+      return () => finishReveal(false);
     }
 
-    void container.offsetHeight;
+    // Step 1: Expand ONLY the empty spacer while the tweet remains completely invisible
+    // and unclipped at opacity: 0, so zero partial/half-height tweet is ever displayed.
+    rippleHandle.fadeOut();
+    spacer.style.height = `${startHeight}px`;
+    void spacer.offsetHeight;
+    spacer.addEventListener("transitionend", onSpacerEnd);
     requestAnimationFrame(() => {
-      container.style.height = `${targetHeight}px`;
-    });
-
-    container.addEventListener("transitionend", (e) => {
-      if (e.target === container && e.propertyName === "height") {
-        finishReveal();
+      if (spacer.isConnected) {
+        spacer.style.height = `${targetHeight}px`;
       }
-    }, { once: true });
-    setTimeout(finishReveal, 340);
+    });
+    fallbackTimer = setTimeout(() => finishReveal(true), 340);
+
+    return () => finishReveal(false);
   }
 
   function renderTweet(container, username, tweetId) {
+    cleanupContainer(container);
+    if (!container.isConnected) return;
+
     ensureTwitterWidgetsScript();
     const theme = getActiveTheme();
+
+    let cancelled = false;
+    let waitInterval = null;
+    let cancelWait = null;
+    let cancelReveal = null;
+    let widthObserver = null;
+    let widthDebounce = null;
 
     // Full-card pure-CSS water-drop ripple originating from the quiet media space
     const rippleHandle = showRippleLoader(container);
 
+    const teardown = () => {
+      if (cancelled) return;
+      cancelled = true;
+      if (waitInterval) {
+        clearInterval(waitInterval);
+        waitInterval = null;
+      }
+      if (cancelWait) {
+        cancelWait();
+        cancelWait = null;
+      }
+      if (cancelReveal) {
+        cancelReveal();
+        cancelReveal = null;
+      }
+      if (widthDebounce) {
+        clearTimeout(widthDebounce);
+        widthDebounce = null;
+      }
+      if (widthObserver) {
+        widthObserver.disconnect();
+        widthObserver = null;
+      }
+      if (rippleHandle) rippleHandle.cleanup();
+    };
+    container._oxriCleanup = teardown;
+
+    const armWidthWatcher = (renderedWidth) => {
+      if (cancelled || !container.isConnected || typeof ResizeObserver === "undefined" || renderedWidth < 250) {
+        return;
+      }
+      widthObserver = new ResizeObserver(() => {
+        if (cancelled || !container.isConnected) {
+          teardown();
+          return;
+        }
+        const rawW = Math.floor(container.getBoundingClientRect().width);
+        if (rawW < 250) return;
+        const clampedW = Math.min(550, rawW);
+        if (Math.abs(clampedW - renderedWidth) <= 24) return;
+
+        if (widthDebounce) clearTimeout(widthDebounce);
+        widthDebounce = setTimeout(() => {
+          if (cancelled || !container.isConnected) return;
+          renderTweet(container, username, tweetId);
+        }, 350);
+      });
+      widthObserver.observe(container);
+    };
+
     const doCreate = (twttr) => {
-      if (!container.isConnected) {
-        if (rippleHandle) rippleHandle.cleanup();
+      if (cancelled || !container.isConnected) {
+        teardown();
         return;
       }
 
@@ -281,26 +404,36 @@
       container.append(stage);
 
       const slotWidth = Math.floor(container.getBoundingClientRect().width);
+      const renderedWidth = slotWidth >= 250 ? Math.min(550, slotWidth) : 0;
       const tweetOptions = {
         theme: theme,
         dnt: true,
         align: "center",
         conversation: "none",
       };
-      if (slotWidth >= 250) {
-        tweetOptions.width = Math.min(550, slotWidth);
+      if (renderedWidth >= 250) {
+        tweetOptions.width = renderedWidth;
       }
 
       twttr.widgets.createTweet(tweetId, stage, tweetOptions).then((el) => {
+        if (cancelled || !container.isConnected) {
+          stage.remove();
+          teardown();
+          return;
+        }
         if (!el) {
           stage.remove();
           showTweetFallback(container, username, tweetId, rippleHandle);
           return;
         }
-        waitForStableHeight(el, () => {
-          revealTweetFluidly(container, rippleHandle, stage);
+        cancelWait = waitForStableHeight(el, () => {
+          if (cancelled || !container.isConnected) return;
+          cancelReveal = revealTweetFluidly(container, rippleHandle, stage, () => {
+            armWidthWatcher(renderedWidth);
+          });
         });
       }).catch(() => {
+        if (cancelled || !container.isConnected) return;
         stage.remove();
         showTweetFallback(container, username, tweetId, rippleHandle);
       });
@@ -312,16 +445,27 @@
     }
 
     if (window.twttr && window.twttr.ready) {
-      window.twttr.ready(doCreate);
+      window.twttr.ready((twttr) => {
+        if (!cancelled && container.isConnected) {
+          doCreate(twttr);
+        }
+      });
     } else {
       let attempts = 0;
-      const interval = setInterval(() => {
+      waitInterval = setInterval(() => {
+        if (cancelled || !container.isConnected) {
+          clearInterval(waitInterval);
+          waitInterval = null;
+          return;
+        }
         attempts++;
         if (window.twttr && window.twttr.widgets && typeof window.twttr.widgets.createTweet === "function") {
-          clearInterval(interval);
+          clearInterval(waitInterval);
+          waitInterval = null;
           doCreate(window.twttr);
-        } else if (attempts > 30) {
-          clearInterval(interval);
+        } else if (attempts > 40) {
+          clearInterval(waitInterval);
+          waitInterval = null;
           showTweetFallback(container, username, tweetId, rippleHandle);
         }
       }, 100);
@@ -379,7 +523,20 @@
 
         const container = document.createElement("div");
         container.className = "tweet-embed-container";
-        renderTweet(container, username, tweetId);
+
+        // Reserve space synchronously, then mount ripple + Twitter widget on the next frame
+        // AFTER the caller appends `container` to the live DOM (prevents detached bailout on
+        // double-click theme toggles and ensures .journal-card & slot width are measurable).
+        const initialSpacer = document.createElement("div");
+        initialSpacer.className = "media-ripple-spacer";
+        initialSpacer.setAttribute("role", "status");
+        initialSpacer.setAttribute("aria-label", "Loading media");
+        container.append(initialSpacer);
+
+        requestAnimationFrame(() => {
+          if (!container.isConnected) return;
+          renderTweet(container, username, tweetId);
+        });
         return container;
       }
     }
@@ -435,6 +592,7 @@
         return;
       }
       const url = safeUrl(raw);
+      cleanupSlot(slot);
       slot.replaceChildren();
       if (!url) return;
       const media = createMedia(url) || createLinkFallback(url);
@@ -449,6 +607,7 @@
     createMedia,
     createLinkFallback,
     mountCatalogSlots,
+    cleanupSlot,
   };
 
   if (document.readyState === "loading") {
@@ -466,6 +625,7 @@
         const raw = slot.getAttribute("data-media-url") || "";
         const url = safeUrl(raw);
         if (url) {
+          cleanupSlot(slot);
           slot.replaceChildren();
           const media = createMedia(url);
           if (media) slot.append(media);
