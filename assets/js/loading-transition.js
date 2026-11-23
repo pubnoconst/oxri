@@ -1,6 +1,29 @@
 (function () {
   "use strict";
 
+  // "Confirming, please wait." speaks the same water language as /login/confirm
+  // and the journals catalog: sunlit rings spread from the phrase's centre while
+  // water-ripple.js refracts the phrase along each crest. The per-character
+  // centre-out wave itself is pure CSS (views/loading/loading.css).
+  var water = null;
+
+  function startWater(root) {
+    if (water || !root || !window.ResImperiiWater) return;
+    var phrase = root.querySelector("[data-loading-water]");
+    var rings = root.querySelector(".loading-water-ripple");
+    if (!phrase || !rings) return;
+    water = window.ResImperiiWater.attach(phrase, rings, { amplitude: 6 });
+  }
+
+  function stopWater() {
+    if (water) water.detach();
+    water = null;
+  }
+
+  // Standalone /loading page: the ripple runs for the page's whole life.
+  var page = document.querySelector(".loading-page");
+  if (page) startWater(page);
+
   var overlay = document.getElementById("confirm-loading-overlay");
 
   function showOverlay() {
@@ -8,10 +31,12 @@
     overlay.removeAttribute("hidden");
     void overlay.offsetWidth;
     overlay.classList.add("is-visible");
+    startWater(overlay);
   }
 
   function hideOverlay() {
     if (!overlay) return;
+    stopWater();
     overlay.classList.remove("is-visible");
     overlay.setAttribute("hidden", "");
   }
@@ -22,6 +47,9 @@
   };
 
   if (!overlay) return;
+
+  // Rendered visible (e.g. vacate-space auto-resubmit): start immediately.
+  if (overlay.classList.contains("is-visible")) startWater(overlay);
 
   var forms = document.querySelectorAll('form[data-confirm-loading="true"]');
   for (var i = 0; i < forms.length; i++) {

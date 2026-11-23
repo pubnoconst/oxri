@@ -333,7 +333,8 @@ func VacateSpacePage(view VacateSpaceView) g.Node {
 			),
 		),
 		loading.Overlay(loading.DefaultPhrase, view.AutoResubmitReady),
-		h.Script(h.Src("/assets/js/loading-transition.js?v=1")),
+		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
+		h.Script(h.Src(loading.TransitionScriptPath)),
 		h.Script(h.Src("/assets/js/vacate-space.js?v=3")),
 	)
 }

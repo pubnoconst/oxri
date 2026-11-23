@@ -32,7 +32,18 @@
   pointer-events: all;
 }
 
+.loading-page,
+.loading-overlay {
+  overflow: hidden;
+}
+
+.loading-page {
+  position: relative;
+}
+
 .loading-phrase {
+  position: relative;
+  z-index: 2;
   margin: 0;
   max-width: 32rem;
   text-align: center;
@@ -43,15 +54,22 @@
   letter-spacing: 0.015em;
   color: var(--page-ink);
   user-select: none;
-  animation: loadingPhrasePulse 1.8s ease-in-out infinite;
 }
 
+/*
+ * Water language shared with /login/confirm and the journals catalog: rings
+ * spread from the phrase's centre (.loading-water-ripple, site.css) and the
+ * letters ripple outward from the middle with them. No scaling: each letter
+ * lifts a little and settles with a damped bob, delayed by its distance from
+ * the centre (--d, set in loading.go). The period equals the ring spawn
+ * interval (3.2s / 3 waves), so every ring launches a fresh text ripple.
+ */
 .loading-char {
   display: inline-block;
-  transform-origin: 50% 62%;
+  opacity: 0.74;
   will-change: transform, opacity;
-  animation: loadingMagnifyWave 1.6s linear infinite;
-  animation-delay: calc(var(--i, 0) * 34ms);
+  animation: loadingCentreRipple 1066ms cubic-bezier(0.37, 0, 0.63, 1) infinite;
+  animation-delay: calc(var(--d, 0) * 46ms);
 }
 
 .loading-char.is-space {
@@ -69,44 +87,26 @@
   }
 }
 
-@keyframes loadingPhrasePulse {
-  0%, 100% {
-    opacity: 0.72;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* Smooth bell-curve magnification traveling linearly across characters like a magnifying glass. */
-@keyframes loadingMagnifyWave {
+@keyframes loadingCentreRipple {
   0% {
-    transform: scale(1) translateY(0);
-    opacity: 0.78;
+    transform: translateY(0);
+    opacity: 0.74;
   }
-  5% {
-    transform: scale(1.12) translateY(-0.02em);
-    opacity: 0.88;
-  }
-  10% {
-    transform: scale(1.32) translateY(-0.055em);
-    opacity: 0.98;
-  }
-  13% {
-    transform: scale(1.42) translateY(-0.07em);
+  9% {
+    transform: translateY(-0.15em);
     opacity: 1;
   }
-  16% {
-    transform: scale(1.32) translateY(-0.055em);
-    opacity: 0.98;
+  20% {
+    transform: translateY(0.055em);
+    opacity: 0.9;
   }
-  21% {
-    transform: scale(1.12) translateY(-0.02em);
-    opacity: 0.88;
+  30% {
+    transform: translateY(-0.02em);
+    opacity: 0.82;
   }
-  26%, 100% {
-    transform: scale(1) translateY(0);
-    opacity: 0.78;
+  40%, 100% {
+    transform: translateY(0);
+    opacity: 0.74;
   }
 }
 
@@ -117,5 +117,9 @@
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .loading-water-ripple {
+    display: none;
   }
 }
