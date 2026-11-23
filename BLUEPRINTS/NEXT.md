@@ -2,7 +2,7 @@
 
 - **Base Commit on `main`**: `ea9247b` (PR #24 — settings moved to `/settings`, `/pilot` removed)
 - **Active Branches**:
-  - `v2-rationale-reconstruction` (PR #25): RATIONALE 015–027 reconstructed from git/GitHub history; Principia #7 now requires git-sourced dates and full timestamps.
+  - `v2-rationale-reconstruction` (PR #26): RATIONALE 015–027 reconstructed from git/GitHub history; Principia #7 now requires git-sourced dates and full timestamps.
   - `v2-tweet-reveal` (local, awaiting UI green light): fixes cut-off tweets in the catalog and the two-phase tweet pop-in.
 - **Active Experiment / Undo Instructions**: None. `v2-tweet-reveal` is uncommitted working-tree changes only; `git restore .` on that branch discards them.
 
