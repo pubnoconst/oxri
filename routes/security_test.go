@@ -11,6 +11,7 @@ import (
 
 	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/db"
+	"github.com/oxri/oxri-go/serverfns"
 )
 
 func TestSecurityHeadersAndNoDirectoryListing(t *testing.T) {
@@ -265,7 +266,7 @@ func TestLogoutPostOnly(t *testing.T) {
 		t.Fatalf("expected 405 Method Not Allowed on GET /logout, got %d", getRec.Code)
 	}
 
-	checkReq := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
+	checkReq := httptest.NewRequest(http.MethodGet, "/settings", nil)
 	checkReq.AddCookie(sessionCookie)
 	checkRec := httptest.NewRecorder()
 	router.ServeHTTP(checkRec, checkReq)
@@ -282,7 +283,7 @@ func TestLogoutPostOnly(t *testing.T) {
 		t.Fatalf("expected 303 to / on POST /logout, got %d loc=%q", postRec.Code, postRec.Header().Get("Location"))
 	}
 
-	afterReq := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
+	afterReq := httptest.NewRequest(http.MethodGet, "/settings", nil)
 	afterReq.AddCookie(sessionCookie)
 	afterRec := httptest.NewRecorder()
 	router.ServeHTTP(afterRec, afterReq)
@@ -336,5 +337,44 @@ func TestPersistentTOTPReplayAcrossRestart(t *testing.T) {
 
 	if _, err := svc2.AuthenticateTOTPForIP("198.51.100.10", code); err != auth.ErrTOTPReplayed {
 		t.Fatalf("expected ErrTOTPReplayed across restart with db.Store, got %v", err)
+	}
+}
+
+func TestPilotRoutesDisabled(t *testing.T) {
+	authSvc, sessionCookie := createTestTOTPAuth(t)
+	defer func() { _ = authSvc.Close() }()
+
+	router := NewRouter(Config{
+		AssetsDir:   "../assets",
+		AuthService: authSvc,
+	})
+
+	removedEndpoints := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/pilot"},
+		{http.MethodGet, "/pilot/user/settings"},
+		{http.MethodPost, "/pilot/passkeys/begin"},
+		{http.MethodPost, "/pilot/passkeys/finish"},
+		{http.MethodPost, "/pilot/passkeys/abc/delete"},
+		{http.MethodGet, "/views/pilot/settings.css"},
+	}
+
+	for _, tc := range removedEndpoints {
+		req := httptest.NewRequest(tc.method, tc.path, nil)
+		req.AddCookie(sessionCookie)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("expected 404 Not Found on removed route %s %s, got %d", tc.method, tc.path, rec.Code)
+		}
+	}
+
+	if got := serverfns.SanitizeRedirect("/pilot/user/settings"); got != "/" {
+		t.Errorf("expected SanitizeRedirect(/pilot/user/settings) -> /, got %q", got)
+	}
+	if got := serverfns.SanitizeRedirect("/settings"); got != "/settings" {
+		t.Errorf("expected SanitizeRedirect(/settings) -> /settings, got %q", got)
 	}
 }

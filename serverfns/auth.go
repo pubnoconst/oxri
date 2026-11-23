@@ -20,7 +20,7 @@ var (
 // Allowed redirect targets to prevent open-redirect vulnerabilities
 var allowedRedirectPrefixes = []string{
 	"/",
-	"/pilot/user/settings",
+	"/settings",
 	"/book-i",
 	"/book-ii",
 	"/book-iii",

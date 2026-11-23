@@ -59,7 +59,7 @@ oxri/
 │   ├── editor/                      # 2-column compose & live preview editor (+ editor.css)
 │   ├── loading/                     # "Confirming, please wait." transition UI (+ loading.css)
 │   ├── login/                       # Passkey-first + Password/TOTP login & 30s cooldown views (+ login.css)
-│   ├── pilot/                       # Administrative security settings & passkey management (+ settings.css)
+│   ├── settings/                    # Administrative security settings & passkey management (+ settings.css)
 │   └── errorpage/                   # Client-safe 4xx/5xx error card with UUID & pure-Go QR code
 └── assets/
     ├── css/site.css                 # Modern CSS reset, canonical design tokens, checkbox theming & view transitions
@@ -75,7 +75,7 @@ oxri/
 - **Gomponents (`maragu.dev/gomponents`)**: Views are type-checked Go functions in `views/<component>/`. Each view owns its scoped stylesheet (`views/<component>/<component>.css`) layered over global tokens in `assets/css/site.css`.
 - **Vendored Frontend Assets & Strict CSP**: HTMX (`htmx.min.js`), `markdown-it.min.js`, and `purify.min.js` are vendored locally in `assets/js/`. `Content-Security-Policy` enforces zero `'unsafe-eval'` and zero `'unsafe-inline'` scripts (`script-src 'self' https://platform.twitter.com`).
 - **Authentication & Step-Up Access Control**:
-  - **FIDO2 / WebAuthn Passkeys** (`github.com/go-webauthn/webauthn`): Primary passwordless login keyed by `RPID` in Turso (`passkeys` table). Adding or removing passkeys in `/pilot/user/settings` requires **fresh reauthentication within 5 minutes** (`RequireFreshAuth`).
+  - **FIDO2 / WebAuthn Passkeys** (`github.com/go-webauthn/webauthn`): Primary passwordless login keyed by `RPID` in Turso (`passkeys` table). Adding or removing passkeys in `/settings` requires **fresh reauthentication within 5 minutes** (`RequireFreshAuth`).
   - **Argon2id Password + RFC 6238 TOTP Fallback**: Mandatory 30-second server-side per-IP confirmation cooldown (`StartTOTPVerification`), persistent TOTP replay watermark saved monotonically in Turso (`auth_state` table, schema v6), and **per-IP failed-attempt lockout** (never global lockout).
   - **CSRF & State-Changing Methods**: `POST`-only `/logout` (`GET` returns `405 Method Not Allowed`), `Sec-Fetch-Site` / `Origin` verification, HttpOnly/SameSite/Secure session cookies, and session rotation on login/reauth.
   - **Hardened Reverse-Proxy Trust**: `TRUST_PROXY=true` honors `True-Client-IP`, `CF-Connecting-IP`, or rightmost untrusted `X-Forwarded-For` hop only when `r.RemoteAddr` belongs to a trusted loopback, RFC 1918/4193 private, CGNAT (`100.64.0.0/10`), or `TRUSTED_PROXY_CIDRS` address.

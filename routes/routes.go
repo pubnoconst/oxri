@@ -22,7 +22,7 @@ import (
 	"github.com/oxri/oxri-go/views/landing"
 	"github.com/oxri/oxri-go/views/loading"
 	"github.com/oxri/oxri-go/views/login"
-	"github.com/oxri/oxri-go/views/pilot"
+	"github.com/oxri/oxri-go/views/settings"
 )
 
 // Config configures the application router dependencies and static asset paths.
@@ -56,7 +56,7 @@ func NewRouter(cfg Config) http.Handler {
 	r.Get(errorpage.StylePath, serveCSS(errorpage.StyleCSS))
 	r.Get(booki.StylePath, serveCSS(booki.StyleCSS))
 	r.Get(login.StylePath, serveCSS(login.StyleCSS))
-	r.Get(pilot.StylePath, serveCSS(pilot.StyleCSS))
+	r.Get(settings.StylePath, serveCSS(settings.StyleCSS))
 	r.Get(journals.StylePath, serveCSS(journals.StyleCSS))
 	r.Get(editor.StylePath, serveCSS(editor.StyleCSS))
 	r.Get(loading.StylePath, serveCSS(loading.StyleCSS))
@@ -114,11 +114,11 @@ func NewRouter(cfg Config) http.Handler {
 	r.Post("/auth/passkey/finish", handlePasskeyLoginFinish(cfg.Store, cfg.AuthService, loginLimiter))
 	r.Post("/logout", handleLogout(cfg.AuthService))
 
-	// 8. Protected Profile / Pilot Settings & Passkey Management Routes
-	r.Get("/pilot/user/settings", handlePilotSettings(cfg.Store, cfg.AuthService))
-	r.Post("/pilot/passkeys/begin", handlePasskeyRegisterBegin(cfg.Store, cfg.AuthService))
-	r.Post("/pilot/passkeys/finish", handlePasskeyRegisterFinish(cfg.Store, cfg.AuthService))
-	r.Post("/pilot/passkeys/{id}/delete", handlePasskeyDelete(cfg.Store, cfg.AuthService))
+	// 8. Protected Settings & Passkey Management Routes
+	r.Get("/settings", handleSettings(cfg.Store, cfg.AuthService))
+	r.Post("/settings/passkeys/begin", handlePasskeyRegisterBegin(cfg.Store, cfg.AuthService))
+	r.Post("/settings/passkeys/finish", handlePasskeyRegisterFinish(cfg.Store, cfg.AuthService))
+	r.Post("/settings/passkeys/{id}/delete", handlePasskeyDelete(cfg.Store, cfg.AuthService))
 
 	return r
 }
@@ -384,10 +384,10 @@ func handleTOTPStatus(authSvc *auth.Service, limiter *ipRateLimiter) http.Handle
 	}
 }
 
-func handlePilotSettings(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+func handleSettings(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if _, err := serverfns.RequireAuth(authSvc, r); err != nil {
-			http.Redirect(w, r, "/login?next=/pilot/user/settings", http.StatusSeeOther)
+			http.Redirect(w, r, "/login?next=/settings", http.StatusSeeOther)
 			return
 		}
 
@@ -399,7 +399,7 @@ func handlePilotSettings(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		}
 
 		rpID, _, supported := auth.ResolveWebAuthnOrigin(r, isHTTPSRequest(r))
-		var items []pilot.PasskeyItem
+		var items []settings.PasskeyItem
 		if store != nil && supported {
 			if recs, err := store.ListPasskeys(r.Context(), rpID); err == nil {
 				for _, rec := range recs {
@@ -407,7 +407,7 @@ func handlePilotSettings(store *db.Store, authSvc *auth.Service) http.HandlerFun
 					if !rec.LastUsedAt.IsZero() {
 						lastUsed = rec.LastUsedAt.Local().Format("Jan 2, 2006")
 					}
-					items = append(items, pilot.PasskeyItem{
+					items = append(items, settings.PasskeyItem{
 						ID:         rec.ID,
 						Name:       rec.Name,
 						CreatedAt:  rec.CreatedAt.Local().Format("Jan 2, 2006"),
@@ -418,7 +418,7 @@ func handlePilotSettings(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = pilot.SettingsPage(pilot.SettingsData{
+		_ = settings.SettingsPage(settings.SettingsData{
 			MethodLabel:      methodLabel,
 			RPID:             rpID,
 			PasskeySupported: supported && store != nil,

@@ -178,7 +178,7 @@ func TOTPPage(nextURL, errMsg string, requirePassword, hasPasskeys, reauth bool)
 				),
 			),
 		})
-		passkeyScript = h.Script(h.Src("/assets/js/passkey.js?v=1"))
+		passkeyScript = h.Script(h.Src("/assets/js/passkey.js?v=2"))
 	} else {
 		cardBody = g.Group([]g.Node{
 			errNode,
