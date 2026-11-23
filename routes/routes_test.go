@@ -31,7 +31,7 @@ func TestLandingPageAndComponentCSS(t *testing.T) {
 		"Book III",
 		"Journals",
 		"Log in",
-		"/assets/css/site.css?v=13",
+		"/assets/css/site.css?v=15",
 		"/views/landing/landing.css?v=2",
 		"/assets/js/htmx.min.js",
 		"/assets/js/theme-toggle.js?v=2",

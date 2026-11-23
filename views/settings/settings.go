@@ -147,7 +147,7 @@ func SettingsPage(data SettingsData) g.Node {
 
 	return layout.Doc(
 		"Settings - RES IMPERII",
-		StylePath+"?v=1",
+		StylePath+"?v=2",
 		h.Main(h.Class("settings-page"),
 			h.Header(h.Class("settings-header"),
 				layout.BackLink("/", "Home"),

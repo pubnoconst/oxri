@@ -238,7 +238,7 @@ func VacateSpacePage(view VacateSpaceView) g.Node {
 
 	return layout.Doc(
 		"Make Room - RES IMPERII",
-		StylePath+"?v=1",
+		StylePath+"?v=2",
 		h.Main(h.Class("journals-page vacate-space-page"),
 			h.Header(h.Class("journals-header"),
 				layout.BackLink("/journals", "Journals"),

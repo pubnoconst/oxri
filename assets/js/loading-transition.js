@@ -9,10 +9,11 @@
 
   function startWater(root) {
     if (water || !root || !window.ResImperiiWater) return;
-    var phrase = root.querySelector("[data-loading-water]");
     var rings = root.querySelector(".loading-water-ripple");
-    if (!phrase || !rings) return;
-    water = window.ResImperiiWater.attach(phrase, rings, { amplitude: 6 });
+    if (!rings) return;
+    // Refract the whole linen surface (page or overlay), not just the phrase:
+    // the bent weave is what makes the water read as water.
+    water = window.ResImperiiWater.attach(root, rings, { amplitude: 9 });
   }
 
   function stopWater() {

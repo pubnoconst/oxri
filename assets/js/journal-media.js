@@ -44,9 +44,6 @@
     overlay.className = "card-water-ripple";
     overlay.setAttribute("aria-hidden", "true");
 
-    const drop = document.createElement("span");
-    drop.className = "card-water-drop";
-
     const wave1 = document.createElement("span");
     wave1.className = "card-water-wave wave-1";
     const wave2 = document.createElement("span");
@@ -54,7 +51,7 @@
     const wave3 = document.createElement("span");
     wave3.className = "card-water-wave wave-3";
 
-    overlay.append(drop, wave1, wave2, wave3);
+    overlay.append(wave1, wave2, wave3);
 
     // The overlay and refraction filter belong on the whole enclosing
     // .journal-card, so the wavefront disturbs the meta, tags and text too.

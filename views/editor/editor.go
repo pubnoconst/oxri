@@ -149,7 +149,7 @@ func FormPage(isAuth bool, data FormData) g.Node {
 
 	return layout.Doc(
 		data.PageTitle(),
-		StylePath+"?v=1",
+		StylePath+"?v=2",
 		h.Main(h.Class("journal-editor-page"),
 			h.Header(h.Class("journal-editor-header"),
 				layout.BackLink("/journals", "Journals"),
@@ -245,7 +245,7 @@ func FormPage(isAuth bool, data FormData) g.Node {
 		loading.Overlay(loading.DefaultPhrase, false),
 		h.Script(h.Src("/assets/js/markdown-it.min.js?v=1")),
 		h.Script(h.Src("/assets/js/purify.min.js?v=1")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=13")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=14")),
 		h.Script(h.Src("/assets/js/journal-editor.js?v=10")),
 		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
 		h.Script(h.Src(loading.TransitionScriptPath)),

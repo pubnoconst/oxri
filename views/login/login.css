@@ -34,7 +34,7 @@
   padding: var(--space-card-pad);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  background: var(--surface-card);
+  background: var(--fabric-card);
   box-shadow: var(--shadow-card);
 }
 
@@ -157,6 +157,8 @@
 .auth-water-stage {
   position: relative;
   min-height: 100svh;
+  /* Own copy of the page cloth so the pagewide ripple refracts the weave. */
+  background: var(--fabric-page);
 }
 
 /* Applied by water-ripple.js once the refraction map is ready */
