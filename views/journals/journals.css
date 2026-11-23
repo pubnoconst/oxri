@@ -765,12 +765,6 @@ button.auth-action-link {
   background: var(--surface-subtle);
 }
 
-.vacate-entry-raw-bytes {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  opacity: 0.55;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .auth-action-link,
   .journal-card.is-collage,

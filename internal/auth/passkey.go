@@ -27,10 +27,9 @@ const (
 )
 
 var (
-	ErrPasskeyUnsupported = errors.New("auth: passkeys require HTTPS or localhost")
-	ErrPasskeyNoCreds     = errors.New("auth: no passkeys enrolled for this domain")
-	ErrPasskeyCeremony    = errors.New("auth: passkey ceremony not found or expired")
-	ErrPasskeyCloned      = errors.New("auth: authenticator appears to be cloned")
+	ErrPasskeyNoCreds  = errors.New("auth: no passkeys enrolled for this domain")
+	ErrPasskeyCeremony = errors.New("auth: passkey ceremony not found or expired")
+	ErrPasskeyCloned   = errors.New("auth: authenticator appears to be cloned")
 )
 
 type pendingWebAuthnCeremony struct {

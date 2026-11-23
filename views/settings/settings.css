@@ -244,12 +244,6 @@
   border: 1px solid var(--border-card);
 }
 
-/* Actions */
-.method-actions {
-  flex-shrink: 0;
-}
-
-/* Footer / Notice */
 /* Add-a-passkey controls, inside the Passkeys (WebAuthn) method card */
 .passkey-controls {
   display: flex;
@@ -399,14 +393,6 @@
   .method-card {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .method-actions {
-    width: 100%;
-  }
-
-  .method-actions .btn {
-    width: 100%;
   }
 
   .action-buttons {
