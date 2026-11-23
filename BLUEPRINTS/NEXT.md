@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `4d31110` (PR #32 — embedded, content-hashed assets; README refresh)
-- **Active Branch**: `v2-favicon` (PR #33): favicon shrunk from 968 KB to 4.9 KB (RATIONALE 034).
+- **Base Commit on `main`**: `361e294` (PR #33 — favicon 968 KB → 4.9 KB)
+- **Active Branch**: `v2-quick-wins` (PR #34): `internal/config`, LF line endings, gofmt/vet in CI, single-instance constraint documented (RATIONALE 035).
 - **Parked Branch (local only)**: `v2-touch-ripple`, the press ripple with mirror-source bounces, UI-approved. Before shipping it needs the **adaptive performance governor**: measure frame time on the first ripple per device and step down (fewer echoes, then drop only, then no refraction); start one level down on coarse-pointer / low-memory / save-data devices; check Safari support for SVG displacement on HTML and skip silently if absent. It also needs a rebase onto `main`: PR #30 changed `views/login/login.go`, and PR #32 replaced every `?v=N` and per-page `water-ripple.js` include with typed `assets` handles (its global `water-ripple.js` / `touch-ripple.js` includes must become `assets.WaterRippleJS` / a new `assets.TouchRippleJS`).
 - **Active Experiment / Undo Instructions**: None.
 
@@ -22,6 +22,8 @@
 
 ## Next on Mind
 
-1. Ship `v2-touch-ripple` with the adaptive governor (rebased onto the `assets` handles), then step 3 of the plan.
-2. **Edge tweets:** confirm the cause in Edge DevTools (look for "Tracking Prevention blocked …twitter.com").
-3. Run `mage backup` and author Books II and III via `/book-ii/edit` and `/book-iii/edit`.
+1. **Passkey sign-in tests** (0% coverage today on the primary sign-in path): end-to-end registration and sign-in through the routes with a simulated authenticator (test-only).
+2. Ship `v2-touch-ripple` with the adaptive governor (rebased onto the `assets` handles); **needs the owner's UI test before shipping**.
+3. Continue the plan from step 3.
+4. **Edge tweets:** confirm the cause in Edge DevTools (look for "Tracking Prevention blocked …twitter.com").
+5. Run `mage backup` and author Books II and III via `/book-ii/edit` and `/book-iii/edit`.
