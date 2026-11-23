@@ -40,7 +40,7 @@ func TestAdminRoutesRefuseAnonymous(t *testing.T) {
 	}
 	id := strconv.FormatInt(seed.ID, 10)
 
-	router := NewRouter(Config{AssetsDir: "../assets", Store: store, AuthService: authSvc})
+	router := NewRouter(Config{Store: store, AuthService: authSvc})
 
 	gets := []string{
 		"/journals/" + id + "/edit",

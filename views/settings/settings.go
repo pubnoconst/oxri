@@ -4,6 +4,7 @@ package settings
 import (
 	_ "embed"
 	"fmt"
+	"github.com/oxri/oxri-go/assets"
 
 	"github.com/oxri/oxri-go/views/layout"
 	g "maragu.dev/gomponents"
@@ -15,6 +16,9 @@ var StyleCSS string
 
 // StylePath is the public route for the settings component CSS.
 const StylePath = "/views/settings/settings.css"
+
+// Style is the content-hashed handle for StyleCSS (URL and route handler).
+var Style = assets.Component(StylePath, StyleCSS)
 
 // PasskeyItem is a display-ready enrolled Passkey for the current RP ID.
 type PasskeyItem struct {
@@ -147,7 +151,7 @@ func SettingsPage(data SettingsData) g.Node {
 
 	return layout.Doc(
 		"Settings - RES IMPERII",
-		StylePath+"?v=2",
+		Style.URL(),
 		h.Main(h.Class("settings-page"),
 			h.Header(h.Class("settings-header"),
 				layout.BackLink("/", "Home"),
@@ -215,6 +219,6 @@ func SettingsPage(data SettingsData) g.Node {
 				),
 			),
 		),
-		h.Script(h.Src("/assets/js/passkey.js?v=2")),
+		h.Script(h.Src(assets.PasskeyJS.URL())),
 	)
 }

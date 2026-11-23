@@ -3,6 +3,7 @@ package routes
 
 import (
 	"errors"
+	"github.com/oxri/oxri-go/assets"
 	"log"
 	"math"
 	"net/http"
@@ -26,9 +27,9 @@ import (
 	"github.com/oxri/oxri-go/views/settings"
 )
 
-// Config configures the application router dependencies and static asset paths.
+// Config configures the application router dependencies.
+// Static assets are embedded in the binary (package assets).
 type Config struct {
-	AssetsDir   string
 	AuthService *auth.Service
 	Store       *db.Store
 }
@@ -52,22 +53,18 @@ func NewRouter(cfg Config) http.Handler {
 		errorpage.Render(w, http.StatusMethodNotAllowed, "")
 	})
 
-	// 3. Component CSS Routes (each component owns its own CSS route)
-	r.Get(landing.StylePath, serveCSS(landing.StyleCSS))
-	r.Get(errorpage.StylePath, serveCSS(errorpage.StyleCSS))
-	r.Get(booki.StylePath, serveCSS(booki.StyleCSS))
-	r.Get(login.StylePath, serveCSS(login.StyleCSS))
-	r.Get(settings.StylePath, serveCSS(settings.StyleCSS))
-	r.Get(journals.StylePath, serveCSS(journals.StyleCSS))
-	r.Get(editor.StylePath, serveCSS(editor.StyleCSS))
-	r.Get(loading.StylePath, serveCSS(loading.StyleCSS))
-
-	// 4. Static Assets (/assets/*) — Directory listings strictly disabled
-	assetsDir := cfg.AssetsDir
-	if assetsDir == "" {
-		assetsDir = "assets"
+	// 3. Component CSS Routes (each component owns its stylesheet; content-hashed URLs)
+	for _, style := range []assets.Asset{
+		landing.Style, errorpage.Style, booki.Style, login.Style,
+		settings.Style, journals.Style, editor.Style, loading.Style,
+	} {
+		r.Get(style.Path(), style.Handler())
 	}
-	r.Handle("/assets/*", noDirListingAssetHandler(assetsDir))
+
+	// 4. Static Assets (/assets/*), embedded; no directory listings
+	r.Handle(assets.RoutePattern, assets.FileHandler(func(w http.ResponseWriter, _ *http.Request) {
+		errorpage.Render(w, http.StatusNotFound, "")
+	}))
 
 	// 5. Public Page, Books & Health Routes
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -358,12 +355,5 @@ func handleLogout(authSvc *auth.Service) http.HandlerFunc {
 		})
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
-	}
-}
-
-func serveCSS(css string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/css; charset=utf-8")
-		_, _ = w.Write([]byte(css))
 	}
 }

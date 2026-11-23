@@ -29,7 +29,6 @@ func TestPasskeyRoutesAndStorePersistence(t *testing.T) {
 	defer func() { _ = authSvc.Close() }()
 
 	router := NewRouter(Config{
-		AssetsDir:   "../assets",
 		AuthService: authSvc,
 		Store:       store,
 	})
@@ -160,7 +159,6 @@ func TestPasskeyManagementRequiresFreshAuth(t *testing.T) {
 	}
 
 	router := NewRouter(Config{
-		AssetsDir:   "../assets",
 		AuthService: authSvc,
 		Store:       store,
 	})

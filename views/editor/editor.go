@@ -4,6 +4,7 @@ package editor
 import (
 	_ "embed"
 	"fmt"
+	"github.com/oxri/oxri-go/assets"
 	"strings"
 
 	"github.com/oxri/oxri-go/views/layout"
@@ -17,6 +18,9 @@ var StyleCSS string
 
 // StylePath is the public route for the journal editor component CSS.
 const StylePath = "/views/editor/editor.css"
+
+// Style is the content-hashed handle for StyleCSS (URL and route handler).
+var Style = assets.Component(StylePath, StyleCSS)
 
 // DefaultBody provides starter Markdown when composing a new journal entry.
 const DefaultBody = `# A journal entry
@@ -149,7 +153,7 @@ func FormPage(isAuth bool, data FormData) g.Node {
 
 	return layout.Doc(
 		data.PageTitle(),
-		StylePath+"?v=2",
+		Style.URL(),
 		h.Main(h.Class("journal-editor-page"),
 			h.Header(h.Class("journal-editor-header"),
 				layout.BackLink("/journals", "Journals"),
@@ -243,11 +247,11 @@ func FormPage(isAuth bool, data FormData) g.Node {
 			),
 		),
 		loading.Overlay(loading.DefaultPhrase, false),
-		h.Script(h.Src("/assets/js/markdown-it.min.js?v=1")),
-		h.Script(h.Src("/assets/js/purify.min.js?v=1")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=14")),
-		h.Script(h.Src("/assets/js/journal-editor.js?v=10")),
-		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src(loading.TransitionScriptPath)),
+		h.Script(h.Src(assets.MarkdownItJS.URL())),
+		h.Script(h.Src(assets.PurifyJS.URL())),
+		h.Script(h.Src(assets.JournalMediaJS.URL())),
+		h.Script(h.Src(assets.JournalEditorJS.URL())),
+		h.Script(h.Src(assets.WaterRippleJS.URL())),
+		h.Script(h.Src(assets.LoadingTransitionJS.URL())),
 	)
 }

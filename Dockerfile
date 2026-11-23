@@ -16,12 +16,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server 
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 
+# Static assets are embedded in the binary (package assets).
 COPY --from=builder /out/server /app/server
-COPY --from=builder /src/assets /app/assets
 
 ENV APP_ENV=prod
 ENV TRUST_PROXY=true
-ENV ASSETS_DIR=/app/assets
 ENV PORT=8080
 
 EXPOSE 8080

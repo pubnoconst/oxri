@@ -39,11 +39,6 @@ func main() {
 		}
 	}
 
-	assetsDir := os.Getenv("ASSETS_DIR")
-	if assetsDir == "" {
-		assetsDir = "assets"
-	}
-
 	var store *db.Store
 	dbURL := os.Getenv("TURSO_DATABASE_URL")
 	dbToken := os.Getenv("TURSO_AUTH_TOKEN")
@@ -90,7 +85,6 @@ func main() {
 	}
 
 	handler := routes.NewRouter(routes.Config{
-		AssetsDir:   assetsDir,
 		AuthService: authSvc,
 		Store:       store,
 	})

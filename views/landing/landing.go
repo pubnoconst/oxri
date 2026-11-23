@@ -3,6 +3,7 @@ package landing
 
 import (
 	_ "embed"
+	"github.com/oxri/oxri-go/assets"
 
 	"github.com/oxri/oxri-go/views/layout"
 	g "maragu.dev/gomponents"
@@ -14,6 +15,9 @@ var StyleCSS string
 
 // StylePath is the public CSS route for the landing component styles.
 const StylePath = "/views/landing/landing.css"
+
+// Style is the content-hashed handle for StyleCSS (URL and route handler).
+var Style = assets.Component(StylePath, StyleCSS)
 
 // Page renders the minimal landing page view inside the base layout shell.
 func Page(isAuth bool) g.Node {
@@ -31,7 +35,7 @@ func Page(isAuth bool) g.Node {
 		)
 	}
 
-	return layout.Doc("RES IMPERII", StylePath+"?v=2",
+	return layout.Doc("RES IMPERII", Style.URL(),
 		h.Main(h.Class("landing"),
 			h.Nav(h.Class("landing-nav"),
 				h.H1(h.Class("landing-title"), g.Text("RES·IMPERII")),

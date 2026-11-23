@@ -6,6 +6,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"github.com/oxri/oxri-go/assets"
 	"html"
 	"regexp"
 	"strings"
@@ -22,6 +23,9 @@ var StyleCSS string
 
 // StylePath is the public route for the Book reader & editor component CSS.
 const StylePath = "/views/booki/booki.css"
+
+// Style is the content-hashed handle for StyleCSS (URL and route handler).
+var Style = assets.Component(StylePath, StyleCSS)
 
 var attrSchemeRe = regexp.MustCompile(`(?i)\b(href|src)\s*=\s*"([^"]*)"`)
 
@@ -65,7 +69,7 @@ func BookPage(slug, title, markdownBody string, isAuth bool) g.Node {
 
 	return layout.Doc(
 		title+" - RES IMPERII",
-		StylePath+"?v=3",
+		Style.URL(),
 		h.Main(h.Class("article-page"),
 			h.Article(h.Class("book-article"),
 				h.Div(h.Class("book-top-bar"),
@@ -88,7 +92,7 @@ func EditPage(slug, title, markdownBody, errMsg string) g.Node {
 
 	return layout.Doc(
 		"Edit "+title+" - RES IMPERII",
-		StylePath+"?v=3",
+		Style.URL(),
 		h.Main(h.Class("book-editor-page"),
 			h.Header(h.Class("book-editor-header"),
 				layout.BackLink("/"+slug, title),
@@ -125,8 +129,8 @@ func EditPage(slug, title, markdownBody, errMsg string) g.Node {
 				),
 			),
 		),
-		h.Script(h.Src("/assets/js/markdown-it.min.js")),
-		h.Script(h.Src("/assets/js/purify.min.js")),
-		h.Script(h.Src("/assets/js/book-editor.js?v=1")),
+		h.Script(h.Src(assets.MarkdownItJS.URL())),
+		h.Script(h.Src(assets.PurifyJS.URL())),
+		h.Script(h.Src(assets.BookEditorJS.URL())),
 	)
 }
