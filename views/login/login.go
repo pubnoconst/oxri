@@ -54,7 +54,7 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 
 	return layout.Doc(
 		"Confirming - RES IMPERII",
-		StylePath+"?v=7",
+		StylePath+"?v=8",
 		g.Raw(filterSVG.String()),
 		h.Div(h.Class("auth-water-stage"), g.Attr("data-water-stage", ""),
 			h.Main(h.Class("auth-page"),
@@ -77,7 +77,6 @@ func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
 			),
 		),
 		h.Div(h.Class("card-water-ripple is-pagewide"), g.Attr("style", rippleStyle), g.Attr("aria-hidden", "true"),
-			h.Span(h.Class("card-water-drop")),
 			h.Span(h.Class("card-water-wave wave-1")),
 			h.Span(h.Class("card-water-wave wave-2")),
 			h.Span(h.Class("card-water-wave wave-3")),
@@ -188,7 +187,7 @@ func TOTPPage(nextURL, errMsg string, requirePassword, hasPasskeys, reauth bool)
 
 	return layout.Doc(
 		"Authentication - RES IMPERII",
-		StylePath+"?v=9",
+		StylePath+"?v=10",
 		h.Main(h.Class("auth-page"),
 			h.Header(h.Class("auth-header"),
 				layout.BackLink("/", "Home"),

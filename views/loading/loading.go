@@ -68,13 +68,13 @@ func renderPhraseChars(phrase string) []g.Node {
 	return nodes
 }
 
-// phrase renders the confirmation phrase; data-loading-water marks it as the
-// surface water-ripple.js refracts (see assets/js/loading-transition.js).
+// phraseNode renders the confirmation phrase. The whole linen surface around
+// it (page or overlay) is what water-ripple.js refracts; see
+// assets/js/loading-transition.js.
 func phraseNode(phrase string) g.Node {
 	return h.P(
 		h.Class("loading-phrase"),
 		g.Attr("aria-label", phrase),
-		g.Attr("data-loading-water", ""),
 		g.Group(renderPhraseChars(phrase)),
 	)
 }
@@ -87,7 +87,6 @@ func rippleRings() g.Node {
 		h.Class("card-water-ripple loading-water-ripple"),
 		g.Attr("style", "--ripple-x:50%;--ripple-y:50%;--ripple-diameter:150vmax;"),
 		g.Attr("aria-hidden", "true"),
-		h.Span(h.Class("card-water-drop")),
 		h.Span(h.Class("card-water-wave wave-1")),
 		h.Span(h.Class("card-water-wave wave-2")),
 		h.Span(h.Class("card-water-wave wave-3")),
@@ -109,12 +108,12 @@ func Page(phrase string) g.Node {
 }
 
 // styleVersion is the cache key for loading.css.
-const styleVersion = "2"
+const styleVersion = "3"
 
 // TransitionScriptPath is the script that shows the overlay on submit and
 // drives the phrase refraction; pages embedding Overlay must include it
 // together with /assets/js/water-ripple.js.
-const TransitionScriptPath = "/assets/js/loading-transition.js?v=2"
+const TransitionScriptPath = "/assets/js/loading-transition.js?v=4"
 
 // Stage renders the centered loading phrase stage.
 func Stage(phrase string) g.Node {

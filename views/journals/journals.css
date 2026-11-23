@@ -138,7 +138,7 @@ button.auth-action-link {
   padding: var(--space-card-pad-sm);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  background: var(--surface-card);
+  background: var(--fabric-card);
 }
 
 .journals-search-form {
@@ -230,7 +230,7 @@ button.auth-action-link {
   margin-bottom: 2rem;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  background: var(--surface-card);
+  background: var(--fabric-card);
 }
 
 .batch-select-group {
@@ -301,7 +301,7 @@ button.auth-action-link {
   padding: var(--space-card-pad);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  background: var(--surface-card);
+  background: var(--fabric-card);
   box-shadow: var(--shadow-card);
   box-sizing: border-box;
 }
@@ -534,7 +534,7 @@ button.auth-action-link {
   margin-bottom: 1.5rem;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  background: var(--surface-card);
+  background: var(--fabric-card);
   box-shadow: var(--shadow-card);
   box-sizing: border-box;
 }

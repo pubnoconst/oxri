@@ -65,7 +65,7 @@ func BookPage(slug, title, markdownBody string, isAuth bool) g.Node {
 
 	return layout.Doc(
 		title+" - RES IMPERII",
-		StylePath+"?v=2",
+		StylePath+"?v=3",
 		h.Main(h.Class("article-page"),
 			h.Article(h.Class("book-article"),
 				h.Div(h.Class("book-top-bar"),
@@ -88,7 +88,7 @@ func EditPage(slug, title, markdownBody, errMsg string) g.Node {
 
 	return layout.Doc(
 		"Edit "+title+" - RES IMPERII",
-		StylePath+"?v=2",
+		StylePath+"?v=3",
 		h.Main(h.Class("book-editor-page"),
 			h.Header(h.Class("book-editor-header"),
 				layout.BackLink("/"+slug, title),
