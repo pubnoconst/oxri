@@ -20,7 +20,7 @@ func Page(isAuth bool) g.Node {
 	authNodes := []g.Node{}
 	if isAuth {
 		authNodes = append(authNodes,
-			h.A(h.Class("landing-auth"), h.Href("/pilot/user/settings"), g.Text("Settings")),
+			h.A(h.Class("landing-auth"), h.Href("/settings"), g.Text("Settings")),
 			h.Form(h.Class("landing-auth-form"), h.Method("POST"), h.Action("/logout"),
 				h.Button(h.Type("submit"), h.Class("landing-auth"), g.Text("Log out")),
 			),

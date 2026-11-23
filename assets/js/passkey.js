@@ -1,6 +1,6 @@
 /*
  * Res Imperii — Minimal zero-dependency WebAuthn / Passkey client helper.
- * Handles credential registration (/pilot/user/settings) and sign-in (/login).
+ * Handles credential registration (/settings) and sign-in (/login).
  */
 (() => {
   "use strict";
@@ -41,7 +41,7 @@
     showStatus(statusEl, "Waiting for your device or passkey manager…", false);
 
     try {
-      const beginResp = await fetch("/pilot/passkeys/begin", {
+      const beginResp = await fetch("/settings/passkeys/begin", {
         method: "POST",
         credentials: "same-origin",
       });
@@ -77,7 +77,7 @@
         },
       };
 
-      const finishResp = await fetch("/pilot/passkeys/finish?name=" + encodeURIComponent(label), {
+      const finishResp = await fetch("/settings/passkeys/finish?name=" + encodeURIComponent(label), {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },

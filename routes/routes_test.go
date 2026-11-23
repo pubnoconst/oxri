@@ -242,7 +242,7 @@ func TestAuthRoutes_CSS(t *testing.T) {
 
 	for _, path := range []string{
 		"/views/login/login.css",
-		"/views/pilot/settings.css",
+		"/views/settings/settings.css",
 	} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		rec := httptest.NewRecorder()
@@ -391,16 +391,16 @@ func TestTOTPAuthRoutes_FullFlow(t *testing.T) {
 		t.Fatalf("expected session cookie after TOTP confirmation")
 	}
 
-	// 4. Authenticated /pilot/user/settings succeeds and shows TOTP
-	reqSettings := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
+	// 4. Authenticated /settings succeeds and shows TOTP
+	reqSettings := httptest.NewRequest(http.MethodGet, "/settings", nil)
 	reqSettings.AddCookie(sessionCookie)
 	recSettings := httptest.NewRecorder()
 	router.ServeHTTP(recSettings, reqSettings)
 	if recSettings.Code != http.StatusOK {
-		t.Fatalf("expected 200 on /pilot/user/settings, got %d", recSettings.Code)
+		t.Fatalf("expected 200 on /settings, got %d", recSettings.Code)
 	}
 	if !strings.Contains(recSettings.Body.String(), "TOTP (RFC 6238)") {
-		t.Errorf("expected TOTP (RFC 6238) in pilot settings page")
+		t.Errorf("expected TOTP (RFC 6238) in settings page")
 	}
 
 	// 5. Logout revokes session and redirects to /
@@ -412,8 +412,8 @@ func TestTOTPAuthRoutes_FullFlow(t *testing.T) {
 		t.Fatalf("expected 303 redirect on logout, got %d", recLogout.Code)
 	}
 
-	// 6. After logout, /pilot/user/settings redirects to /login
-	reqAfterLogout := httptest.NewRequest(http.MethodGet, "/pilot/user/settings", nil)
+	// 6. After logout, /settings redirects to /login
+	reqAfterLogout := httptest.NewRequest(http.MethodGet, "/settings", nil)
 	reqAfterLogout.AddCookie(sessionCookie)
 	recAfterLogout := httptest.NewRecorder()
 	router.ServeHTTP(recAfterLogout, reqAfterLogout)

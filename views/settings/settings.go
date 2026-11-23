@@ -1,5 +1,5 @@
-// Package pilot provides experimental administrative views and user profile settings.
-package pilot
+// Package settings provides administrative security and credential management views.
+package settings
 
 import (
 	_ "embed"
@@ -13,8 +13,8 @@ import (
 //go:embed settings.css
 var StyleCSS string
 
-// StylePath is the public route for the pilot settings component CSS.
-const StylePath = "/views/pilot/settings.css"
+// StylePath is the public route for the settings component CSS.
+const StylePath = "/views/settings/settings.css"
 
 // PasskeyItem is a display-ready enrolled Passkey for the current RP ID.
 type PasskeyItem struct {
@@ -24,7 +24,7 @@ type PasskeyItem struct {
 	LastUsedAt string
 }
 
-// SettingsData carries the live authentication and passkey state for /pilot/user/settings.
+// SettingsData carries the live authentication and passkey state for /settings.
 type SettingsData struct {
 	MethodLabel      string
 	RPID             string
@@ -65,7 +65,7 @@ func SettingsPage(data SettingsData) g.Node {
 			} else {
 				removeControl = h.Form(
 					h.Method("POST"),
-					h.Action("/pilot/passkeys/"+pk.ID+"/delete"),
+					h.Action("/settings/passkeys/"+pk.ID+"/delete"),
 					g.Attr("data-confirm", "Remove this passkey?"),
 					h.Button(h.Type("submit"), h.Class("btn btn-destructive btn-sm"), g.Text("Remove")),
 				)
@@ -117,7 +117,7 @@ func SettingsPage(data SettingsData) g.Node {
 				h.Div(h.Class("notice-body"),
 					h.Span(h.Class("notice-title"), g.Text("Recent verification required to manage passkeys")),
 					h.P(g.Text("For security, adding or removing passkeys requires signing in within the last 5 minutes.")),
-					h.A(h.Class("btn btn-neutral btn-sm reauth-link"), h.Href("/login?next=/pilot/user/settings&reauth=1"), g.Text("Re-verify identity")),
+					h.A(h.Class("btn btn-neutral btn-sm reauth-link"), h.Href("/login?next=/settings&reauth=1"), g.Text("Re-verify identity")),
 				),
 			),
 		)
@@ -147,12 +147,12 @@ func SettingsPage(data SettingsData) g.Node {
 
 	return layout.Doc(
 		"Settings - RES IMPERII",
-		StylePath+"?v=3",
+		StylePath+"?v=1",
 		h.Main(h.Class("settings-page"),
 			h.Header(h.Class("settings-header"),
 				layout.BackLink("/", "Home"),
 				h.Div(h.Class("settings-heading"),
-					h.P(h.Class("settings-eyebrow"), g.Text("PILOT / EXPERIMENTAL · SETTINGS")),
+					h.P(h.Class("settings-eyebrow"), g.Text("SETTINGS")),
 					h.H1(g.Text("Security & Authentication")),
 					h.P(h.Class("settings-subtitle"), g.Text("Manage administrative credentials, passkeys, and access controls for Res Imperii.")),
 				),
@@ -215,6 +215,6 @@ func SettingsPage(data SettingsData) g.Node {
 				),
 			),
 		),
-		h.Script(h.Src("/assets/js/passkey.js?v=1")),
+		h.Script(h.Src("/assets/js/passkey.js?v=2")),
 	)
 }

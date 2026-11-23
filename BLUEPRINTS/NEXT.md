@@ -1,8 +1,8 @@
 # Next
 
-- **Base Commit on `main`**: `6e9ec8a` (PR #22 — light-mode plain white checkboxes & synced `color-scheme`)
-- **Active Branch**: `v2-prod-hardening` (Production Hardening Sprint ready for PR review)
-- **Active Experiment / Undo Instructions**: None (all changes isolated on `v2-prod-hardening`).
+- **Base Commit on `main`**: `851ec93` (PR #23 — Production Hardening Sprint)
+- **Active Branch**: `v2-remove-pilot-routes` (moved settings to `/settings` and removed `/pilot` routes)
+- **Active Experiment / Undo Instructions**: None (isolated on `v2-remove-pilot-routes`).
 
 ## Completed Production Milestones
 
@@ -13,16 +13,14 @@
   - Standardized all button labels to sentence case, expanded tags to 8 ASCII-only characters (schema v5), and styled checkboxes plain white (`#ffffff`) in light mode.
 - **Deployment & CI (PR #17)**:
   - Distroless `CGO_ENABLED=0` `Dockerfile`, `render.yaml`, `.github/workflows/ci.yml`, live on Render (`https://res-imperii.onrender.com`, `prod` branch).
+- **Production Hardening Sprint (PR #23)**:
+  - Per-IP TOTP lockout and cooldown isolation, persistent TOTP replay watermark in Turso `auth_state` (schema v6), trusted-proxy IP validation, `POST`-only `/logout`, 5-minute step-up reauthentication for passkeys, strict `script-src` CSP, and `mage backup`.
 
-## Current Work (`v2-prod-hardening` — Production Hardening Sprint)
+## Current Work (`v2-remove-pilot-routes`)
 
-1. **Per-IP Lockout & Bounded Auth Maps**: Isolated TOTP failed-attempt lockouts and 30s single-flight cooldowns per client IP (avoiding global DoS lockout) and bounded pending/session/limiter maps.
-2. **Restart-Safe TOTP Replay Persistence (Schema v6)**: Persisted `last_totp_step` monotonically in Turso `auth_state` via `auth.TOTPReplayStore`.
-3. **Hardened Proxy IP Trust**: Validated trusted peer CIDRs (loopback, private, CGNAT `100.64.0.0/10`) before honoring `True-Client-IP`, `CF-Connecting-IP`, or rightmost untrusted `X-Forwarded-For` hop.
-4. **POST-Only `/logout` & Step-Up Passkey Reauth**: Made `/logout` POST-only (`GET` returns `405`) and gated `/pilot/passkeys/*` add/delete actions behind fresh 5-minute reauthentication (`RequireFreshAuth`, `?reauth=1`).
-5. **Strict Script CSP & Offline Backup CLI**: Removed `'unsafe-inline'` from `script-src` by externalizing form confirm prompts into `assets/js/navigation-feedback.js`, and added `cmd/backup` (`mage backup`) for offline Turso JSON snapshots and restoration.
+- Moved administrative security and passkey settings from `/pilot/user/settings` (`views/pilot/`) to `/settings` (`views/settings/`) and removed all `/pilot/*` routes (`404 Not Found`) while preserving enrolled WebAuthn credentials (`res-imperii-pilot` user handle).
 
 ## Next on Mind
 
-1. Merge the Production Hardening PR into `main`, sync `v2` and `prod` to deploy to Render, and run an initial `mage backup` snapshot to `../oxri-parent/backups/`.
-2. Author Books II and III via `/book-ii/edit` and `/book-iii/edit` directly in production.
+1. Merge the `v2-remove-pilot-routes` PR into `main` and sync `v2` / `prod` to Render.
+2. Run `mage backup` to snapshot Turso into `../oxri-parent/backups/` and author Books II and III via `/book-ii/edit` and `/book-iii/edit`.

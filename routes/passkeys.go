@@ -175,14 +175,14 @@ func handlePasskeyDelete(store *db.Store, authSvc *auth.Service) http.HandlerFun
 	return func(w http.ResponseWriter, r *http.Request) {
 		if _, err := serverfns.RequireFreshAuth(authSvc, r, auth.FreshAuthWindow); err != nil {
 			if errors.Is(err, serverfns.ErrStaleSession) {
-				http.Redirect(w, r, "/login?next=/pilot/user/settings&reauth=1", http.StatusSeeOther)
+				http.Redirect(w, r, "/login?next=/settings&reauth=1", http.StatusSeeOther)
 				return
 			}
-			http.Redirect(w, r, "/login?next=/pilot/user/settings", http.StatusSeeOther)
+			http.Redirect(w, r, "/login?next=/settings", http.StatusSeeOther)
 			return
 		}
 		if store == nil {
-			http.Redirect(w, r, "/pilot/user/settings", http.StatusSeeOther)
+			http.Redirect(w, r, "/settings", http.StatusSeeOther)
 			return
 		}
 		rpID, _, supported := auth.ResolveWebAuthnOrigin(r, isHTTPSRequest(r))
@@ -192,7 +192,7 @@ func handlePasskeyDelete(store *db.Store, authSvc *auth.Service) http.HandlerFun
 				_ = store.DeletePasskey(r.Context(), id, rpID)
 			}
 		}
-		http.Redirect(w, r, "/pilot/user/settings", http.StatusSeeOther)
+		http.Redirect(w, r, "/settings", http.StatusSeeOther)
 	}
 }
 

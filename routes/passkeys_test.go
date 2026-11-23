@@ -34,8 +34,8 @@ func TestPasskeyRoutesAndStorePersistence(t *testing.T) {
 		Store:       store,
 	})
 
-	// 1. Unauthenticated /pilot/passkeys/begin returns 401
-	reqUnauth := httptest.NewRequest(http.MethodPost, "http://localhost:8080/pilot/passkeys/begin", nil)
+	// 1. Unauthenticated /settings/passkeys/begin returns 401
+	reqUnauth := httptest.NewRequest(http.MethodPost, "http://localhost:8080/settings/passkeys/begin", nil)
 	reqUnauth.Host = "localhost:8080"
 	recUnauth := httptest.NewRecorder()
 	router.ServeHTTP(recUnauth, reqUnauth)
@@ -43,14 +43,14 @@ func TestPasskeyRoutesAndStorePersistence(t *testing.T) {
 		t.Fatalf("expected 401 for unauthenticated passkey registration begin, got %d", recUnauth.Code)
 	}
 
-	// 2. Authenticated /pilot/passkeys/begin on localhost returns PublicKeyCredentialCreationOptions JSON + ceremony cookie
-	reqBegin := httptest.NewRequest(http.MethodPost, "http://localhost:8080/pilot/passkeys/begin", nil)
+	// 2. Authenticated /settings/passkeys/begin on localhost returns PublicKeyCredentialCreationOptions JSON + ceremony cookie
+	reqBegin := httptest.NewRequest(http.MethodPost, "http://localhost:8080/settings/passkeys/begin", nil)
 	reqBegin.Host = "localhost:8080"
 	reqBegin.AddCookie(sessionCookie)
 	recBegin := httptest.NewRecorder()
 	router.ServeHTTP(recBegin, reqBegin)
 	if recBegin.Code != http.StatusOK {
-		t.Fatalf("expected 200 on /pilot/passkeys/begin, got %d: %s", recBegin.Code, recBegin.Body.String())
+		t.Fatalf("expected 200 on /settings/passkeys/begin, got %d: %s", recBegin.Code, recBegin.Body.String())
 	}
 	if !strings.Contains(recBegin.Body.String(), `"publicKey"`) || !strings.Contains(recBegin.Body.String(), `"challenge"`) {
 		t.Fatalf("unexpected WebAuthn creation options JSON: %s", recBegin.Body.String())
@@ -62,11 +62,11 @@ func TestPasskeyRoutesAndStorePersistence(t *testing.T) {
 		}
 	}
 	if !hasCeremonyCookie {
-		t.Fatalf("expected %s cookie on /pilot/passkeys/begin", auth.PasskeyCeremonyCookieName)
+		t.Fatalf("expected %s cookie on /settings/passkeys/begin", auth.PasskeyCeremonyCookieName)
 	}
 
-	// 3. Save a passkey record to Turso and verify /login shows "Sign in with Passkey"
-	//    and /pilot/user/settings lists it with a Remove action
+	// 3. Save a passkey record to Turso and verify /login shows "Sign in with passkey"
+	//    and /settings lists it with a Remove action
 	if err := store.SavePasskey(ctx, db.PasskeyRecord{
 		ID:             "cred-test-1",
 		RPID:           "localhost",
@@ -85,17 +85,17 @@ func TestPasskeyRoutesAndStorePersistence(t *testing.T) {
 		t.Fatalf("expected /login to offer Sign in with passkey when credential is enrolled")
 	}
 
-	reqSettings := httptest.NewRequest(http.MethodGet, "http://localhost:8080/pilot/user/settings", nil)
+	reqSettings := httptest.NewRequest(http.MethodGet, "http://localhost:8080/settings", nil)
 	reqSettings.Host = "localhost:8080"
 	reqSettings.AddCookie(sessionCookie)
 	recSettings := httptest.NewRecorder()
 	router.ServeHTTP(recSettings, reqSettings)
 	if recSettings.Code != http.StatusOK || !strings.Contains(recSettings.Body.String(), "Proton Pass") {
-		t.Fatalf("expected /pilot/user/settings to list enrolled Proton Pass credential")
+		t.Fatalf("expected /settings to list enrolled Proton Pass credential")
 	}
 
 	// 4. Deleting the passkey removes it from Turso
-	reqDel := httptest.NewRequest(http.MethodPost, "http://localhost:8080/pilot/passkeys/cred-test-1/delete", nil)
+	reqDel := httptest.NewRequest(http.MethodPost, "http://localhost:8080/settings/passkeys/cred-test-1/delete", nil)
 	reqDel.Host = "localhost:8080"
 	reqDel.AddCookie(sessionCookie)
 	recDel := httptest.NewRecorder()
@@ -157,8 +157,8 @@ func TestPasskeyManagementRequiresFreshAuth(t *testing.T) {
 		Store:       store,
 	})
 
-	// 1. Within fresh window (t=0): /pilot/passkeys/begin succeeds
-	reqFresh := httptest.NewRequest(http.MethodPost, "http://localhost:8080/pilot/passkeys/begin", nil)
+	// 1. Within fresh window (t=0): /settings/passkeys/begin succeeds
+	reqFresh := httptest.NewRequest(http.MethodPost, "http://localhost:8080/settings/passkeys/begin", nil)
 	reqFresh.Host = "localhost:8080"
 	reqFresh.AddCookie(sessionCookie)
 	recFresh := httptest.NewRecorder()
@@ -170,30 +170,30 @@ func TestPasskeyManagementRequiresFreshAuth(t *testing.T) {
 	// 2. Advance past FreshAuthWindow (+6m): passkey mutations must be blocked while session remains logged in
 	now = now.Add(6 * time.Minute)
 
-	reqStaleBegin := httptest.NewRequest(http.MethodPost, "http://localhost:8080/pilot/passkeys/begin", nil)
+	reqStaleBegin := httptest.NewRequest(http.MethodPost, "http://localhost:8080/settings/passkeys/begin", nil)
 	reqStaleBegin.Host = "localhost:8080"
 	reqStaleBegin.AddCookie(sessionCookie)
 	recStaleBegin := httptest.NewRecorder()
 	router.ServeHTTP(recStaleBegin, reqStaleBegin)
 	if recStaleBegin.Code != http.StatusForbidden {
-		t.Fatalf("expected 403 Forbidden for stale /pilot/passkeys/begin, got %d", recStaleBegin.Code)
+		t.Fatalf("expected 403 Forbidden for stale /settings/passkeys/begin, got %d", recStaleBegin.Code)
 	}
 
-	reqStaleFinish := httptest.NewRequest(http.MethodPost, "http://localhost:8080/pilot/passkeys/finish", strings.NewReader("{}"))
+	reqStaleFinish := httptest.NewRequest(http.MethodPost, "http://localhost:8080/settings/passkeys/finish", strings.NewReader("{}"))
 	reqStaleFinish.Host = "localhost:8080"
 	reqStaleFinish.AddCookie(sessionCookie)
 	recStaleFinish := httptest.NewRecorder()
 	router.ServeHTTP(recStaleFinish, reqStaleFinish)
 	if recStaleFinish.Code != http.StatusForbidden {
-		t.Fatalf("expected 403 Forbidden for stale /pilot/passkeys/finish, got %d", recStaleFinish.Code)
+		t.Fatalf("expected 403 Forbidden for stale /settings/passkeys/finish, got %d", recStaleFinish.Code)
 	}
 
-	reqStaleDel := httptest.NewRequest(http.MethodPost, "http://localhost:8080/pilot/passkeys/cred-reauth-1/delete", nil)
+	reqStaleDel := httptest.NewRequest(http.MethodPost, "http://localhost:8080/settings/passkeys/cred-reauth-1/delete", nil)
 	reqStaleDel.Host = "localhost:8080"
 	reqStaleDel.AddCookie(sessionCookie)
 	recStaleDel := httptest.NewRecorder()
 	router.ServeHTTP(recStaleDel, reqStaleDel)
-	if recStaleDel.Code != http.StatusSeeOther || recStaleDel.Header().Get("Location") != "/login?next=/pilot/user/settings&reauth=1" {
+	if recStaleDel.Code != http.StatusSeeOther || recStaleDel.Header().Get("Location") != "/login?next=/settings&reauth=1" {
 		t.Fatalf("expected 303 redirect to reauth on stale delete, got %d loc=%q", recStaleDel.Code, recStaleDel.Header().Get("Location"))
 	}
 	count, err := store.CountPasskeys(ctx, "localhost")
@@ -202,21 +202,19 @@ func TestPasskeyManagementRequiresFreshAuth(t *testing.T) {
 	}
 
 	// 3. Settings page renders re-verify prompt and /login?reauth=1 renders rather than bouncing away
-	reqSettings := httptest.NewRequest(http.MethodGet, "http://localhost:8080/pilot/user/settings", nil)
+	reqSettings := httptest.NewRequest(http.MethodGet, "http://localhost:8080/settings", nil)
 	reqSettings.Host = "localhost:8080"
 	reqSettings.AddCookie(sessionCookie)
 	recSettings := httptest.NewRecorder()
 	router.ServeHTTP(recSettings, reqSettings)
 	if recSettings.Code != http.StatusOK {
-		t.Fatalf("expected 200 on stale /pilot/user/settings, got %d", recSettings.Code)
+		t.Fatalf("expected 200 on stale /settings, got %d", recSettings.Code)
 	}
-	if !strings.Contains(recSettings.Body.String(), "Re-verify identity") || !strings.Contains(recSettings.Body.String(), "/login?next=/pilot/user/settings&amp;reauth=1") {
-		if !strings.Contains(recSettings.Body.String(), "Re-verify identity") || !strings.Contains(recSettings.Body.String(), "reauth=1") {
-			t.Fatalf("expected Re-verify identity link on stale settings page")
-		}
+	if !strings.Contains(recSettings.Body.String(), "Re-verify identity") || !strings.Contains(recSettings.Body.String(), "reauth=1") {
+		t.Fatalf("expected Re-verify identity link on stale settings page")
 	}
 
-	reqReauthLogin := httptest.NewRequest(http.MethodGet, "http://localhost:8080/login?next=/pilot/user/settings&reauth=1", nil)
+	reqReauthLogin := httptest.NewRequest(http.MethodGet, "http://localhost:8080/login?next=/settings&reauth=1", nil)
 	reqReauthLogin.Host = "localhost:8080"
 	reqReauthLogin.AddCookie(sessionCookie)
 	recReauthLogin := httptest.NewRecorder()
