@@ -34,8 +34,8 @@ func TestParseMediaURL(t *testing.T) {
 	}
 
 	invalidCases := []string{
-		"",                                          // empty
-		"   ",                                       // whitespace
+		"",                                         // empty
+		"   ",                                      // whitespace
 		"http://example.com/insecure.png",          // insecure scheme
 		"ftp://example.com/file.png",               // unsupported scheme
 		"javascript:alert(1)",                      // XSS uri

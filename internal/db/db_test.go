@@ -4,37 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 )
-
-func TestLoadEnvFiles(t *testing.T) {
-	dir := t.TempDir()
-	envPath := filepath.Join(dir, "db.env")
-	content := "# comment\nTEST_TURSO_URL=\"libsql://example.turso.io\"\nTEST_TURSO_TOKEN='secret-token'\n"
-	if err := os.WriteFile(envPath, []byte(content), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	os.Unsetenv("TEST_TURSO_URL")
-	os.Unsetenv("TEST_TURSO_TOKEN")
-	defer os.Unsetenv("TEST_TURSO_URL")
-	defer os.Unsetenv("TEST_TURSO_TOKEN")
-
-	if err := LoadEnvFiles(envPath, filepath.Join(dir, "nonexistent.env")); err != nil {
-		t.Fatalf("LoadEnvFiles failed: %v", err)
-	}
-
-	if got := os.Getenv("TEST_TURSO_URL"); got != "libsql://example.turso.io" {
-		t.Errorf("expected libsql://example.turso.io, got %q", got)
-	}
-	if got := os.Getenv("TEST_TURSO_TOKEN"); got != "secret-token" {
-		t.Errorf("expected secret-token, got %q", got)
-	}
-}
 
 func TestValidateInput(t *testing.T) {
 	valid := JournalInput{

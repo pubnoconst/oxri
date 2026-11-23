@@ -3,7 +3,8 @@
 The foundational principles governing **Res Imperii**:
 
 1. **Runtime dependencies are to be avoided as much as possible.**
-   - Ship a self-contained static binary (`CGO_ENABLED=0`) free from dynamic linking, external C toolchains, or host runtime requirements.
+   - Ship a self-contained static binary (`CGO_ENABLED=0`) free from dynamic linking, external C toolchains, or host runtime requirements. Static assets are embedded (package `assets`).
+   - **Single instance by design**: sessions, sign-in counters (holds, per-IP lockout, global failure budget), rate limiters, WebAuthn ceremonies and the pending vacate submission live in process memory. Running two instances would silently split that state, halving brute-force protection and losing sessions between instances; a restart (including a free-tier spin-down) signs everyone out. Scaling out requires moving that state to shared storage first.
 2. **Minimalism is the core essence of our UX.**
    - Every view, typography choice, and interaction must remain quiet, restrained, and free of visual clutter or unnecessary controls.
 3. **All Inputs are evil. Men are, by nature, political creatures.**
