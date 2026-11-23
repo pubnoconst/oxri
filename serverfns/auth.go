@@ -14,7 +14,6 @@ import (
 var (
 	ErrUnauthenticated = errors.New("serverfns: unauthenticated session")
 	ErrStaleSession    = errors.New("serverfns: recent reauthentication required")
-	ErrInvalidRedirect = errors.New("serverfns: invalid redirect URL")
 )
 
 // Allowed redirect targets to prevent open-redirect vulnerabilities

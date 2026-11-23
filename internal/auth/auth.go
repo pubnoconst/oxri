@@ -36,10 +36,7 @@ const (
 )
 
 var (
-	ErrUnauthorized      = errors.New("auth: unauthorized")
-	ErrChallengeExpired  = errors.New("auth: confirmation has expired")
-	ErrChallengeNotFound = errors.New("auth: confirmation not found")
-	ErrInvalidBinding    = errors.New("auth: confirmation binding verification failed")
+	ErrUnauthorized = errors.New("auth: unauthorized")
 )
 
 // UserSession represents an active authenticated administrative HTTP session.

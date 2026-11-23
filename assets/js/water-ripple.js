@@ -148,7 +148,7 @@
     }
 
     getSharedDefs().appendChild(filter);
-    return { filter, id, layers, owned: true };
+    return { filter, id, layers };
   }
 
   function hideLayer(layer) {
@@ -389,28 +389,8 @@
     const waves = Array.from(overlay.querySelectorAll(".card-water-wave")).slice(0, maxWaves);
     if (!waves.length) return noop;
 
-    let filter = opts.filter || null;
-    let filterId = filter ? filter.id : "";
-    let layers = null;
-    let owned = false;
-
-    if (filter) {
-      layers = waves.map((_, i) => ({
-        img: filter.querySelector("#wr-img-" + (i + 1)),
-        disp: filter.querySelector("#wr-disp-" + (i + 1)),
-      }));
-      if (layers.some((l) => !l.img || !l.disp)) {
-        filter = null;
-      }
-    }
-
-    if (!filter) {
-      const dyn = createDynamicFilter(waves.length);
-      filter = dyn.filter;
-      filterId = dyn.id;
-      layers = dyn.layers;
-      owned = dyn.owned;
-    }
+    // Each attachment owns a fresh SVG filter (one displacement layer per wave).
+    const { filter, id: filterId, layers } = createDynamicFilter(waves.length);
 
     const mapURL = getMapURL();
     layers.forEach((layer) => {
@@ -420,14 +400,8 @@
     });
 
     const amplitude = typeof opts.amplitude === "number" ? opts.amplitude : DEFAULT_AMPLITUDE;
-    const useClass = Boolean(opts.useClass);
     const prevInlineFilter = stage.style.filter;
-
-    if (useClass) {
-      stage.classList.add("is-submerged");
-    } else {
-      stage.style.filter = `url(#${filterId})`;
-    }
+    stage.style.filter = `url(#${filterId})`;
 
     let detached = false;
     const inst = {
@@ -447,14 +421,8 @@
         detached = true;
         activeInstances.delete(inst);
         layers.forEach(hideLayer);
-        if (useClass) {
-          stage.classList.remove("is-submerged");
-        } else {
-          stage.style.filter = prevInlineFilter;
-        }
-        if (owned && filter.parentNode) {
-          filter.remove();
-        }
+        stage.style.filter = prevInlineFilter;
+        if (filter.parentNode) filter.remove();
       },
       fadeAndDetach(removeOverlay) {
         if (detached) return;
@@ -480,12 +448,7 @@
     const overlay = document.querySelector(".card-water-ripple.is-pagewide");
     if (!stage || !overlay) return;
 
-    const existingFilter = document.getElementById("water-surface-refract");
-    const inst = attach(stage, overlay, {
-      filter: existingFilter,
-      useClass: Boolean(existingFilter),
-      amplitude: DEFAULT_AMPLITUDE,
-    });
+    const inst = attach(stage, overlay, { amplitude: DEFAULT_AMPLITUDE });
 
     const dismissTargetId = overlay.getAttribute("data-water-dismiss-on-swap");
     if (dismissTargetId) {

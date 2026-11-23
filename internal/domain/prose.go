@@ -9,7 +9,6 @@ import (
 )
 
 var (
-	ErrInvalidProse      = errors.New("domain: invalid prose text")
 	ErrProseTooLong      = errors.New("domain: prose exceeds maximum allowed length")
 	ErrProseNullBytes    = errors.New("domain: prose contains forbidden null bytes")
 	ErrProseDisallowedCh = errors.New("domain: prose contains disallowed character (only Latin, Greek, numbers, and standard punctuation permitted; no emojis)")
