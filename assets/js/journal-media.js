@@ -40,12 +40,6 @@
     spacer.setAttribute("aria-label", "Loading media");
     container.append(spacer);
 
-    // Mount the optical water-drop ripple over the entire enclosing .journal-card
-    // so the expanding wavefront disturbs the preview text as well.
-    const hostCard = container.closest(".journal-card") || container;
-    const existingOverlay = hostCard.querySelector(":scope > .card-water-ripple");
-    if (existingOverlay) existingOverlay.remove();
-
     const overlay = document.createElement("div");
     overlay.className = "card-water-ripple";
     overlay.setAttribute("aria-hidden", "true");
@@ -61,10 +55,20 @@
     wave3.className = "card-water-wave wave-3";
 
     overlay.append(drop, wave1, wave2, wave3);
-    hostCard.append(overlay);
+
+    // The overlay and refraction filter belong on the whole enclosing
+    // .journal-card, so the wavefront disturbs the meta, tags and text too.
+    // renderTweet() runs inside createMedia(), *before* the caller appends the
+    // container to the card, so closest() would find nothing and the ripple
+    // would be trapped inside the tweet slot. Mount on a microtask instead:
+    // by then the synchronous append has happened.
+    let hostCard = null;
+    let waterHandle = null;
+    let cardObserver = null;
+    let cleaned = false;
 
     const alignOrigin = () => {
-      if (!spacer.isConnected || !hostCard.isConnected) return;
+      if (!hostCard || !spacer.isConnected || !hostCard.isConnected) return;
       const hostRect = hostCard.getBoundingClientRect();
       const spacerRect = spacer.getBoundingClientRect();
       if (hostRect.width <= 0 || hostRect.height <= 0) return;
@@ -82,13 +86,26 @@
       overlay.style.setProperty("--ripple-diameter", `${Math.ceil(maxDist * 2.25)}px`);
     };
 
-    requestAnimationFrame(alignOrigin);
+    const mount = () => {
+      if (cleaned) return;
+      hostCard = container.closest(".journal-card") || container;
+      const existingOverlay = hostCard.querySelector(":scope > .card-water-ripple");
+      if (existingOverlay) existingOverlay.remove();
+      hostCard.append(overlay);
 
-    const waterHandle = window.ResImperiiWater
-      ? window.ResImperiiWater.attach(hostCard, overlay, { amplitude: 7 })
-      : null;
+      requestAnimationFrame(alignOrigin);
+      // Keep origin and reach correct if the card reflows (fonts, neighbours, resize).
+      if (typeof ResizeObserver !== "undefined") {
+        cardObserver = new ResizeObserver(alignOrigin);
+        cardObserver.observe(hostCard);
+      }
 
-    let cleaned = false;
+      waterHandle = window.ResImperiiWater
+        ? window.ResImperiiWater.attach(hostCard, overlay, { amplitude: 7 })
+        : null;
+    };
+    queueMicrotask(mount);
+
     return {
       fadeOut() {
         overlay.classList.add("is-fading-out");
@@ -99,6 +116,7 @@
       cleanup() {
         if (cleaned) return;
         cleaned = true;
+        if (cardObserver) cardObserver.disconnect();
         if (waterHandle) waterHandle.detach();
         if (spacer.parentNode === container) spacer.remove();
         if (overlay.parentNode) overlay.remove();
@@ -153,6 +171,7 @@
   // second phase, or a viewport-width change) retargets the same height
   // transition, so the second phase is a smooth push, never a jump or a clip.
   const MIN_REAL_HEIGHT = 40; // below this Twitter hasn't laid the tweet out yet
+  const TWEET_GIVE_UP_MS = 12000; // embed blocked/never rendered -> show the link card
 
   function expandAndRevealTweet(container, rippleHandle, stage) {
     let target = 0;
@@ -254,11 +273,22 @@
       // Start tracking before Twitter renders so the very first height is caught.
       const tracker = expandAndRevealTweet(container, rippleHandle, stage);
 
+      let settled = false;
       const fail = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(giveUp);
+        // Already on screen (the height tracker revealed it): never replace it.
+        if (!stage.classList.contains("is-staging")) return;
         tracker.abort();
         stage.remove();
         showTweetFallback(container, username, tweetId, rippleHandle);
       };
+
+      // Failure net, not a wait: if a browser's tracking protection (e.g. Edge's
+      // Tracking Prevention) blocks the embed iframe, createTweet() may never
+      // settle. Rather than ripple forever, fall back to the plain X link card.
+      const giveUp = setTimeout(fail, TWEET_GIVE_UP_MS);
 
       twttr.widgets.createTweet(tweetId, stage, {
         theme: theme,
@@ -266,8 +296,14 @@
         align: "center",
         conversation: "none",
       }).then((el) => {
-        if (el) tracker.rendered();
-        else fail();
+        if (settled) return;
+        if (!el) {
+          fail();
+          return;
+        }
+        settled = true;
+        clearTimeout(giveUp);
+        tracker.rendered();
       }).catch(fail);
     };
 

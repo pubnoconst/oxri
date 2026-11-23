@@ -245,8 +245,9 @@ func FormPage(isAuth bool, data FormData) g.Node {
 		loading.Overlay(loading.DefaultPhrase, false),
 		h.Script(h.Src("/assets/js/markdown-it.min.js?v=1")),
 		h.Script(h.Src("/assets/js/purify.min.js?v=1")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=11")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=13")),
 		h.Script(h.Src("/assets/js/journal-editor.js?v=10")),
-		h.Script(h.Src("/assets/js/loading-transition.js?v=1")),
+		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
+		h.Script(h.Src(loading.TransitionScriptPath)),
 	)
 }
