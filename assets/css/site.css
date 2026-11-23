@@ -352,7 +352,6 @@ a {
   background: transparent;
   padding: 0.25rem 0;
   border-radius: 14px;
-  filter: drop-shadow(0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent));
 }
 
 /* Quiet empty space where the water drop originates inside the media slot */
@@ -510,6 +509,7 @@ a {
 .tweet-embed-stage.is-ready {
   opacity: 1;
   transform: translateY(0);
+  filter: drop-shadow(0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent));
 }
 
 .tweet-embed-stage.is-staging {
@@ -518,8 +518,17 @@ a {
   right: 0;
   top: 0.25rem;
   margin: 0 auto;
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: -1;
+}
+
+.tweet-embed-stage.is-staging .twitter-tweet,
+.tweet-embed-stage.is-staging iframe {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .journal-preview-media .tweet-embed-container iframe,

@@ -341,7 +341,7 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 			h.Span(h.Class("card-water-wave wave-3")),
 		),
 		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=9")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=10")),
 		catalogScript,
 	)
 }
@@ -363,7 +363,7 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 			),
 		),
 		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=9")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=10")),
 		catalogScript,
 	)
 }
@@ -382,7 +382,7 @@ func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 			),
 		),
 		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=9")),
+		h.Script(h.Src("/assets/js/journal-media.js?v=10")),
 	)
 }
 

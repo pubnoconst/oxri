@@ -288,14 +288,18 @@
         return;
       }
 
-      // Step 2: Swap settled tweet into flow at exact height and fade in all at once
+      // Step 2: Remove ripple/SVG filter and swap settled tweet into flow at exact height
+      // (still opacity: 0), wait 2 frames for Chromium to composite the full unclipped iframe,
+      // then fade in the complete tweet as one unbroken unit.
       if (rippleHandle) rippleHandle.cleanup();
       stage.classList.remove("is-staging");
       requestAnimationFrame(() => {
-        if (stage.isConnected) {
-          stage.classList.add("is-ready");
-          if (onComplete) onComplete();
-        }
+        requestAnimationFrame(() => {
+          if (stage.isConnected) {
+            stage.classList.add("is-ready");
+            if (onComplete) onComplete();
+          }
+        });
       });
     };
 
