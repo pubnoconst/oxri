@@ -31,7 +31,7 @@ func TestLandingPageAndComponentCSS(t *testing.T) {
 		"Book III",
 		"Journals",
 		"Log in",
-		"/assets/css/site.css?v=9",
+		"/assets/css/site.css?v=10",
 		"/views/landing/landing.css?v=2",
 		"/assets/js/htmx.min.js",
 		"/assets/js/theme-toggle.js?v=2",
@@ -69,6 +69,9 @@ func TestLandingPageAndComponentCSS(t *testing.T) {
 	siteBody, _ := io.ReadAll(siteRec.Body)
 	if !strings.Contains(string(siteBody), "--font-serif") || !strings.Contains(string(siteBody), ".btn-encouraged") {
 		t.Errorf("missing design tokens or button classes in site.css")
+	}
+	if strings.Contains(string(siteBody), "max-width: 520px !important") {
+		t.Errorf("site.css should not force 520px width narrower than Twitter's 550px embed")
 	}
 
 	// 4. Vendored HTMX (/assets/js/htmx.min.js)

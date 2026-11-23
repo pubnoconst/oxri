@@ -71,6 +71,9 @@ func TestJournalsEditorVacateAndLoadingFlow(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected 200 on %s, got %d", cssPath, rec.Code)
 		}
+		if cssPath == "/views/journals/journals.css" && strings.Contains(rec.Body.String(), "max-height: 22rem") {
+			t.Errorf("journals.css must not hard-clip tweet embeds at max-height: 22rem")
+		}
 	}
 
 	reqLoad := httptest.NewRequest(http.MethodGet, "/loading", nil)

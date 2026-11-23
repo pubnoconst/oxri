@@ -132,62 +132,93 @@
     document.head.appendChild(s);
   }
 
-  // Wait until Twitter's internal iframe resize settles before revealing, preventing double-jumps.
+  // Wait until Twitter's internal iframe resize and media layout settle before revealing.
   function waitForStableHeight(el, onSettled) {
     let done = false;
     let settleTimer = null;
     let maxTimer = null;
-    let observer = null;
+    let resizeObserver = null;
+    let mutObserver = null;
+    const iframe = el.querySelector("iframe");
+    let lastHeight = -1;
 
-    const finish = () => {
+    const measure = () => {
+      const elH = el.getBoundingClientRect().height;
+      const frameH = iframe ? iframe.getBoundingClientRect().height : 0;
+      return Math.max(elH, frameH);
+    };
+
+    const finish = (shouldReveal) => {
       if (done) return;
       done = true;
       if (settleTimer) clearTimeout(settleTimer);
       if (maxTimer) clearTimeout(maxTimer);
-      if (observer) observer.disconnect();
-      onSettled();
+      if (resizeObserver) resizeObserver.disconnect();
+      if (mutObserver) mutObserver.disconnect();
+      if (iframe) iframe.removeEventListener("load", scheduleSettle);
+      if (shouldReveal && el.isConnected) {
+        onSettled();
+      }
     };
 
     const scheduleSettle = () => {
-      if (settleTimer) clearTimeout(settleTimer);
-      const h = el.getBoundingClientRect().height;
-      // Wait 140ms of stability once the tweet has a real rendered height
-      if (h > 40) {
-        settleTimer = setTimeout(finish, 140);
+      if (done) return;
+      if (!el.isConnected) {
+        finish(false);
+        return;
+      }
+      const h = Math.round(measure());
+      if (h <= 60) return;
+
+      if (Math.abs(h - lastHeight) > 1 || settleTimer === null) {
+        lastHeight = h;
+        if (settleTimer) clearTimeout(settleTimer);
+        settleTimer = setTimeout(() => finish(true), 500);
       }
     };
 
     if (typeof ResizeObserver !== "undefined") {
-      observer = new ResizeObserver(scheduleSettle);
-      observer.observe(el);
+      resizeObserver = new ResizeObserver(scheduleSettle);
+      resizeObserver.observe(el);
+      if (iframe) resizeObserver.observe(iframe);
+    }
+    if (typeof MutationObserver !== "undefined" && iframe) {
+      mutObserver = new MutationObserver(scheduleSettle);
+      mutObserver.observe(iframe, { attributes: true, attributeFilter: ["style", "height"] });
+    }
+    if (iframe) {
+      iframe.addEventListener("load", scheduleSettle);
     }
 
     scheduleSettle();
-    maxTimer = setTimeout(finish, 950);
+    maxTimer = setTimeout(() => finish(true), 4000);
   }
 
   function revealTweetFluidly(container, rippleHandle, stage) {
+    if (!container.isConnected || !stage.isConnected) {
+      if (rippleHandle) rippleHandle.cleanup();
+      return;
+    }
+
     const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) {
       if (rippleHandle) rippleHandle.cleanup();
       stage.classList.remove("is-staging");
-      stage.classList.add("is-ready");
+      container.classList.remove("is-animating-height");
       container.style.height = "";
+      stage.classList.add("is-ready");
       return;
     }
 
     const startHeight = container.getBoundingClientRect().height;
-    const stageHeight = stage.getBoundingClientRect().height;
     const style = window.getComputedStyle(container);
     const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
-    const computedMax = parseFloat(style.maxHeight);
+    const stageHeight = stage.getBoundingClientRect().height;
+    const targetHeight = Math.ceil(Math.max(startHeight, stageHeight + padY));
 
-    let targetHeight = Math.max(startHeight, stageHeight + padY);
-    if (Number.isFinite(computedMax) && computedMax > 0) {
-      targetHeight = Math.min(targetHeight, computedMax);
-    }
-
+    // Step 1: Expand the slot cleanly while the tweet stays completely invisible (opacity: 0)
     container.style.height = `${startHeight}px`;
+    container.classList.add("is-animating-height");
 
     if (rippleHandle) {
       rippleHandle.fadeOut();
@@ -195,27 +226,41 @@
     }
     stage.classList.remove("is-staging");
 
-    // Force layout flush so the height transition starts cleanly from startHeight
-    void container.offsetHeight;
+    let revealed = false;
+    const finishReveal = () => {
+      if (revealed) return;
+      revealed = true;
+      if (!container.isConnected || !stage.isConnected) {
+        if (rippleHandle) rippleHandle.cleanup();
+        return;
+      }
+      if (rippleHandle) rippleHandle.cleanup();
+      container.classList.remove("is-animating-height");
+      container.style.height = "";
+      // Step 2: Fade in the complete, unclipped tweet in a single motion
+      requestAnimationFrame(() => {
+        if (stage.isConnected) {
+          stage.classList.add("is-ready");
+        }
+      });
+    };
 
+    if (Math.abs(targetHeight - startHeight) <= 2) {
+      finishReveal();
+      return;
+    }
+
+    void container.offsetHeight;
     requestAnimationFrame(() => {
       container.style.height = `${targetHeight}px`;
-      stage.classList.add("is-ready");
     });
 
-    let settled = false;
-    const cleanup = () => {
-      if (settled) return;
-      settled = true;
-      if (rippleHandle) rippleHandle.cleanup();
-      container.style.height = "";
-    };
     container.addEventListener("transitionend", (e) => {
       if (e.target === container && e.propertyName === "height") {
-        cleanup();
+        finishReveal();
       }
     }, { once: true });
-    setTimeout(cleanup, 520);
+    setTimeout(finishReveal, 340);
   }
 
   function renderTweet(container, username, tweetId) {
@@ -226,16 +271,27 @@
     const rippleHandle = showRippleLoader(container);
 
     const doCreate = (twttr) => {
+      if (!container.isConnected) {
+        if (rippleHandle) rippleHandle.cleanup();
+        return;
+      }
+
       const stage = document.createElement("div");
       stage.className = "tweet-embed-stage is-staging";
       container.append(stage);
 
-      twttr.widgets.createTweet(tweetId, stage, {
+      const slotWidth = Math.floor(container.getBoundingClientRect().width);
+      const tweetOptions = {
         theme: theme,
         dnt: true,
         align: "center",
         conversation: "none",
-      }).then((el) => {
+      };
+      if (slotWidth >= 250) {
+        tweetOptions.width = Math.min(550, slotWidth);
+      }
+
+      twttr.widgets.createTweet(tweetId, stage, tweetOptions).then((el) => {
         if (!el) {
           stage.remove();
           showTweetFallback(container, username, tweetId, rippleHandle);

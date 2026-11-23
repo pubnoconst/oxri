@@ -350,10 +350,13 @@ a {
   width: 100%;
   background: transparent;
   padding: 0.25rem 0;
-  overflow: hidden;
   border-radius: 14px;
   filter: drop-shadow(0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent));
-  transition: height 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: height 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.journal-preview-media .tweet-embed-container.is-animating-height {
+  overflow: hidden;
 }
 
 /* Quiet empty space where the water drop originates inside the media slot */
@@ -499,16 +502,17 @@ a {
 
 .tweet-embed-stage {
   width: 100%;
+  max-width: 550px;
   display: flex;
   justify-content: center;
   opacity: 0;
-  transform: translateY(6px) scale(0.988);
-  transition: opacity 380ms cubic-bezier(0.22, 1, 0.36, 1), transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(4px);
+  transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1), transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .tweet-embed-stage.is-ready {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateY(0);
 }
 
 .tweet-embed-stage.is-staging {
@@ -516,7 +520,8 @@ a {
   left: 0;
   right: 0;
   top: 0;
-  visibility: hidden;
+  margin: 0 auto;
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -524,12 +529,11 @@ a {
 .journal-preview-media .twitter-tweet {
   max-height: none !important;
   aspect-ratio: auto !important;
-  max-width: 520px !important;
+  max-width: 550px;
   width: 100% !important;
   margin: 0 auto !important;
   border-radius: 14px !important;
   box-shadow: none !important;
-  overflow: hidden;
 }
 
 .tweet-fallback-card {
