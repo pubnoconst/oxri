@@ -15,12 +15,18 @@ var (
 // can ever mint AdminCap instances.
 type CapMinter func() AdminCap
 
-// AdminCap is a compile-time and runtime capability token representing verified administrative authority.
-// It possesses unexported fields and cannot be constructed outside internal/domain.
+// AdminCap is a capability token representing verified administrative authority.
 // Functions requiring administrative authority must mandate an AdminCap parameter.
+//
+// A *valid* AdminCap can only be minted inside internal/domain, via the one-time
+// CapMinter claimed by internal/auth after it verifies a session. Go cannot
+// forbid the zero value (AdminCap{} compiles anywhere), so the zero value means
+// "no authority": administrative store writes reject it at runtime (db.ErrUnauthorized),
+// and TestPrivilegedCallSites fails the build if the literal appears outside the
+// code that reports authentication failures.
 type AdminCap struct {
 	issuedAt time.Time
-	_        [0]func() // prevents struct comparison and literal construction
+	_        [0]func() // prevents comparison (==)
 }
 
 // SetupCapMinter returns the unique CapMinter function.

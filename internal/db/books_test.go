@@ -30,24 +30,24 @@ func TestBooksSchemaPersistenceAndSecurity(t *testing.T) {
 	if _, err := store.GetBook(ctx, "book-iv"); !errors.Is(err, ErrInvalidBookSlug) {
 		t.Fatalf("expected ErrInvalidBookSlug, got %v", err)
 	}
-	if _, err := store.SaveBook(ctx, "book-iv", "# Nope"); !errors.Is(err, ErrInvalidBookSlug) {
+	if _, err := store.SaveBook(ctx, testCap, "book-iv", "# Nope"); !errors.Is(err, ErrInvalidBookSlug) {
 		t.Fatalf("expected ErrInvalidBookSlug on SaveBook, got %v", err)
 	}
 
 	// 3. Oversized payload (> 128 KiB) is rejected (anti-DDoS)
 	huge := strings.Repeat("a", MaxBookBodyBytes+1)
-	if _, err := store.SaveBook(ctx, "book-ii", huge); !errors.Is(err, ErrBookTooLarge) {
+	if _, err := store.SaveBook(ctx, testCap, "book-ii", huge); !errors.Is(err, ErrBookTooLarge) {
 		t.Fatalf("expected ErrBookTooLarge, got %v", err)
 	}
 
 	// 4. Disallowed characters (emojis / zero-width) are rejected
-	if _, err := store.SaveBook(ctx, "book-ii", "# Book II 🚀"); !errors.Is(err, ErrInvalidInput) {
+	if _, err := store.SaveBook(ctx, testCap, "book-ii", "# Book II 🚀"); !errors.Is(err, ErrInvalidInput) {
 		t.Fatalf("expected ErrInvalidInput for emoji, got %v", err)
 	}
 
 	// 5. Valid Latin + Greek Markdown persists and updates cache
 	md := "# Book II\n\n## On Λόγος\n\nA calm chapter."
-	saved, err := store.SaveBook(ctx, "book-ii", md)
+	saved, err := store.SaveBook(ctx, testCap, "book-ii", md)
 	if err != nil {
 		t.Fatalf("SaveBook: %v", err)
 	}

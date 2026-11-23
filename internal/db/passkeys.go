@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"github.com/oxri/oxri-go/internal/domain"
 	"strings"
 	"time"
 )
@@ -56,7 +57,10 @@ func (s *Store) CountPasskeys(ctx context.Context, rpID string) (int, error) {
 }
 
 // SavePasskey inserts a new WebAuthn passkey record into Turso.
-func (s *Store) SavePasskey(ctx context.Context, rec PasskeyRecord) error {
+func (s *Store) SavePasskey(ctx context.Context, cap domain.AdminCap, rec PasskeyRecord) error {
+	if err := requireCap(cap); err != nil {
+		return err
+	}
 	if s == nil || s.db == nil {
 		return errors.New("database store is not initialized")
 	}
@@ -92,7 +96,10 @@ func (s *Store) UpdatePasskeyCredential(ctx context.Context, id, rpID, credJSON 
 }
 
 // DeletePasskey removes an enrolled passkey for rpID.
-func (s *Store) DeletePasskey(ctx context.Context, id, rpID string) error {
+func (s *Store) DeletePasskey(ctx context.Context, cap domain.AdminCap, id, rpID string) error {
+	if err := requireCap(cap); err != nil {
+		return err
+	}
 	if s == nil || s.db == nil {
 		return errors.New("database store is not initialized")
 	}

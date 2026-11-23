@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/oxri/oxri-go/internal/domain"
 	"strings"
 	"time"
 )
@@ -123,7 +124,10 @@ func (s *Store) GetBook(ctx context.Context, slug string) (*Book, error) {
 }
 
 // SaveBook validates and persists a Book's Markdown body into Turso and invalidates its read cache.
-func (s *Store) SaveBook(ctx context.Context, slug, rawBody string) (*Book, error) {
+func (s *Store) SaveBook(ctx context.Context, cap domain.AdminCap, slug, rawBody string) (*Book, error) {
+	if err := requireCap(cap); err != nil {
+		return nil, err
+	}
 	title, ok := canonicalBooks[slug]
 	if !ok {
 		return nil, ErrInvalidBookSlug
