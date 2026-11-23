@@ -3,8 +3,6 @@ package login
 
 import (
 	_ "embed"
-	"fmt"
-	"strings"
 
 	"github.com/oxri/oxri-go/views/layout"
 	g "maragu.dev/gomponents"
@@ -16,74 +14,6 @@ var StyleCSS string
 
 // StylePath is the public route for the login component CSS.
 const StylePath = "/views/login/login.css"
-
-// TOTPConfirmPage renders the 30-second anti-bruteforce confirmation cooldown screen
-// featuring the pagewide sunlit water-drop ripple, a smooth progress bar, and "Confirming, wait.".
-func TOTPConfirmPage(verifyID string, remainingMs, totalMs int64) g.Node {
-	if totalMs <= 0 {
-		totalMs = 30000
-	}
-	if remainingMs < 0 {
-		remainingMs = 0
-	}
-	if remainingMs > totalMs {
-		remainingMs = totalMs
-	}
-	startRatio := float64(totalMs-remainingMs) / float64(totalMs)
-	barStyle := fmt.Sprintf("--cooldown-ms:%dms;--cooldown-start:%.4f;", remainingMs, startRatio)
-	rippleStyle := "--ripple-x:50%;--ripple-y:46%;--ripple-diameter:150vmax;"
-
-	// Inline SVG refraction filter (strict-CSP safe). Three chained displacement maps, one per
-	// expanding wavefront, bend the submerged content radially along each ripple. The map images,
-	// positions and strengths are driven per-frame by /assets/js/water-ripple.js from the CSS rings.
-	// color-interpolation-filters=sRGB is essential so mid-grey (128) means zero displacement.
-	var filterSVG strings.Builder
-	filterSVG.WriteString(`<svg class="water-refract-svg" aria-hidden="true" width="0" height="0" focusable="false"><defs>`)
-	filterSVG.WriteString(`<filter id="water-surface-refract" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="-20" y="-20" width="4000" height="3000" color-interpolation-filters="sRGB">`)
-	filterSVG.WriteString(`<feFlood flood-color="rgb(128,128,128)" flood-opacity="1" result="neutral"/>`)
-	for i := 1; i <= 3; i++ {
-		in := "SourceGraphic"
-		if i > 1 {
-			in = fmt.Sprintf("d%d", i-1)
-		}
-		filterSVG.WriteString(fmt.Sprintf(`<feImage id="wr-img-%d" preserveAspectRatio="none" x="-10" y="-10" width="1" height="1" result="m%d"/>`, i, i))
-		filterSVG.WriteString(fmt.Sprintf(`<feMerge result="map%d"><feMergeNode in="neutral"/><feMergeNode in="m%d"/></feMerge>`, i, i))
-		filterSVG.WriteString(fmt.Sprintf(`<feDisplacementMap id="wr-disp-%d" in="%s" in2="map%d" scale="0" xChannelSelector="R" yChannelSelector="G" result="d%d"/>`, i, in, i, i))
-	}
-	filterSVG.WriteString(`</filter></defs></svg>`)
-
-	return layout.Doc(
-		"Confirming - RES IMPERII",
-		StylePath+"?v=8",
-		g.Raw(filterSVG.String()),
-		h.Div(h.Class("auth-water-stage"), g.Attr("data-water-stage", ""),
-			h.Main(h.Class("auth-page"),
-				h.Header(h.Class("auth-header"),
-					layout.BackLink("/login", "Back"),
-					h.H1(g.Text("AUTHENTICATION")),
-				),
-				h.Section(h.Class("auth-card auth-confirm-card"), g.Attr("aria-live", "polite"),
-					h.P(h.Class("auth-confirm-phrase"), g.Text("Confirming, wait.")),
-					h.Div(h.Class("auth-cooldown-track"), g.Attr("role", "progressbar"), g.Attr("aria-label", "Authentication confirmation progress"),
-						h.Div(h.Class("auth-cooldown-fill"), g.Attr("style", barStyle)),
-					),
-				),
-				h.Div(
-					h.ID("totp-confirm-poller"),
-					g.Attr("hx-get", fmt.Sprintf("/auth/totp-status?id=%s", verifyID)),
-					g.Attr("hx-trigger", "every 1s"),
-					g.Attr("hx-swap", "none"),
-				),
-			),
-		),
-		h.Div(h.Class("card-water-ripple is-pagewide"), g.Attr("style", rippleStyle), g.Attr("aria-hidden", "true"),
-			h.Span(h.Class("card-water-wave wave-1")),
-			h.Span(h.Class("card-water-wave wave-2")),
-			h.Span(h.Class("card-water-wave wave-3")),
-		),
-		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-	)
-}
 
 // TOTPPage renders the quiet authentication screen: one-click Passkey sign-in when enrolled
 // for this domain, alongside Argon2id password + 6-digit TOTP recovery/bootstrap login.
@@ -187,7 +117,7 @@ func TOTPPage(nextURL, errMsg string, requirePassword, hasPasskeys, reauth bool)
 
 	return layout.Doc(
 		"Authentication - RES IMPERII",
-		StylePath+"?v=10",
+		StylePath+"?v=11",
 		h.Main(h.Class("auth-page"),
 			h.Header(h.Class("auth-header"),
 				layout.BackLink("/", "Home"),

@@ -4,9 +4,10 @@ package routes
 import (
 	"errors"
 	"log"
+	"math"
 	"net/http"
-	"net/url"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
@@ -105,11 +106,8 @@ func NewRouter(cfg Config) http.Handler {
 	// 7. Authentication Routes (with per-IP rate limiters)
 	loginLimiter := newIPRateLimiter(30, time.Minute)
 	totpSubmitLimiter := newIPRateLimiter(15, 5*time.Minute)
-	statusLimiter := newIPRateLimiter(120, time.Minute)
 	r.Get("/login", handleLogin(cfg.Store, cfg.AuthService, loginLimiter))
 	r.Post("/login", handleLoginSubmit(cfg.Store, cfg.AuthService, totpSubmitLimiter))
-	r.Get("/login/confirm", handleTOTPConfirm(cfg.AuthService))
-	r.Get("/auth/totp-status", handleTOTPStatus(cfg.AuthService, statusLimiter))
 	r.Post("/auth/passkey/begin", handlePasskeyLoginBegin(cfg.Store, cfg.AuthService, loginLimiter))
 	r.Post("/auth/passkey/finish", handlePasskeyLoginFinish(cfg.Store, cfg.AuthService, loginLimiter))
 	r.Post("/logout", handleLogout(cfg.AuthService))
@@ -167,32 +165,47 @@ func renderLoginView(w http.ResponseWriter, r *http.Request, store *db.Store, au
 	_ = login.TOTPPage(next, errMsg, requirePassword, hasPasskeys, reauth).Render(w)
 }
 
-func isValidVerifyID(id string) bool {
-	if len(id) != 32 {
-		return false
+// loginFailure maps a sign-in failure to a plain, non-technical message and
+// HTTP status. Wrong password and wrong code share one message on purpose.
+func loginFailure(err error, hasPassword bool) (string, int) {
+	wait := humanWait(auth.RetryAfter(err))
+	what := "code"
+	if hasPassword {
+		what = "password or code"
 	}
-	for i := 0; i < len(id); i++ {
-		c := id[i]
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
-			return false
+	switch {
+	case errors.Is(err, auth.ErrTOTPPaused):
+		return "Password sign-in is paused for a few minutes after unusual activity. Use your passkey, or try again in " + wait + ".", http.StatusTooManyRequests
+	case errors.Is(err, auth.ErrTOTPLocked):
+		return "Too many attempts. Please try again in " + wait + ".", http.StatusTooManyRequests
+	case errors.Is(err, auth.ErrTOTPCooling):
+		return "Please wait " + wait + " before trying again.", http.StatusTooManyRequests
+	case errors.Is(err, auth.ErrTOTPReplayed):
+		return "That code was already used. Wait for the next 6-digit code.", http.StatusUnauthorized
+	case errors.Is(err, auth.ErrTOTPInvalid):
+		if auth.RetryAfter(err) >= time.Minute {
+			return "Incorrect " + what + ". Too many attempts, so please try again in " + wait + ".", http.StatusUnauthorized
 		}
+		return "Incorrect " + what + ". You can try again in " + wait + ".", http.StatusUnauthorized
+	default:
+		return "", http.StatusInternalServerError
 	}
-	return true
 }
 
-func loginErrorMessage(code string) string {
-	switch code {
-	case "invalid":
-		return "Invalid or expired authentication code."
-	case "replayed":
-		return "That code was already used. Wait for the next 6-digit code."
-	case "locked":
-		return "Too many failed attempts. Please wait a few minutes."
-	case "expired":
-		return "Confirmation expired. Please enter a fresh 6-digit code."
-	default:
-		return ""
+// humanWait renders a wait as whole seconds under a minute, else whole minutes.
+func humanWait(d time.Duration) string {
+	if d <= time.Second {
+		return "a moment"
 	}
+	if d < time.Minute {
+		n := int(math.Ceil(d.Seconds()))
+		return strconv.Itoa(n) + " seconds"
+	}
+	n := int(math.Ceil(d.Minutes()))
+	if n == 1 {
+		return "1 minute"
+	}
+	return strconv.Itoa(n) + " minutes"
 }
 
 func handleLogin(store *db.Store, authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
@@ -216,8 +229,7 @@ func handleLogin(store *db.Store, authSvc *auth.Service, limiter *ipRateLimiter)
 			return
 		}
 
-		errMsg := loginErrorMessage(r.URL.Query().Get("err"))
-		renderLoginView(w, r, store, authSvc, next, errMsg, http.StatusOK, reauth)
+		renderLoginView(w, r, store, authSvc, next, "", http.StatusOK, reauth)
 	}
 }
 
@@ -240,126 +252,25 @@ func handleLoginSubmit(store *db.Store, authSvc *auth.Service, limiter *ipRateLi
 			return
 		}
 
+		// Instant on success; failures carry an escalating per-IP hold, the
+		// per-IP lockout and the global budget (internal/auth/login.go).
 		password := r.FormValue("password")
 		code := strings.TrimSpace(r.FormValue("code"))
-		verifyID, bindingCookie, _, err := authSvc.StartTOTPVerification(clientIP, password, code, next)
+		sessionID, err := authSvc.LoginTOTP(clientIP, password, code)
 		if err != nil {
-			if errors.Is(err, auth.ErrTOTPPending) {
-				renderLoginView(w, r, store, authSvc, next, "A confirmation is already in progress. Please wait.", http.StatusTooManyRequests, false)
+			msg, status := loginFailure(err, authSvc.HasPassword())
+			if status == http.StatusInternalServerError {
+				errorpage.Render(w, status, "Sign-in is temporarily unavailable.")
 				return
 			}
-			errorpage.Render(w, http.StatusInternalServerError, "Failed to initiate authentication confirmation.")
+			if wait := auth.RetryAfter(err); wait > 0 {
+				w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(wait.Seconds()))))
+			}
+			renderLoginView(w, r, store, authSvc, next, msg, status, false)
 			return
 		}
 
 		secure := isHTTPSRequest(r)
-		http.SetCookie(w, &http.Cookie{
-			Name:     auth.BindingCookieName,
-			Value:    bindingCookie,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   secure,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   180,
-		})
-
-		http.Redirect(w, r, "/login/confirm?id="+verifyID, http.StatusSeeOther)
-	}
-}
-
-func handleTOTPConfirm(authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if authSvc == nil || !authSvc.HasTOTP() {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
-		verifyID := strings.TrimSpace(r.URL.Query().Get("id"))
-		if !isValidVerifyID(verifyID) {
-			http.Redirect(w, r, "/login?err=expired", http.StatusSeeOther)
-			return
-		}
-		bindingCookie, err := r.Cookie(auth.BindingCookieName)
-		if err != nil || bindingCookie.Value == "" {
-			http.Redirect(w, r, "/login?err=expired", http.StatusSeeOther)
-			return
-		}
-		remaining, err := authSvc.PendingTOTPStatus(verifyID, bindingCookie.Value)
-		if err != nil {
-			http.Redirect(w, r, "/login?err=expired", http.StatusSeeOther)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = login.TOTPConfirmPage(verifyID, remaining.Milliseconds(), authSvc.TOTPConfirmDelay().Milliseconds()).Render(w)
-	}
-}
-
-func handleTOTPStatus(authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if authSvc == nil || !authSvc.HasTOTP() {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			return
-		}
-		if limiter != nil && !limiter.allow(clientIPFromRequest(r)) {
-			w.WriteHeader(http.StatusTooManyRequests)
-			return
-		}
-
-		verifyID := strings.TrimSpace(r.URL.Query().Get("id"))
-		if !isValidVerifyID(verifyID) {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		bindingCookie, err := r.Cookie(auth.BindingCookieName)
-		if err != nil || bindingCookie.Value == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		sessionID, redirectURL, err := authSvc.RedeemTOTPVerification(verifyID, bindingCookie.Value)
-		if errors.Is(err, auth.ErrTOTPConfirming) {
-			// Mandatory 30-second confirmation cooldown still active: keep polling
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		secure := isHTTPSRequest(r)
-		// Clear temporary binding cookie once confirmation resolves
-		http.SetCookie(w, &http.Cookie{
-			Name:     auth.BindingCookieName,
-			Value:    "",
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   secure,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   -1,
-		})
-
-		if err != nil {
-			errCode := "invalid"
-			switch {
-			case errors.Is(err, auth.ErrTOTPLocked):
-				errCode = "locked"
-			case errors.Is(err, auth.ErrTOTPReplayed):
-				errCode = "replayed"
-			case errors.Is(err, auth.ErrChallengeExpired), errors.Is(err, auth.ErrChallengeNotFound):
-				errCode = "expired"
-			}
-			vals := url.Values{}
-			vals.Set("err", errCode)
-			if safeNext := serverfns.SanitizeRedirect(redirectURL); safeNext != "/" {
-				vals.Set("next", safeNext)
-			}
-			failTarget := "/login?" + vals.Encode()
-			if r.Header.Get("HX-Request") == "true" {
-				w.Header().Set("HX-Redirect", failTarget)
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-			http.Redirect(w, r, failTarget, http.StatusSeeOther)
-			return
-		}
-
 		if oldSess, err := r.Cookie(auth.SessionCookieName); err == nil && oldSess.Value != "" {
 			authSvc.RevokeSession(oldSess.Value)
 		}
@@ -374,7 +285,7 @@ func handleTOTPStatus(authSvc *auth.Service, limiter *ipRateLimiter) http.Handle
 			MaxAge:   int(auth.SessionDuration.Seconds()),
 		})
 
-		target := serverfns.SanitizeRedirect(redirectURL)
+		target := next
 		if r.Header.Get("HX-Request") == "true" {
 			w.Header().Set("HX-Redirect", target)
 			w.WriteHeader(http.StatusOK)

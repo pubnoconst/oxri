@@ -1,8 +1,8 @@
 (function () {
   "use strict";
 
-  // "Confirming, please wait." speaks the same water language as /login/confirm
-  // and the journals catalog: sunlit rings spread from the phrase's centre while
+  // "Confirming, please wait." speaks the same water language as the journals
+  // catalog: sunlit rings spread from the phrase's centre while
   // water-ripple.js refracts the phrase along each crest. The per-character
   // centre-out wave itself is pure CSS (views/loading/loading.css).
   var water = null;
