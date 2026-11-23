@@ -17,7 +17,10 @@ The foundational principles governing **Res Imperii**:
 7. **Every major decision and feature flows through a documented Pull Request cycle.**
    - **No Monoliths (Code or Docs)**: Keep both source files and documentation partitioned into small, focused units.
    - **Feature Branches & GitHub CLI PRs**: Develop each decision or feature on a dedicated branch, open a Pull Request via GitHub CLI (`gh pr create`), and merge it (`gh pr merge --merge --delete-branch`) so Git history remains reviewable and self-contained.
-   - **Date-Sorted Commit Rationale (`BLUEPRINTS/RATIONALE/`)**: For each commit, record the reasoning in `BLUEPRINTS/RATIONALE/Y<YYYY>/M<MM>/D<D>/<git committer name>/<Chronological Number>-<commit hash>.md`.
+   - **Date-Sorted Commit Rationale (`BLUEPRINTS/RATIONALE/`)**: Every merged PR gets an entry, committed inside that PR, at `BLUEPRINTS/RATIONALE/Y<YYYY>/M<MM>/D<D>/<git committer name>/<Chronological Number>-<commit hash>.md`, where `<commit hash>` is the PR's head feature commit.
+     - **Dates come from Git, never from the session**: `Y/M/D` is that commit's own committer date as printed by `git log -1 --format=%ci <hash>` (local offset, `+1000`). Work spanning several days lands in several day folders; never file a later commit under an earlier day's folder.
+     - **Record the time, not just the day**: the entry header carries `Committed: YYYY-MM-DD HH:MM:SS ±ZZZZ` for the head commit, lists every commit in the PR with its full timestamp, and names the PR number (plus merge hash and merge time when backfilling).
+     - `<Chronological Number>` is a single global sequence across all folders (001, 002, …), ordered by commit time.
    - **Session Continuity (`BLUEPRINTS/NEXT.md`)**: Always keep `BLUEPRINTS/NEXT.md` updated with the latest commit hash, what is next on mind, and—if a session pauses mid-experiment—exact instructions on how to undo the experiment.
    - **External Secrets (`../oxri-parent/`)**: Secrets (`db.env`, `.ssh_host_key`) live strictly outside the Git repository in `../oxri-parent/`.
 8. **Modularization and the Type System: Make erroneous states unrepresentable.**
