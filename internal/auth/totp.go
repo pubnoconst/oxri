@@ -23,10 +23,6 @@ const (
 	// TOTPDigits is the standard 6-digit authenticator code length.
 	TOTPDigits = 6
 
-	// DefaultTOTPConfirmDelay is the mandatory server-side confirmation wait
-	// enforced on every pure TOTP login attempt to neutralize brute-forcing.
-	DefaultTOTPConfirmDelay = 30 * time.Second
-
 	// totpMaxFailures caps failed TOTP attempts within totpLockoutWindow.
 	totpMaxFailures   = 5
 	totpLockoutWindow = 5 * time.Minute
@@ -37,8 +33,6 @@ var (
 	ErrTOTPInvalid       = errors.New("auth: invalid or expired authentication code")
 	ErrTOTPReplayed      = errors.New("auth: authentication code already used")
 	ErrTOTPLocked        = errors.New("auth: too many failed authentication attempts; please wait")
-	ErrTOTPConfirming    = errors.New("auth: TOTP verification is still confirming")
-	ErrTOTPPending       = errors.New("auth: another TOTP confirmation is already in progress")
 )
 
 var totpBase32 = base32.StdEncoding.WithPadding(base32.NoPadding)

@@ -203,7 +203,7 @@ func SettingsPage(data SettingsData) g.Node {
 									h.H3(h.Class("method-name"), g.Text("Authenticator (TOTP)")),
 									h.Span(h.Class("badge badge-active"), g.Text("Active")),
 								),
-								h.P(h.Class("method-description"), g.Text("6-digit time-based one-time codes with 30-second server confirmation cooldown and single-use replay protection.")),
+								h.P(h.Class("method-description"), g.Text("6-digit time-based one-time codes. Instant on success; short, growing waits after wrong attempts; each code works only once.")),
 								h.Div(h.Class("method-meta"),
 									h.Span(h.Class("meta-label"), g.Text("Method:")),
 									h.Code(h.Class("meta-code"), g.Text(data.MethodLabel)),

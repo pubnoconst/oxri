@@ -21,8 +21,7 @@ func createTestTOTPAuth(t *testing.T) (*auth.Service, *http.Cookie) {
 		t.Fatalf("GenerateTOTPSecret failed: %v", err)
 	}
 	authSvc, err := auth.NewServiceWithOptions(auth.ServiceOptions{
-		TOTPSecret:       secret,
-		TOTPConfirmDelay: 50 * time.Millisecond,
+		TOTPSecret: secret,
 	})
 	if err != nil {
 		t.Fatalf("NewServiceWithOptions failed: %v", err)

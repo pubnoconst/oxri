@@ -79,8 +79,8 @@ func phraseNode(phrase string) g.Node {
 	)
 }
 
-// rippleRings renders the same sunlit water-drop rings used by /login/confirm and
-// the journals catalog, centred on the phrase, so every "please wait" state in
+// rippleRings renders the same sunlit water-drop rings used by the journals
+// catalog, centred on the phrase, so every "please wait" state in
 // the app speaks one visual language: water.
 func rippleRings() g.Node {
 	return h.Div(

@@ -1,13 +1,12 @@
-// Package auth provides RFC 6238 TOTP authentication with mandatory server-side
-// confirmation cooldown, persistent single-use replay protection, per-IP lockout,
+// Package auth provides Argon2id password + RFC 6238 TOTP sign-in (instant on
+// success; escalating per-IP holds, per-IP lockout and a global failure budget
+// on failure; see login.go), persistent single-use replay protection,
 // FIDO2/WebAuthn passkeys, and HTTP session management for Res Imperii.
 package auth
 
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -24,10 +23,6 @@ const (
 	// SessionCookieName is the HTTP cookie name holding the authenticated session token.
 	SessionCookieName = "res_imperii_session"
 
-	// BindingCookieName is the HTTP cookie binding a pending TOTP confirmation to the
-	// specific browser that submitted the 6-digit code.
-	BindingCookieName = "res_imperii_login_binding"
-
 	// SessionDuration is how long an authenticated HTTP session remains valid.
 	SessionDuration = 24 * time.Hour
 
@@ -35,7 +30,6 @@ const (
 	// (such as adding or removing passkeys) are permitted without re-verifying identity.
 	FreshAuthWindow = 5 * time.Minute
 
-	maxPendingTOTP     = 256
 	maxPendingWebAuthn = 256
 	maxActiveSessions  = 64
 	maxTrackedFailIPs  = 2048
@@ -48,20 +42,6 @@ var (
 	ErrInvalidBinding    = errors.New("auth: confirmation binding verification failed")
 )
 
-// PendingTOTPVerification tracks a pure TOTP login attempt during its mandatory
-// server-side confirmation cooldown so success/failure is never revealed early.
-type PendingTOTPVerification struct {
-	ID          string
-	ClientIP    string
-	BindingHash []byte
-	CreatedAt   time.Time
-	ReadyAt     time.Time
-	ExpiresAt   time.Time
-	Approved    bool
-	FailureErr  error
-	RedirectURL string
-}
-
 // UserSession represents an active authenticated administrative HTTP session.
 type UserSession struct {
 	SessionID string
@@ -71,25 +51,23 @@ type UserSession struct {
 
 // ServiceOptions configures the authentication service.
 type ServiceOptions struct {
-	TOTPSecret       string
-	PasswordHash     string
-	TOTPConfirmDelay time.Duration
-	ReplayStore      TOTPReplayStore
-	NowFunc          func() time.Time
+	TOTPSecret   string
+	PasswordHash string
+	ReplayStore  TOTPReplayStore
+	NowFunc      func() time.Time
 }
 
 // Service manages TOTP + optional Argon2id password verification, confirmation cooldowns,
 // and active sessions.
 type Service struct {
 	mu               sync.RWMutex
-	pendingTOTP      map[string]*PendingTOTPVerification
 	pendingWebAuthn  map[string]*pendingWebAuthnCeremony
 	activeSessions   map[string]*UserSession
 	totpSecret       string
 	passwordHash     string
-	totpConfirmDelay time.Duration
 	lastUsedTOTPStep int64
 	totpFailuresByIP map[string][]time.Time
+	globalFailures   []time.Time
 	replayStore      TOTPReplayStore
 	nowFunc          func() time.Time
 	capMinter        domain.CapMinter
@@ -131,11 +109,6 @@ func NewServiceWithOptions(opts ServiceOptions) (*Service, error) {
 		}
 	}
 
-	confirmDelay := opts.TOTPConfirmDelay
-	if confirmDelay <= 0 {
-		confirmDelay = DefaultTOTPConfirmDelay
-	}
-
 	lastUsedStep := int64(-1)
 	if opts.ReplayStore != nil {
 		loadCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -149,12 +122,10 @@ func NewServiceWithOptions(opts ServiceOptions) (*Service, error) {
 	}
 
 	return &Service{
-		pendingTOTP:      make(map[string]*PendingTOTPVerification),
 		pendingWebAuthn:  make(map[string]*pendingWebAuthnCeremony),
 		activeSessions:   make(map[string]*UserSession),
 		totpSecret:       totpSecret,
 		passwordHash:     passwordHash,
-		totpConfirmDelay: confirmDelay,
 		lastUsedTOTPStep: lastUsedStep,
 		totpFailuresByIP: make(map[string][]time.Time),
 		replayStore:      opts.ReplayStore,
@@ -287,230 +258,17 @@ func (s *Service) HasPassword() bool {
 	return s != nil && s.passwordHash != ""
 }
 
-// TOTPConfirmDelay returns the configured server-side confirmation wait for pure TOTP logins.
-func (s *Service) TOTPConfirmDelay() time.Duration {
-	if s == nil || s.totpConfirmDelay <= 0 {
-		return DefaultTOTPConfirmDelay
-	}
-	return s.totpConfirmDelay
-}
-
-// StartTOTPVerification evaluates the optional Argon2id password and 6-digit TOTP code
-// at submission time and holds the outcome behind a mandatory server-side cooldown (default 30s)
-// before revealing success or failure. Only one pending confirmation per client IP may be
-// in-flight at a time, and failed-attempt lockouts are isolated per client IP so an attacker
-// cannot lock out the legitimate administrator from another address.
-func (s *Service) StartTOTPVerification(clientIP, password, code, redirectURL string) (verifyID, bindingCookie string, readyAt time.Time, err error) {
-	if !s.HasTOTP() {
-		return "", "", time.Time{}, ErrTOTPNotConfigured
-	}
-
-	idBytes := make([]byte, 16)
-	if _, err := io.ReadFull(rand.Reader, idBytes); err != nil {
-		return "", "", time.Time{}, err
-	}
-	verifyID = hex.EncodeToString(idBytes)
-
-	bindingBytes := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, bindingBytes); err != nil {
-		return "", "", time.Time{}, err
-	}
-	bindingCookie = hex.EncodeToString(bindingBytes)
-	bindingHash := sha256.Sum256([]byte(bindingCookie))
-
-	ip := normalizeClientIP(clientIP)
-	now := s.now()
-
-	var (
-		approved      bool
-		stepToPersist int64
-	)
-
-	s.mu.Lock()
-	s.cleanupExpiredLocked()
-
-	// Prevent parallel brute-forcing per client IP without blocking other IPs
-	for _, p := range s.pendingTOTP {
-		if p.ClientIP == ip && now.Before(p.ReadyAt) {
-			s.mu.Unlock()
-			return "", "", time.Time{}, ErrTOTPPending
-		}
-	}
-	if len(s.pendingTOTP) >= maxPendingTOTP {
-		s.mu.Unlock()
-		return "", "", time.Time{}, ErrTOTPPending
-	}
-
-	recentFailures := s.pruneFailuresLocked(ip, now)
-
-	var failureErr error
-	if len(recentFailures) >= totpMaxFailures {
-		failureErr = ErrTOTPLocked
-	} else {
-		pwOK := true
-		if s.passwordHash != "" {
-			pwOK = VerifyPassword(s.passwordHash, password)
-		}
-		matchedStep, totpOK := VerifyTOTP(s.totpSecret, code, now)
-		switch {
-		case !pwOK || !totpOK:
-			count := s.recordFailureLocked(ip, now)
-			log.Printf("[AUTH] login rejected (ip=%s, pwOK=%t, totpOK=%t, failures=%d)", ip, pwOK, totpOK, count)
-			failureErr = ErrTOTPInvalid
-		case matchedStep <= s.lastUsedTOTPStep:
-			log.Printf("[AUTH] login rejected (ip=%s, replayed TOTP step)", ip)
-			failureErr = ErrTOTPReplayed
-		default:
-			s.lastUsedTOTPStep = matchedStep
-			delete(s.totpFailuresByIP, ip)
-			approved = true
-			stepToPersist = matchedStep
-		}
-	}
-
-	readyAt = now.Add(s.totpConfirmDelay)
-	s.pendingTOTP[verifyID] = &PendingTOTPVerification{
-		ID:          verifyID,
-		ClientIP:    ip,
-		BindingHash: bindingHash[:],
-		CreatedAt:   now,
-		ReadyAt:     readyAt,
-		ExpiresAt:   readyAt.Add(2 * time.Minute),
-		Approved:    approved,
-		FailureErr:  failureErr,
-		RedirectURL: redirectURL,
-	}
-	s.mu.Unlock()
-
-	if approved {
-		s.persistLastTOTPStep(stepToPersist)
-	}
-
-	return verifyID, bindingCookie, readyAt, nil
-}
-
-// PendingTOTPStatus verifies browser binding and returns how much cooldown time remains.
-func (s *Service) PendingTOTPStatus(verifyID, bindingCookie string) (remaining time.Duration, err error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	p, exists := s.pendingTOTP[verifyID]
-	if !exists {
-		return 0, ErrChallengeNotFound
-	}
-	now := s.now()
-	if now.After(p.ExpiresAt) {
-		return 0, ErrChallengeExpired
-	}
-	providedHash := sha256.Sum256([]byte(bindingCookie))
-	if subtle.ConstantTimeCompare(providedHash[:], p.BindingHash) != 1 {
-		return 0, ErrInvalidBinding
-	}
-	if now.Before(p.ReadyAt) {
-		return p.ReadyAt.Sub(now), nil
-	}
-	return 0, nil
-}
-
-// RedeemTOTPVerification completes a pending TOTP verification once its mandatory
-// cooldown has elapsed. Before ReadyAt, it returns ErrTOTPConfirming without leaking
-// whether the code succeeded or failed.
-func (s *Service) RedeemTOTPVerification(verifyID, bindingCookie string) (sessionID, redirectURL string, err error) {
-	sessBytes := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, sessBytes); err != nil {
-		return "", "", err
-	}
-	sessionID = hex.EncodeToString(sessBytes)
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	p, exists := s.pendingTOTP[verifyID]
-	if !exists {
-		return "", "", ErrChallengeNotFound
-	}
-
-	now := s.now()
-	if now.After(p.ExpiresAt) {
-		delete(s.pendingTOTP, verifyID)
-		return "", "", ErrChallengeExpired
-	}
-
-	providedHash := sha256.Sum256([]byte(bindingCookie))
-	if subtle.ConstantTimeCompare(providedHash[:], p.BindingHash) != 1 {
-		return "", "", ErrInvalidBinding
-	}
-
-	if now.Before(p.ReadyAt) {
-		return "", "", ErrTOTPConfirming
-	}
-
-	redirectURL = p.RedirectURL
-	delete(s.pendingTOTP, verifyID)
-
-	if !p.Approved {
-		if p.FailureErr != nil {
-			return "", redirectURL, p.FailureErr
-		}
-		return "", redirectURL, ErrTOTPInvalid
-	}
-
-	s.storeSessionLocked(sessionID, now)
-
-	return sessionID, redirectURL, nil
-}
-
 // AuthenticateTOTP verifies a 6-digit RFC 6238 TOTP code immediately with single-use
 // replay protection and per-IP failed-attempt lockout, returning a new 256-bit session identifier.
 func (s *Service) AuthenticateTOTP(code string) (string, error) {
 	return s.AuthenticateTOTPForIP("local", code)
 }
 
-// AuthenticateTOTPForIP verifies a 6-digit RFC 6238 TOTP code immediately for clientIP
-// with persistent replay protection and per-IP lockout.
+// AuthenticateTOTPForIP verifies a 6-digit RFC 6238 TOTP code for clientIP
+// under the same policy as LoginTOTP (holds, lockout, global budget, replay),
+// without the password factor.
 func (s *Service) AuthenticateTOTPForIP(clientIP, code string) (string, error) {
-	if !s.HasTOTP() {
-		return "", ErrTOTPNotConfigured
-	}
-
-	sessBytes := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, sessBytes); err != nil {
-		return "", err
-	}
-	sessionID := hex.EncodeToString(sessBytes)
-
-	ip := normalizeClientIP(clientIP)
-	now := s.now()
-
-	s.mu.Lock()
-	s.cleanupExpiredLocked()
-
-	recentFailures := s.pruneFailuresLocked(ip, now)
-	if len(recentFailures) >= totpMaxFailures {
-		s.mu.Unlock()
-		return "", ErrTOTPLocked
-	}
-
-	matchedStep, ok := VerifyTOTP(s.totpSecret, code, now)
-	if !ok {
-		s.recordFailureLocked(ip, now)
-		s.mu.Unlock()
-		return "", ErrTOTPInvalid
-	}
-
-	if matchedStep <= s.lastUsedTOTPStep {
-		s.mu.Unlock()
-		return "", ErrTOTPReplayed
-	}
-
-	s.lastUsedTOTPStep = matchedStep
-	delete(s.totpFailuresByIP, ip)
-	s.storeSessionLocked(sessionID, now)
-	s.mu.Unlock()
-
-	s.persistLastTOTPStep(matchedStep)
-
-	return sessionID, nil
+	return s.login(clientIP, "", code, false)
 }
 
 // Authenticate checks if a session ID is valid and active.
@@ -577,20 +335,15 @@ func (s *Service) RevokeSession(sessionID string) {
 func (s *Service) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	clear(s.pendingTOTP)
 	clear(s.pendingWebAuthn)
 	clear(s.activeSessions)
 	clear(s.totpFailuresByIP)
+	s.globalFailures = nil
 	return nil
 }
 
 func (s *Service) cleanupExpiredLocked() {
 	now := s.now()
-	for id, pending := range s.pendingTOTP {
-		if now.After(pending.ExpiresAt) {
-			delete(s.pendingTOTP, id)
-		}
-	}
 	for id, ceremony := range s.pendingWebAuthn {
 		if now.After(ceremony.ExpiresAt) {
 			delete(s.pendingWebAuthn, id)

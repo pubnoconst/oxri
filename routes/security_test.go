@@ -2,6 +2,7 @@ package routes
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -110,8 +111,8 @@ func TestCSRFProtectionAndServerSideInputSanitization(t *testing.T) {
 
 	// 2. Server-side rejection & sanitization of evil input bypassing client JS
 	evilCases := []struct {
-		name         string
-		form         url.Values
+		name          string
+		form          url.Values
 		forbiddenEcho string
 	}{
 		{
@@ -335,7 +336,7 @@ func TestPersistentTOTPReplayAcrossRestart(t *testing.T) {
 	}
 	defer func() { _ = svc2.Close() }()
 
-	if _, err := svc2.AuthenticateTOTPForIP("198.51.100.10", code); err != auth.ErrTOTPReplayed {
+	if _, err := svc2.AuthenticateTOTPForIP("198.51.100.10", code); !errors.Is(err, auth.ErrTOTPReplayed) {
 		t.Fatalf("expected ErrTOTPReplayed across restart with db.Store, got %v", err)
 	}
 }
