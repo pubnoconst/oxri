@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `5f302ee` (PR #36 — press ripple, quality governor, settings polish)
-- **Active Branch**: `v2-dead-code` (PR #37): dead code and dead branches removed (RATIONALE 038).
+- **Base Commit on `main`**: `06dc714` (PR #37 — dead code and dead branches removed)
+- **Active Branch**: `v2-fix-ripple-crash` (PR #38): **regression fix**. Clicking a journal entry hung the tab because the press ripple filtered the whole page, tweet iframes included; it now refracts a cloth layer behind content and stops on navigation (RATIONALE 039).
 - **Branches**: `main`, `prod`, `v2` (live); `v1`, `fsharp-legacy`, `rust-experiment` (archived lineage, kept on purpose).
 - **Active Experiment / Undo Instructions**: None. To reset a device's water quality level: in the browser console, `localStorage.removeItem("res-imperii.water-quality")`.
 
