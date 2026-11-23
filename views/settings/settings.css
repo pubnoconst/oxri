@@ -76,12 +76,44 @@
 }
 
 .status-dot {
+  position: relative;
   width: 0.65rem;
   height: 0.65rem;
   border-radius: 50%;
   background-color: var(--accent-active);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-active) 22%, transparent);
   flex-shrink: 0;
+}
+
+/* "Live" cue in the site's water language: a faint ring spreads from the dot
+   and fades, slowly. Subtle by design; still under reduced motion. */
+.status-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid var(--accent-active);
+  opacity: 0;
+  animation: status-dot-ripple 3s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes status-dot-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  70%,
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot::after {
+    animation: none;
+  }
 }
 
 .status-content {
@@ -218,11 +250,12 @@
 }
 
 /* Footer / Notice */
-.methods-footer {
+/* Add-a-passkey controls, inside the Passkeys (WebAuthn) method card */
+.passkey-controls {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding-top: 1.5rem;
+  gap: 0.9rem;
+  padding-top: 0.9rem;
   border-top: 1px solid var(--border-subtle);
 }
 
