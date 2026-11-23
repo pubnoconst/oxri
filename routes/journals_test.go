@@ -53,7 +53,6 @@ func TestJournalsEditorVacateAndLoadingFlow(t *testing.T) {
 	defer func() { _ = authSvc.Close() }()
 
 	router := NewRouter(Config{
-		AssetsDir:   "../assets",
 		AuthService: authSvc,
 		Store:       store,
 	})

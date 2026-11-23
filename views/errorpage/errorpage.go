@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"fmt"
+	"github.com/oxri/oxri-go/assets"
 	"net/http"
 
 	"github.com/oxri/oxri-go/views/layout"
@@ -18,6 +19,9 @@ var StyleCSS string
 
 // StylePath is the public route for the error page component CSS.
 const StylePath = "/views/errorpage/errorpage.css"
+
+// Style is the content-hashed handle for StyleCSS (URL and route handler).
+var Style = assets.Component(StylePath, StyleCSS)
 
 // MessageForStatus returns a secure, client-safe message for an HTTP status code.
 // Internal error details or stack traces are never exposed.
@@ -73,7 +77,7 @@ func Page(status int, message, reference, qrDataURI string) g.Node {
 	title := fmt.Sprintf("Error %d - RES IMPERII", status)
 	return layout.Doc(
 		title,
-		StylePath,
+		Style.URL(),
 		h.Main(h.Class("error-page"),
 			h.Section(h.Class("error-card"),
 				h.P(h.Class("error-wordmark"), g.Text("RES IMPERII")),

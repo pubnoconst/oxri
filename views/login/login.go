@@ -3,6 +3,7 @@ package login
 
 import (
 	_ "embed"
+	"github.com/oxri/oxri-go/assets"
 
 	"github.com/oxri/oxri-go/views/layout"
 	g "maragu.dev/gomponents"
@@ -14,6 +15,9 @@ var StyleCSS string
 
 // StylePath is the public route for the login component CSS.
 const StylePath = "/views/login/login.css"
+
+// Style is the content-hashed handle for StyleCSS (URL and route handler).
+var Style = assets.Component(StylePath, StyleCSS)
 
 // TOTPPage renders the quiet authentication screen: one-click Passkey sign-in when enrolled
 // for this domain, alongside Argon2id password + 6-digit TOTP recovery/bootstrap login.
@@ -107,7 +111,7 @@ func TOTPPage(nextURL, errMsg string, requirePassword, hasPasskeys, reauth bool)
 				),
 			),
 		})
-		passkeyScript = h.Script(h.Src("/assets/js/passkey.js?v=2"))
+		passkeyScript = h.Script(h.Src(assets.PasskeyJS.URL()))
 	} else {
 		cardBody = g.Group([]g.Node{
 			errNode,
@@ -117,7 +121,7 @@ func TOTPPage(nextURL, errMsg string, requirePassword, hasPasskeys, reauth bool)
 
 	return layout.Doc(
 		"Authentication - RES IMPERII",
-		StylePath+"?v=11",
+		Style.URL(),
 		h.Main(h.Class("auth-page"),
 			h.Header(h.Class("auth-header"),
 				layout.BackLink("/", "Home"),

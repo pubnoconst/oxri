@@ -22,7 +22,7 @@ The foundational principles governing **Res Imperii**:
      - **Record the time, not just the day**: the entry header carries `Committed: YYYY-MM-DD HH:MM:SS ±ZZZZ` for the head commit, lists every commit in the PR with its full timestamp, and names the PR number (plus merge hash and merge time when backfilling).
      - `<Chronological Number>` is a single global sequence across all folders (001, 002, …), ordered by commit time.
    - **Session Continuity (`BLUEPRINTS/NEXT.md`)**: Always keep `BLUEPRINTS/NEXT.md` updated with the latest commit hash, what is next on mind, and—if a session pauses mid-experiment—exact instructions on how to undo the experiment.
-   - **External Secrets (`../oxri-parent/`)**: Secrets (`db.env`, `.ssh_host_key`) live strictly outside the Git repository in `../oxri-parent/`.
+   - **External Secrets (`../oxri-parent/`)**: Secrets (`db.env`, `pw.env`) and offline backups (`backups/`) live strictly outside the Git repository in `../oxri-parent/`.
 8. **Modularization and the Type System: Make erroneous states unrepresentable.**
    - **Context windows are strictly limited**: Large files, sprawling packages, and mental-discipline conventions inevitably fail when context is constrained. Every module must be small, cohesive, and have a single clear responsibility.
    - **The type system is our primary defense**: Do not rely on runtime checks or human memory to catch invalid data or unauthorized actions. Use opaque unexported-field types, boundary parsers ("Parse, Don't Validate"), compile-time capability tokens (`AdminCap`), and sealed outcome types so erroneous states fail at compile time.

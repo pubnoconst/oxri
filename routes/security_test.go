@@ -16,7 +16,7 @@ import (
 )
 
 func TestSecurityHeadersAndNoDirectoryListing(t *testing.T) {
-	router := NewRouter(Config{AssetsDir: "../assets"})
+	router := NewRouter(Config{})
 
 	// 1. Verify Security Headers on GET /
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -93,7 +93,6 @@ func TestCSRFProtectionAndServerSideInputSanitization(t *testing.T) {
 	defer func() { _ = authSvc.Close() }()
 
 	router := NewRouter(Config{
-		AssetsDir:   "../assets",
 		AuthService: authSvc,
 		Store:       store,
 	})
@@ -210,7 +209,7 @@ func TestProxyIPTrustAndSpoofDefense(t *testing.T) {
 		t.Fatalf("expected X-Forwarded-Proto to be ignored from untrusted RemoteAddr")
 	}
 
-	router := NewRouter(Config{AssetsDir: "../assets"})
+	router := NewRouter(Config{})
 	hstsRec := httptest.NewRecorder()
 	router.ServeHTTP(hstsRec, untrustedReq)
 	if got := hstsRec.Header().Get("Strict-Transport-Security"); got != "" {
@@ -254,7 +253,6 @@ func TestLogoutPostOnly(t *testing.T) {
 	defer func() { _ = authSvc.Close() }()
 
 	router := NewRouter(Config{
-		AssetsDir:   "../assets",
 		AuthService: authSvc,
 	})
 
@@ -346,7 +344,6 @@ func TestPilotRoutesDisabled(t *testing.T) {
 	defer func() { _ = authSvc.Close() }()
 
 	router := NewRouter(Config{
-		AssetsDir:   "../assets",
 		AuthService: authSvc,
 	})
 

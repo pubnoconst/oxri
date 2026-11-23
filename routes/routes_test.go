@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"github.com/oxri/oxri-go/assets"
+	"github.com/oxri/oxri-go/views/landing"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,7 +15,7 @@ import (
 )
 
 func TestLandingPageAndComponentCSS(t *testing.T) {
-	router := NewRouter(Config{AssetsDir: "../assets"})
+	router := NewRouter(Config{})
 
 	// 1. Landing Page HTML
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -31,11 +33,11 @@ func TestLandingPageAndComponentCSS(t *testing.T) {
 		"Book III",
 		"Journals",
 		"Log in",
-		"/assets/css/site.css?v=15",
-		"/views/landing/landing.css?v=2",
-		"/assets/js/htmx.min.js",
-		"/assets/js/theme-toggle.js?v=2",
-		"/assets/js/navigation-feedback.js?v=2",
+		assets.SiteCSS.URL(),
+		landing.Style.URL(),
+		assets.HTMXJS.URL(),
+		assets.ThemeToggleJS.URL(),
+		assets.NavigationFeedbackJS.URL(),
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("missing %q in landing page HTML", expected)
@@ -82,7 +84,7 @@ func TestLandingPageAndComponentCSS(t *testing.T) {
 }
 
 func TestErrorPages_NotFound(t *testing.T) {
-	router := NewRouter(Config{AssetsDir: "../assets"})
+	router := NewRouter(Config{})
 
 	req := httptest.NewRequest(http.MethodGet, "/non-existent-page-xyz", nil)
 	rec := httptest.NewRecorder()
@@ -109,7 +111,7 @@ func TestErrorPages_NotFound(t *testing.T) {
 }
 
 func TestErrorPages_MethodNotAllowed(t *testing.T) {
-	router := NewRouter(Config{AssetsDir: "../assets"})
+	router := NewRouter(Config{})
 
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("evil payload"))
 	rec := httptest.NewRecorder()
@@ -174,7 +176,7 @@ func TestErrorPages_PanicRecovery_NoLeak(t *testing.T) {
 }
 
 func TestErrorPages_CSS(t *testing.T) {
-	router := NewRouter(Config{AssetsDir: "../assets"})
+	router := NewRouter(Config{})
 
 	req := httptest.NewRequest(http.MethodGet, "/views/errorpage/errorpage.css", nil)
 	rec := httptest.NewRecorder()
@@ -193,7 +195,7 @@ func TestErrorPages_CSS(t *testing.T) {
 }
 
 func TestBookIPage(t *testing.T) {
-	router := NewRouter(Config{AssetsDir: "../assets"})
+	router := NewRouter(Config{})
 
 	req := httptest.NewRequest(http.MethodGet, "/book-i", nil)
 	rec := httptest.NewRecorder()
@@ -219,7 +221,7 @@ func TestBookIPage(t *testing.T) {
 }
 
 func TestBookICSS(t *testing.T) {
-	router := NewRouter(Config{AssetsDir: "../assets"})
+	router := NewRouter(Config{})
 
 	req := httptest.NewRequest(http.MethodGet, "/views/booki/booki.css", nil)
 	rec := httptest.NewRecorder()
@@ -238,7 +240,7 @@ func TestBookICSS(t *testing.T) {
 }
 
 func TestAuthRoutes_CSS(t *testing.T) {
-	router := NewRouter(Config{AssetsDir: "../assets"})
+	router := NewRouter(Config{})
 
 	for _, path := range []string{
 		"/views/login/login.css",
@@ -274,7 +276,6 @@ func TestTOTPAuthRoutes_FullFlow(t *testing.T) {
 	defer authSvc.Close()
 
 	router := NewRouter(Config{
-		AssetsDir:   "../assets",
 		AuthService: authSvc,
 	})
 

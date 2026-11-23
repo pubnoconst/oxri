@@ -2,6 +2,7 @@
 package layout
 
 import (
+	"github.com/oxri/oxri-go/assets"
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 )
@@ -12,7 +13,7 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 		h.Meta(h.Charset("utf-8")),
 		h.Meta(h.Name("viewport"), h.Content("width=device-width, initial-scale=1")),
 		h.TitleEl(g.Text(title)),
-		h.Link(h.Rel("icon"), h.Type("image/png"), h.Href("/assets/favicon.png?v=1")),
+		h.Link(h.Rel("icon"), h.Type("image/png"), h.Href(assets.Favicon.URL())),
 
 		// EB Garamond Typeface
 		h.Link(h.Rel("preconnect"), h.Href("https://fonts.googleapis.com")),
@@ -20,7 +21,7 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 		h.Link(h.Rel("stylesheet"), h.Href("https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap")),
 
 		// Global Site CSS
-		h.Link(h.Rel("stylesheet"), h.Href("/assets/css/site.css?v=15")),
+		h.Link(h.Rel("stylesheet"), h.Href(assets.SiteCSS.URL())),
 	}
 
 	if componentCSS != "" {
@@ -33,9 +34,9 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 			h.Body(
 				g.Group(bodyChildren),
 				// Vendored HTMX, Theme Toggle, and Page Transition Feedback (No External CDN scripts)
-				h.Script(h.Src("/assets/js/htmx.min.js")),
-				h.Script(h.Src("/assets/js/theme-toggle.js?v=2")),
-				h.Script(h.Src("/assets/js/navigation-feedback.js?v=2")),
+				h.Script(h.Src(assets.HTMXJS.URL())),
+				h.Script(h.Src(assets.ThemeToggleJS.URL())),
+				h.Script(h.Src(assets.NavigationFeedbackJS.URL())),
 			),
 		),
 	)

@@ -6,7 +6,6 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -86,29 +85,6 @@ func csrfOriginMiddleware(next http.Handler) http.Handler {
 			}
 		}
 		next.ServeHTTP(w, r)
-	})
-}
-
-// noDirListingAssetHandler serves static files from assetsDir while returning a 404
-// error page for any directory path or traversal attempt (disabling directory listings).
-func noDirListingAssetHandler(assetsDir string) http.Handler {
-	fs := http.FileServer(http.Dir(assetsDir))
-	stripped := http.StripPrefix("/assets/", fs)
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		relPath := strings.TrimPrefix(r.URL.Path, "/assets/")
-		if relPath == "" || strings.HasSuffix(r.URL.Path, "/") || strings.Contains(relPath, "..") {
-			errorpage.Render(w, http.StatusNotFound, "")
-			return
-		}
-		cleanRel := filepath.FromSlash(filepath.Clean("/" + relPath))
-		fullPath := filepath.Join(assetsDir, cleanRel)
-		info, err := os.Stat(fullPath)
-		if err != nil || info.IsDir() {
-			errorpage.Render(w, http.StatusNotFound, "")
-			return
-		}
-		stripped.ServeHTTP(w, r)
 	})
 }
 

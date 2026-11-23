@@ -2,6 +2,7 @@ package journals
 
 import (
 	"fmt"
+	"github.com/oxri/oxri-go/assets"
 
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/views/layout"
@@ -238,7 +239,7 @@ func VacateSpacePage(view VacateSpaceView) g.Node {
 
 	return layout.Doc(
 		"Make Room - RES IMPERII",
-		StylePath+"?v=2",
+		Style.URL(),
 		h.Main(h.Class("journals-page vacate-space-page"),
 			h.Header(h.Class("journals-header"),
 				layout.BackLink("/journals", "Journals"),
@@ -333,8 +334,8 @@ func VacateSpacePage(view VacateSpaceView) g.Node {
 			),
 		),
 		loading.Overlay(loading.DefaultPhrase, view.AutoResubmitReady),
-		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src(loading.TransitionScriptPath)),
-		h.Script(h.Src("/assets/js/vacate-space.js?v=3")),
+		h.Script(h.Src(assets.WaterRippleJS.URL())),
+		h.Script(h.Src(assets.LoadingTransitionJS.URL())),
+		h.Script(h.Src(assets.VacateSpaceJS.URL())),
 	)
 }

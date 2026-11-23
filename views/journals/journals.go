@@ -6,6 +6,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"github.com/oxri/oxri-go/assets"
 	"html"
 	"net/url"
 	"regexp"
@@ -25,6 +26,9 @@ var StyleCSS string
 
 // StylePath is the public route for the journals component CSS.
 const StylePath = "/views/journals/journals.css"
+
+// Style is the content-hashed handle for StyleCSS (URL and route handler).
+var Style = assets.Component(StylePath, StyleCSS)
 
 const MaxExcerptRunes = 280
 
@@ -310,14 +314,14 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 
 	var catalogScript g.Node
 	if isAuth {
-		catalogScript = h.Script(h.Src("/assets/js/journals-catalog.js?v=2"))
+		catalogScript = h.Script(h.Src(assets.JournalsCatalogJS.URL()))
 	}
 
 	rippleStyle := "--ripple-x:50%;--ripple-y:38%;--ripple-diameter:150vmax;"
 
 	return layout.Doc(
 		"Journals - RES IMPERII",
-		StylePath+"?v=7",
+		Style.URL(),
 		h.Div(h.Class("water-stage"), g.Attr("data-water-stage", ""),
 			h.Main(h.Class("journals-page"),
 				renderJournalsHeader(isAuth),
@@ -339,8 +343,8 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 			h.Span(h.Class("card-water-wave wave-2")),
 			h.Span(h.Class("card-water-wave wave-3")),
 		),
-		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=14")),
+		h.Script(h.Src(assets.WaterRippleJS.URL())),
+		h.Script(h.Src(assets.JournalMediaJS.URL())),
 		catalogScript,
 	)
 }
@@ -349,20 +353,20 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 func CatalogPage(isAuth bool, view CatalogView) g.Node {
 	var catalogScript g.Node
 	if isAuth {
-		catalogScript = h.Script(h.Src("/assets/js/journals-catalog.js?v=2"))
+		catalogScript = h.Script(h.Src(assets.JournalsCatalogJS.URL()))
 	}
 
 	return layout.Doc(
 		"Journals - RES IMPERII",
-		StylePath+"?v=7",
+		Style.URL(),
 		h.Main(h.Class("journals-page"),
 			renderJournalsHeader(isAuth),
 			h.Div(h.ID("journals-catalog-stage"),
 				CatalogContentFragment(isAuth, view),
 			),
 		),
-		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=14")),
+		h.Script(h.Src(assets.WaterRippleJS.URL())),
+		h.Script(h.Src(assets.JournalMediaJS.URL())),
 		catalogScript,
 	)
 }
@@ -371,7 +375,7 @@ func CatalogPage(isAuth bool, view CatalogView) g.Node {
 func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 	return layout.Doc(
 		"Journal Entry - RES IMPERII",
-		StylePath+"?v=7",
+		Style.URL(),
 		h.Main(h.Class("journals-page journals-single-page"),
 			h.Header(h.Class("journals-header"),
 				layout.BackLink("/journals", "Journals"),
@@ -380,8 +384,8 @@ func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 				EntryCard(isAuth, item, false),
 			),
 		),
-		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src("/assets/js/journal-media.js?v=14")),
+		h.Script(h.Src(assets.WaterRippleJS.URL())),
+		h.Script(h.Src(assets.JournalMediaJS.URL())),
 	)
 }
 

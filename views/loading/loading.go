@@ -4,6 +4,7 @@ package loading
 import (
 	_ "embed"
 	"fmt"
+	"github.com/oxri/oxri-go/assets"
 	"math"
 
 	"github.com/oxri/oxri-go/views/layout"
@@ -16,6 +17,9 @@ var StyleCSS string
 
 // StylePath is the public route for the loading component CSS.
 const StylePath = "/views/loading/loading.css"
+
+// Style is the content-hashed handle for StyleCSS (URL and route handler).
+var Style = assets.Component(StylePath, StyleCSS)
 
 // DefaultPhrase is the non-technical confirmation message displayed during loading transitions.
 const DefaultPhrase = "Confirming, please wait."
@@ -100,20 +104,12 @@ func Page(phrase string) g.Node {
 	}
 	return layout.Doc(
 		"RES IMPERII",
-		StylePath+"?v="+styleVersion,
+		Style.URL(),
 		Stage(phrase),
-		h.Script(h.Src("/assets/js/water-ripple.js?v=2")),
-		h.Script(h.Src(TransitionScriptPath)),
+		h.Script(h.Src(assets.WaterRippleJS.URL())),
+		h.Script(h.Src(assets.LoadingTransitionJS.URL())),
 	)
 }
-
-// styleVersion is the cache key for loading.css.
-const styleVersion = "3"
-
-// TransitionScriptPath is the script that shows the overlay on submit and
-// drives the phrase refraction; pages embedding Overlay must include it
-// together with /assets/js/water-ripple.js.
-const TransitionScriptPath = "/assets/js/loading-transition.js?v=4"
 
 // Stage renders the centered loading phrase stage.
 func Stage(phrase string) g.Node {
@@ -130,6 +126,7 @@ func Stage(phrase string) g.Node {
 }
 
 // Overlay renders the full-screen confirmation overlay for form submissions and auto-resubmits.
+// Pages embedding it must also load assets.WaterRippleJS and assets.LoadingTransitionJS.
 func Overlay(phrase string, initiallyVisible bool) g.Node {
 	if phrase == "" {
 		phrase = DefaultPhrase
@@ -150,7 +147,7 @@ func Overlay(phrase string, initiallyVisible bool) g.Node {
 	attrs = append(attrs, phraseNode(phrase), rippleRings())
 
 	return g.Group([]g.Node{
-		h.Link(h.Rel("stylesheet"), h.Href(StylePath+"?v="+styleVersion)),
+		h.Link(h.Rel("stylesheet"), h.Href(Style.URL())),
 		h.Div(attrs...),
 	})
 }
