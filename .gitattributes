@@ -1,0 +1,7 @@
+# Line endings: LF in the repository and in every checkout (overrides a
+# machine-wide core.autocrlf), so gofmt, diffs and embedded-asset content
+# hashes are identical on Windows and Linux.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary

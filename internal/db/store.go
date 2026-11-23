@@ -47,9 +47,9 @@ type Store struct {
 	cacheValid    bool
 	cacheLoadedAt time.Time
 
-	bookCacheMu    sync.RWMutex
-	cachedBooks    map[string]Book
-	bookCacheAt    map[string]time.Time
+	bookCacheMu sync.RWMutex
+	cachedBooks map[string]Book
+	bookCacheAt map[string]time.Time
 }
 
 // Open connects to a remote Turso/libSQL URL (libsql:// or https://), verifies

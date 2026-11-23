@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/oxri/oxri-go/internal/config"
 	"os"
 	"path/filepath"
 	"time"
@@ -30,12 +31,7 @@ func main() {
 	restorePath := flag.String("restore", "", "Path to a JSON snapshot file to restore into Turso")
 	flag.Parse()
 
-	_ = db.LoadEnvFiles(
-		filepath.Join("..", "oxri-parent", "db.env"),
-		filepath.Join("..", "oxri-parent", ".env"),
-		filepath.Join("..", "db.env"),
-		filepath.Join("..", ".env"),
-	)
+	_ = config.LoadSecrets("db.env") // never pw.env: the backup tool needs no password hash
 
 	dbURL := os.Getenv("TURSO_DATABASE_URL")
 	dbToken := os.Getenv("TURSO_AUTH_TOKEN")

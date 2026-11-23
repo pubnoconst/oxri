@@ -32,17 +32,17 @@ func TestParseTag(t *testing.T) {
 	}
 
 	invalid := []string{
-		"",                                 // empty
-		"   ",                              // spaces only
-		"Philosophy",                       // uppercase (ParseTag normalizes to lowercase if valid chars, but let's test invalid patterns)
-		"-leading-hyphen",                  // leading hyphen
-		"trailing-hyphen-",                 // trailing hyphen
-		"double--hyphen",                   // double hyphen
-		"space in tag",                     // spaces
-		"tag_underscore",                   // underscore not allowed in kebab-case tag
-		"tag.dot",                          // punctuation
-		"tag@domain",                       // special chars
-		strings.Repeat("a", 41),            // too long (>40 chars)
+		"",                      // empty
+		"   ",                   // spaces only
+		"Philosophy",            // uppercase (ParseTag normalizes to lowercase if valid chars, but let's test invalid patterns)
+		"-leading-hyphen",       // leading hyphen
+		"trailing-hyphen-",      // trailing hyphen
+		"double--hyphen",        // double hyphen
+		"space in tag",          // spaces
+		"tag_underscore",        // underscore not allowed in kebab-case tag
+		"tag.dot",               // punctuation
+		"tag@domain",            // special chars
+		strings.Repeat("a", 41), // too long (>40 chars)
 	}
 
 	for _, s := range invalid {

@@ -25,7 +25,8 @@ This repository is structured so that any engineer or AI agent can pick up full 
 
 ```text
 oxri/
-├── .github/workflows/ci.yml         # GitHub Actions CI (CGO_ENABLED=0 test + Linux static build)
+├── .gitattributes                   # LF line endings everywhere (overrides core.autocrlf)
+├── .github/workflows/ci.yml         # GitHub Actions CI (gofmt + vet + CGO_ENABLED=0 tests + Linux static build)
 ├── Dockerfile                       # Multi-stage CGO_ENABLED=0 distroless container (single binary)
 ├── render.yaml                      # Render Web Service deployment manifest
 ├── magefile.go                      # Pure-Go build, test, setup & backup targets (CGO_ENABLED=0)
@@ -39,6 +40,7 @@ oxri/
 │   ├── passgen/main.go              # Loopback Argon2id passphrase setup tool (`mage password`)
 │   └── backup/main.go               # Offline Turso JSON snapshot export & restore CLI (`mage backup`)
 ├── internal/
+│   ├── config/                      # Secret env files: LoadSecrets("db.env", …) from ../oxri-parent/ then ../
 │   ├── auth/                        # Passkeys, Argon2id password + RFC 6238 TOTP sign-in policy (login.go), sessions, AdminCap minting
 │   ├── db/                          # Remote Turso/libSQL store (schema v6): journals, books, passkeys, auth_state, backup, quota; capability-gated writes
 │   └── domain/                      # "Parse, Don't Validate" opaque domain types & the AdminCap capability token
@@ -157,7 +159,8 @@ mage clean
 ## 6. Deployment & Branch Lineage
 
 - **Production Deployment**: Distroless Docker container (`Dockerfile`, `render.yaml`) deployed on Render from the `prod` branch, fronted by Render's ingress proxy (`APP_ENV=prod`, `TRUST_PROXY=true`). The image holds a single binary; assets are embedded.
-- **Continuous Integration**: `.github/workflows/ci.yml` runs `CGO_ENABLED=0 go test -v ./...` and verifies the static `GOOS=linux GOARCH=amd64` binary build on every push and PR to `main`. Merges wait for it to pass.
+- **Single instance by design**: sessions, sign-in counters and rate limiters live in memory (see Principia #1). Run exactly one instance; a restart signs everyone out.
+- **Continuous Integration**: `.github/workflows/ci.yml` fails on unformatted code (`gofmt -l`), runs `go vet` and `CGO_ENABLED=0 go test -v ./...`, and verifies the static `GOOS=linux GOARCH=amd64` binary build on every push and PR to `main`. Merges wait for it to pass.
 - **Release flow**: feature branch → local build and UI test → PR → CI → merge to `main` → fast-forward `prod` (and `v2`) to `main`.
 - **Lineage**:
   - **`main`** (and **`v2`**, **`prod`**): Active pure-Go + Gomponents + Vanilla JS + Modern CSS architecture.

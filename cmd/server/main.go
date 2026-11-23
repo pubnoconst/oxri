@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/oxri/oxri-go/internal/config"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -16,15 +16,7 @@ import (
 )
 
 func main() {
-	envFiles := []string{
-		filepath.Join("..", "oxri-parent", "db.env"),
-		filepath.Join("..", "oxri-parent", "pw.env"),
-		filepath.Join("..", "oxri-parent", ".env"),
-		filepath.Join("..", "db.env"),
-		filepath.Join("..", "pw.env"),
-		filepath.Join("..", ".env"),
-	}
-	_ = db.LoadEnvFiles(envFiles...)
+	_ = config.LoadSecrets("db.env", "pw.env")
 
 	port := os.Getenv("PORT")
 	if port == "" {

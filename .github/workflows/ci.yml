@@ -19,6 +19,16 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
+      - name: Check formatting (gofmt) and vet
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "gofmt needed on:"; echo "$unformatted"; exit 1
+          fi
+          go vet ./...
+
       - name: Run unit & integration tests (CGO_ENABLED=0)
         env:
           CGO_ENABLED: "0"

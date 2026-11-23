@@ -30,20 +30,20 @@ func TestParseSafePath(t *testing.T) {
 	}
 
 	invalid := []string{
-		"",                                 // empty
-		"   ",                              // whitespace
-		"../traversal",                     // path traversal
-		"..",                               // directory traversal
-		"/root/path",                       // unix root
-		`C:\Windows\System32`,              // windows drive
-		"sub/folder",                       // subfolder slash
-		`sub\folder`,                       // backslash
-		"-leading-dash",                    // must start with alphanumeric
-		"_leading-underscore",              // must start with alphanumeric
-		"entry with spaces",                // spaces
-		"file\x00null",                     // null byte
-		"entry.html",                       // dot not in regex
-		strings.Repeat("a", 81),            // >80 characters
+		"",                      // empty
+		"   ",                   // whitespace
+		"../traversal",          // path traversal
+		"..",                    // directory traversal
+		"/root/path",            // unix root
+		`C:\Windows\System32`,   // windows drive
+		"sub/folder",            // subfolder slash
+		`sub\folder`,            // backslash
+		"-leading-dash",         // must start with alphanumeric
+		"_leading-underscore",   // must start with alphanumeric
+		"entry with spaces",     // spaces
+		"file\x00null",          // null byte
+		"entry.html",            // dot not in regex
+		strings.Repeat("a", 81), // >80 characters
 	}
 
 	for _, s := range invalid {
