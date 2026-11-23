@@ -85,10 +85,12 @@ func SettingsPage(data SettingsData) g.Node {
 		passkeyList = h.Ul(h.Class("passkey-list"), g.Group(items))
 	}
 
-	var footerControls g.Node
+	// passkeyControls (add a passkey / why it's unavailable) live inside the
+	// Passkeys (WebAuthn) method card they belong to.
+	var passkeyControls g.Node
 	switch {
 	case data.PasskeySupported && data.FreshAuth:
-		footerControls = h.Div(h.Class("methods-footer"),
+		passkeyControls = h.Div(h.Class("passkey-controls"),
 			h.Div(h.Class("passkey-add-row"),
 				h.Input(
 					h.ID("passkey-label-input"),
@@ -103,7 +105,7 @@ func SettingsPage(data SettingsData) g.Node {
 			h.P(h.ID("passkey-register-status"), h.Class("passkey-status"), g.Attr("role", "status"), g.Attr("hidden", "")),
 		)
 	case data.PasskeySupported && !data.FreshAuth:
-		footerControls = h.Div(h.Class("methods-footer"),
+		passkeyControls = h.Div(h.Class("passkey-controls"),
 			h.Div(h.Class("passkey-add-row"),
 				h.Input(
 					h.ID("passkey-label-input"),
@@ -126,7 +128,7 @@ func SettingsPage(data SettingsData) g.Node {
 			),
 		)
 	default:
-		footerControls = h.Div(h.Class("methods-footer"),
+		passkeyControls = h.Div(h.Class("passkey-controls"),
 			h.Div(h.Class("action-buttons"),
 				h.Button(h.Type("button"), h.Class("btn btn-encouraged"), g.Attr("disabled", ""), g.Attr("aria-disabled", "true"), g.Text("Add passkey")),
 			),
@@ -198,6 +200,7 @@ func SettingsPage(data SettingsData) g.Node {
 								),
 							),
 							passkeyList,
+							passkeyControls,
 						),
 
 						// Method 2: Password + Authenticator (TOTP)
@@ -215,7 +218,6 @@ func SettingsPage(data SettingsData) g.Node {
 							),
 						),
 					),
-					footerControls,
 				),
 			),
 		),

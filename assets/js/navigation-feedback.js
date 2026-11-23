@@ -57,6 +57,20 @@
     }
   });
 
+  // A submit that will navigate is a navigation in flight too: mark it so the
+  // touch ripple (touch-ripple.js) keeps pulsing if the response is slow.
+  // Registered after the data-confirm handler, so a cancelled confirm is seen
+  // as defaultPrevented. Forms with the "Confirming" overlay have their own UI.
+  document.addEventListener("submit", (event) => {
+    const form = event.target instanceof HTMLFormElement ? event.target : null;
+    if (!form || event.defaultPrevented) return;
+    if (form.getAttribute("data-confirm-loading") === "true") return;
+    if (form.target && form.target.toLowerCase() !== "_self") return;
+    clearNavigationState();
+    document.documentElement.classList.add(leavingClass);
+    resetTimer = window.setTimeout(clearNavigationState, resetAfterMs);
+  });
+
   // Ensure Back/Forward Cache restore clears any leaving/pending state.
   window.addEventListener("pageshow", clearNavigationState);
 })();

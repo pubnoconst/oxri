@@ -646,21 +646,62 @@ a {
   animation: 220ms ease-in-out both page-fade-in;
 }
 
-:root.navigation-leaving body {
-  opacity: 0.35;
+/*
+ * Touch ripple (assets/js/touch-ripple.js): pressing a link or button drops a
+ * drop at the touch point; four mirror-image sources make it bounce off the
+ * window edges. The waves are invisible: their scale and opacity only drive
+ * water-ripple.js refraction of the page, so the linen bends and nothing is
+ * painted. Linear scale = constant wave speed, so echoes arrive on time.
+ */
+.touch-ripple {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 60;
 }
 
-@keyframes navigation-pending-breathe {
-  0%, 100% {
-    opacity: 1;
+.touch-ripple .card-water-wave {
+  width: var(--touch-diameter, 200vmax);
+  height: var(--touch-diameter, 200vmax);
+  background: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+  /* Never painted, so never promote these (large) rings to GPU layers. */
+  will-change: auto;
+  animation: touch-wave-propagate var(--touch-ms, 1000ms) linear 1 both;
+}
+
+@keyframes touch-wave-propagate {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
   }
-  50% {
-    opacity: 0.88;
+  5% {
+    opacity: calc(0.9 * var(--gain, 1));
+  }
+  35% {
+    opacity: calc(0.55 * var(--gain, 1));
+  }
+  70% {
+    opacity: calc(0.25 * var(--gain, 1));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
-:root.navigation-pending body {
-  animation: navigation-pending-breathe 1.6s ease-in-out infinite;
+/* Without a ripple (reduced motion, or the water quality governor switched
+   refraction off on this device: .water-off), keep a calm, static "received" cue. */
+:root.water-off.navigation-leaving body {
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root.navigation-leaving body {
+    opacity: 0.6;
+  }
 }
 
 /* 7. Reduced-Motion Accessibility */
