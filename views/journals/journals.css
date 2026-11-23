@@ -433,12 +433,6 @@ button.auth-action-link {
   object-fit: cover;
 }
 
-.journal-card.is-collage .journal-media-slot .tweet-embed-container {
-  max-height: 22rem;
-  overflow: hidden;
-  border-radius: 14px;
-}
-
 /* Tags */
 .journal-entry-tags {
   display: flex;

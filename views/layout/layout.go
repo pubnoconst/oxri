@@ -20,7 +20,7 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 		h.Link(h.Rel("stylesheet"), h.Href("https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap")),
 
 		// Global Site CSS
-		h.Link(h.Rel("stylesheet"), h.Href("/assets/css/site.css?v=9")),
+		h.Link(h.Rel("stylesheet"), h.Href("/assets/css/site.css?v=13")),
 	}
 
 	if componentCSS != "" {

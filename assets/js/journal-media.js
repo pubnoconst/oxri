@@ -19,6 +19,16 @@
     return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
 
+  // Tweet load sequence on a journal card:
+  //   1. Turso done -> card text is shown with a quiet media space where the
+  //      card-level water ripple plays (the client is visibly waiting).
+  //   2. The tweet renders off-screen (invisible stage). The moment Twitter
+  //      reports a real height, the space animates to exactly that height,
+  //      pushing the card body down fluidly. If Twitter resizes again (it
+  //      lays embeds out in two passes) the same transition simply retargets.
+  //   3. Once the push has finished, the tweet eases in and the ripple fades.
+  // The tweet itself is never shown half-laid-out, and nothing waits on a
+  // fixed "settle" timer.
   function showRippleLoader(container) {
     container.style.height = "";
     container.replaceChildren();
@@ -78,9 +88,8 @@
       ? window.ResImperiiWater.attach(hostCard, overlay, { amplitude: 7 })
       : null;
 
+    let cleaned = false;
     return {
-      spacer,
-      overlay,
       fadeOut() {
         overlay.classList.add("is-fading-out");
       },
@@ -88,6 +97,8 @@
         if (spacer.parentNode === container) spacer.remove();
       },
       cleanup() {
+        if (cleaned) return;
+        cleaned = true;
         if (waterHandle) waterHandle.detach();
         if (spacer.parentNode === container) spacer.remove();
         if (overlay.parentNode) overlay.remove();
@@ -97,6 +108,7 @@
 
   function showTweetFallback(container, username, tweetId, rippleHandle) {
     if (rippleHandle) rippleHandle.cleanup();
+    container.classList.remove("is-expanding");
     container.style.height = "";
     container.replaceChildren();
     const card = document.createElement("div");
@@ -132,97 +144,106 @@
     document.head.appendChild(s);
   }
 
-  // Wait until Twitter's internal iframe resize settles before revealing, preventing double-jumps.
-  function waitForStableHeight(el, onSettled) {
-    let done = false;
-    let settleTimer = null;
-    let maxTimer = null;
+  // What Twitter actually does (measured via its postMessage protocol):
+  //   initialized -> results -> resize(h) + rendered   <- createTweet() resolves here,
+  //                                                       iframe height is already exact
+  //   ...later, tweets with photos/video send another resize(h') once media loads.
+  // So there is no "settle" to wait for. As soon as a real height exists we push
+  // the card body down to it and ease the tweet in; every later resize (Twitter's
+  // second phase, or a viewport-width change) retargets the same height
+  // transition, so the second phase is a smooth push, never a jump or a clip.
+  const MIN_REAL_HEIGHT = 40; // below this Twitter hasn't laid the tweet out yet
+
+  function expandAndRevealTweet(container, rippleHandle, stage) {
+    let target = 0;
+    let revealed = false;
+    let stopped = false;
     let observer = null;
 
-    const finish = () => {
-      if (done) return;
-      done = true;
-      if (settleTimer) clearTimeout(settleTimer);
-      if (maxTimer) clearTimeout(maxTimer);
-      if (observer) observer.disconnect();
-      onSettled();
+    // Measure Twitter's iframe itself, never the stage/container: once the stage
+    // is in flow it takes the container's height, which would feed back into
+    // itself. offsetHeight ignores the stage's scale-in transform.
+    let observedFrame = null;
+    const measure = () => {
+      const frame = stage.querySelector("iframe");
+      if (!frame) return 0;
+      if (observer && frame !== observedFrame) {
+        observer.observe(frame);
+        observedFrame = frame;
+      }
+      const cs = window.getComputedStyle(stage);
+      const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+      return Math.ceil(frame.offsetHeight + padY);
     };
 
-    const scheduleSettle = () => {
-      if (settleTimer) clearTimeout(settleTimer);
-      const h = el.getBoundingClientRect().height;
-      // Wait 140ms of stability once the tweet has a real rendered height
-      if (h > 40) {
-        settleTimer = setTimeout(finish, 140);
+    const stop = () => {
+      stopped = true;
+      if (observer) observer.disconnect();
+    };
+
+    const reveal = () => {
+      if (revealed) return;
+      revealed = true;
+      stage.classList.remove("is-staging");
+      if (rippleHandle) {
+        rippleHandle.fadeOut();
+        setTimeout(() => rippleHandle.cleanup(), 420);
       }
+      requestAnimationFrame(() => stage.classList.add("is-ready"));
+    };
+
+    const onHeight = () => {
+      if (stopped) return;
+      if (!container.isConnected) {
+        stop();
+        if (rippleHandle) rippleHandle.cleanup();
+        return;
+      }
+      const h = measure();
+      if (h < MIN_REAL_HEIGHT || h === target) return;
+
+      if (target === 0) {
+        // Lock the slot at its current (ripple spacer) height, swap the spacer
+        // out, and from here drive the slot height explicitly.
+        container.style.height = `${container.getBoundingClientRect().height}px`;
+        container.classList.add("is-expanding");
+        if (rippleHandle) rippleHandle.removeSpacer();
+        void container.offsetHeight;
+      }
+      target = h;
+      // CSS height transition = the body being pushed; retargets mid-flight.
+      container.style.height = `${h}px`;
+      reveal();
     };
 
     if (typeof ResizeObserver !== "undefined") {
-      observer = new ResizeObserver(scheduleSettle);
-      observer.observe(el);
+      observer = new ResizeObserver(onHeight);
+      observer.observe(stage);
     }
 
-    scheduleSettle();
-    maxTimer = setTimeout(finish, 950);
-  }
-
-  function revealTweetFluidly(container, rippleHandle, stage) {
-    const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) {
-      if (rippleHandle) rippleHandle.cleanup();
-      stage.classList.remove("is-staging");
-      stage.classList.add("is-ready");
-      container.style.height = "";
-      return;
-    }
-
-    const startHeight = container.getBoundingClientRect().height;
-    const stageHeight = stage.getBoundingClientRect().height;
-    const style = window.getComputedStyle(container);
-    const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
-    const computedMax = parseFloat(style.maxHeight);
-
-    let targetHeight = Math.max(startHeight, stageHeight + padY);
-    if (Number.isFinite(computedMax) && computedMax > 0) {
-      targetHeight = Math.min(targetHeight, computedMax);
-    }
-
-    container.style.height = `${startHeight}px`;
-
-    if (rippleHandle) {
-      rippleHandle.fadeOut();
-      rippleHandle.removeSpacer();
-    }
-    stage.classList.remove("is-staging");
-
-    // Force layout flush so the height transition starts cleanly from startHeight
-    void container.offsetHeight;
-
-    requestAnimationFrame(() => {
-      container.style.height = `${targetHeight}px`;
-      stage.classList.add("is-ready");
-    });
-
-    let settled = false;
-    const cleanup = () => {
-      if (settled) return;
-      settled = true;
-      if (rippleHandle) rippleHandle.cleanup();
-      container.style.height = "";
+    return {
+      // createTweet() resolved: Twitter has already applied the exact height.
+      rendered() {
+        onHeight();
+        if (target === 0 && !stopped) {
+          // Nothing measurable (no ResizeObserver, or an odd embed):
+          // fall back to plain layout rather than keep the reader waiting.
+          stop();
+          if (rippleHandle) rippleHandle.removeSpacer();
+          container.style.height = "";
+          container.classList.remove("is-expanding");
+          reveal();
+        }
+      },
+      abort: stop,
     };
-    container.addEventListener("transitionend", (e) => {
-      if (e.target === container && e.propertyName === "height") {
-        cleanup();
-      }
-    }, { once: true });
-    setTimeout(cleanup, 520);
   }
 
   function renderTweet(container, username, tweetId) {
     ensureTwitterWidgetsScript();
     const theme = getActiveTheme();
 
-    // Full-card pure-CSS water-drop ripple originating from the quiet media space
+    // Card text is visible; the media space shows the ripple while we wait.
     const rippleHandle = showRippleLoader(container);
 
     const doCreate = (twttr) => {
@@ -230,24 +251,24 @@
       stage.className = "tweet-embed-stage is-staging";
       container.append(stage);
 
+      // Start tracking before Twitter renders so the very first height is caught.
+      const tracker = expandAndRevealTweet(container, rippleHandle, stage);
+
+      const fail = () => {
+        tracker.abort();
+        stage.remove();
+        showTweetFallback(container, username, tweetId, rippleHandle);
+      };
+
       twttr.widgets.createTweet(tweetId, stage, {
         theme: theme,
         dnt: true,
         align: "center",
         conversation: "none",
       }).then((el) => {
-        if (!el) {
-          stage.remove();
-          showTweetFallback(container, username, tweetId, rippleHandle);
-          return;
-        }
-        waitForStableHeight(el, () => {
-          revealTweetFluidly(container, rippleHandle, stage);
-        });
-      }).catch(() => {
-        stage.remove();
-        showTweetFallback(container, username, tweetId, rippleHandle);
-      });
+        if (el) tracker.rendered();
+        else fail();
+      }).catch(fail);
     };
 
     if (window.twttr && window.twttr.widgets && typeof window.twttr.widgets.createTweet === "function") {
@@ -264,7 +285,7 @@
         if (window.twttr && window.twttr.widgets && typeof window.twttr.widgets.createTweet === "function") {
           clearInterval(interval);
           doCreate(window.twttr);
-        } else if (attempts > 30) {
+        } else if (attempts > 50) {
           clearInterval(interval);
           showTweetFallback(container, username, tweetId, rippleHandle);
         }
@@ -394,6 +415,13 @@
     createLinkFallback,
     mountCatalogSlots,
   };
+
+  // On the async catalog shell, start downloading Twitter's widgets.js while
+  // Turso is still being queried instead of after the cards arrive, so the
+  // tweet's own ~1-2s render pipeline overlaps the DB round-trip.
+  if (document.querySelector("#journals-catalog-stage[hx-get]")) {
+    ensureTwitterWidgetsScript();
+  }
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", mountCatalogSlots);
