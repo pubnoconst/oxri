@@ -22,6 +22,12 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 
 		// Global Site CSS
 		h.Link(h.Rel("stylesheet"), h.Href(assets.SiteCSS.URL())),
+
+		// Shared water refraction engine (ResImperiiWater), loaded once in the head so
+		// page scripts at the end of <body> (loading-transition.js, journal-media.js)
+		// can rely on it. It only defines functions; its pagewide auto-init waits for
+		// DOMContentLoaded.
+		h.Script(h.Src(assets.WaterRippleJS.URL())),
 	}
 
 	if componentCSS != "" {
@@ -37,6 +43,8 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 				h.Script(h.Src(assets.HTMXJS.URL())),
 				h.Script(h.Src(assets.ThemeToggleJS.URL())),
 				h.Script(h.Src(assets.NavigationFeedbackJS.URL())),
+				// Touch ripple: pressing a link or button drops water that bounces off the window.
+				h.Script(h.Src(assets.TouchRippleJS.URL())),
 			),
 		),
 	)

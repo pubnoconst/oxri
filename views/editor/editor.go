@@ -251,7 +251,6 @@ func FormPage(isAuth bool, data FormData) g.Node {
 		h.Script(h.Src(assets.PurifyJS.URL())),
 		h.Script(h.Src(assets.JournalMediaJS.URL())),
 		h.Script(h.Src(assets.JournalEditorJS.URL())),
-		h.Script(h.Src(assets.WaterRippleJS.URL())),
 		h.Script(h.Src(assets.LoadingTransitionJS.URL())),
 	)
 }

@@ -334,7 +334,6 @@ func VacateSpacePage(view VacateSpaceView) g.Node {
 			),
 		),
 		loading.Overlay(loading.DefaultPhrase, view.AutoResubmitReady),
-		h.Script(h.Src(assets.WaterRippleJS.URL())),
 		h.Script(h.Src(assets.LoadingTransitionJS.URL())),
 		h.Script(h.Src(assets.VacateSpaceJS.URL())),
 	)

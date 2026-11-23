@@ -51,6 +51,7 @@ var (
 	ThemeToggleJS        = file("js/theme-toggle.js")
 	NavigationFeedbackJS = file("js/navigation-feedback.js")
 	WaterRippleJS        = file("js/water-ripple.js")
+	TouchRippleJS        = file("js/touch-ripple.js")
 	JournalMediaJS       = file("js/journal-media.js")
 	JournalEditorJS      = file("js/journal-editor.js")
 	JournalsCatalogJS    = file("js/journals-catalog.js")

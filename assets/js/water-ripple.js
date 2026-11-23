@@ -175,15 +175,35 @@
       const stageRect = inst.stage.getBoundingClientRect();
       if (stageRect.width <= 0 || stageRect.height <= 0) return;
 
-      const w = Math.ceil(stageRect.width) + 40;
-      const h = Math.ceil(stageRect.height) + 40;
-      if (inst.lastW !== w || inst.lastH !== h) {
-        inst.filter.setAttribute("x", "-20");
-        inst.filter.setAttribute("y", "-20");
-        inst.filter.setAttribute("width", String(w));
-        inst.filter.setAttribute("height", String(h));
-        inst.lastW = w;
-        inst.lastH = h;
+      if (inst.viewportRegion) {
+        // Root-element stage (touch ripple): only the visible viewport is ever
+        // refracted, so clip the filter region to it rather than filtering the
+        // whole (possibly very long) document every frame.
+        const x = Math.floor(-stageRect.left) - 20;
+        const y = Math.floor(-stageRect.top) - 20;
+        const w = window.innerWidth + 40;
+        const h = window.innerHeight + 40;
+        if (inst.lastX !== x || inst.lastY !== y || inst.lastW !== w || inst.lastH !== h) {
+          inst.filter.setAttribute("x", String(x));
+          inst.filter.setAttribute("y", String(y));
+          inst.filter.setAttribute("width", String(w));
+          inst.filter.setAttribute("height", String(h));
+          inst.lastX = x;
+          inst.lastY = y;
+          inst.lastW = w;
+          inst.lastH = h;
+        }
+      } else {
+        const w = Math.ceil(stageRect.width) + 40;
+        const h = Math.ceil(stageRect.height) + 40;
+        if (inst.lastW !== w || inst.lastH !== h) {
+          inst.filter.setAttribute("x", "-20");
+          inst.filter.setAttribute("y", "-20");
+          inst.filter.setAttribute("width", String(w));
+          inst.filter.setAttribute("height", String(h));
+          inst.lastW = w;
+          inst.lastH = h;
+        }
       }
 
       // Scale displacement smoothly down as the overlay fades out
@@ -216,6 +236,28 @@
         const cy = rect.top + rect.height / 2 - stageRect.top;
         const mapHalf = crestRadius / MAP_CREST;
 
+        if (inst.viewportRegion) {
+          // Skip a layer whose wave band (≈ 0.28–1.0 × mapHalf, see getMapURL)
+          // doesn't touch the viewport this frame: the viewport lies wholly
+          // inside the band's calm centre, or wholly outside the band.
+          const vx0 = -stageRect.left;
+          const vy0 = -stageRect.top;
+          const vx1 = vx0 + window.innerWidth;
+          const vy1 = vy0 + window.innerHeight;
+          const nearest = Math.hypot(
+            Math.max(vx0 - cx, 0, cx - vx1),
+            Math.max(vy0 - cy, 0, cy - vy1)
+          );
+          const farthest = Math.hypot(
+            Math.max(Math.abs(cx - vx0), Math.abs(cx - vx1)),
+            Math.max(Math.abs(cy - vy0), Math.abs(cy - vy1))
+          );
+          if (nearest > mapHalf || farthest < mapHalf * 0.28) {
+            hideLayer(layer);
+            continue;
+          }
+        }
+
         layer.img.setAttribute("x", (cx - mapHalf).toFixed(1));
         layer.img.setAttribute("y", (cy - mapHalf).toFixed(1));
         layer.img.setAttribute("width", (mapHalf * 2).toFixed(1));
@@ -235,11 +277,116 @@
     }
   }
 
+  // ---- Adaptive quality governor -------------------------------------------
+  // Refraction cost scales with screen pixels and with every wave layer, so a
+  // fast laptop and a five-year-old phone cannot share one setting. The
+  // governor measures real frame times while water is moving and settles each
+  // device at the richest level it draws smoothly, remembered per browser:
+  //   3  drop + every reachable wall echo      2  drop + nearest echo
+  //   1  drop only                             0  off: no refraction anywhere
+  //                                               (static "received" cue instead)
+  const QUALITY_KEY = "res-imperii.water-quality";
+  const SLOW_P75_MS = 24; // slower than ~42 fps: step down at once
+  const FAST_P75_MS = 18; // ~55 fps or better: counts towards stepping up
+  const PROMOTE_AFTER = 3; // consecutive smooth runs before stepping up
+  const THROTTLED_P75_MS = 250; // covered/background window, not a slow device: ignore
+
+  function isAppleWebKit() {
+    const ua = navigator.userAgent || "";
+    return /AppleWebKit/.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Android/.test(ua);
+  }
+
+  function startingLevel() {
+    try {
+      const stored = Number(window.localStorage.getItem(QUALITY_KEY));
+      if (Number.isInteger(stored) && stored >= 0 && stored <= 3 && window.localStorage.getItem(QUALITY_KEY) !== null) {
+        return stored;
+      }
+    } catch (_) {
+      // storage unavailable (private mode): fall through to a fresh guess
+    }
+    let level = 3;
+    const constrained =
+      (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
+      (navigator.deviceMemory && navigator.deviceMemory <= 4) ||
+      (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
+    if (constrained) level = 2;
+    if (navigator.connection && navigator.connection.saveData) level = 1;
+    // Safari's SVG displacement on HTML content has historically been slow:
+    // start cautious and let measured smoothness earn more.
+    if (isAppleWebKit()) level = Math.min(level, 1);
+    return level;
+  }
+
+  const quality = {
+    level: startingLevel(),
+    smoothRuns: 0,
+
+    get() {
+      return this.level;
+    },
+
+    set(level) {
+      this.level = Math.max(0, Math.min(3, level));
+      this.smoothRuns = 0;
+      document.documentElement.classList.toggle("water-off", this.level === 0);
+      try {
+        window.localStorage.setItem(QUALITY_KEY, String(this.level));
+      } catch (_) {
+        // not persisted; still applies for this page
+      }
+    },
+
+    // observe feeds one run's 75th-percentile frame time into the governor.
+    observe(p75) {
+      if (!(p75 > 0) || p75 >= THROTTLED_P75_MS) return; // throttled window: not evidence
+      if (p75 > SLOW_P75_MS) {
+        if (this.level > 0) this.set(this.level - 1);
+        return;
+      }
+      if (p75 < FAST_P75_MS) {
+        this.smoothRuns += 1;
+        if (this.smoothRuns >= PROMOTE_AFTER && this.level < 3) this.set(this.level + 1);
+        return;
+      }
+      this.smoothRuns = 0; // acceptable but not fast: hold
+    },
+
+    // measure samples frame times until the returned end(report) is called;
+    // end(false) discards the run (e.g. interrupted by a new press).
+    measure() {
+      if (this.level === 0) return () => {};
+      const frames = [];
+      let last = 0;
+      let raf = 0;
+      const hiddenAtStart = document.hidden;
+      const tick = (t) => {
+        if (last) frames.push(t - last);
+        last = t;
+        raf = window.requestAnimationFrame(tick);
+      };
+      raf = window.requestAnimationFrame(tick);
+      let ended = false;
+      return (report = true) => {
+        if (ended) return;
+        ended = true;
+        window.cancelAnimationFrame(raf);
+        if (!report || hiddenAtStart || document.hidden || frames.length < 8) return;
+        const sorted = frames.slice(2).sort((a, b) => a - b); // skip start-up frames
+        this.observe(sorted[Math.floor(sorted.length * 0.75)]);
+      };
+    },
+  };
+  document.documentElement.classList.toggle("water-off", quality.level === 0);
+
   function attach(stage, overlay, opts = {}) {
     const noop = { detach() {}, fadeAndDetach() {} };
-    if (!stage || !overlay || prefersReducedMotion()) return noop;
+    if (!stage || !overlay || prefersReducedMotion() || quality.level === 0) return noop;
 
-    const waves = Array.from(overlay.querySelectorAll(".card-water-wave")).slice(0, 3);
+    // Loading ripples use 3 staggered rings; the touch ripple uses 1 drop plus
+    // 4 mirror-image echo sources (opts.maxWaves = 5).
+    const maxWaves = typeof opts.maxWaves === "number" ? opts.maxWaves : 3;
+    const waves = Array.from(overlay.querySelectorAll(".card-water-wave")).slice(0, maxWaves);
     if (!waves.length) return noop;
 
     let filter = opts.filter || null;
@@ -290,6 +437,9 @@
       filter,
       layers,
       amplitude,
+      viewportRegion: Boolean(opts.viewportRegion),
+      lastX: 0,
+      lastY: 0,
       lastW: 0,
       lastH: 0,
       detach() {
@@ -323,7 +473,7 @@
     return inst;
   }
 
-  window.ResImperiiWater = { attach };
+  window.ResImperiiWater = { attach, quality };
 
   function autoInitPagewide() {
     const stage = document.querySelector("[data-water-stage]");

@@ -106,7 +106,6 @@ func Page(phrase string) g.Node {
 		"RES IMPERII",
 		Style.URL(),
 		Stage(phrase),
-		h.Script(h.Src(assets.WaterRippleJS.URL())),
 		h.Script(h.Src(assets.LoadingTransitionJS.URL())),
 	)
 }
@@ -126,7 +125,7 @@ func Stage(phrase string) g.Node {
 }
 
 // Overlay renders the full-screen confirmation overlay for form submissions and auto-resubmits.
-// Pages embedding it must also load assets.WaterRippleJS and assets.LoadingTransitionJS.
+// Pages embedding it must also load assets.LoadingTransitionJS (layout.Doc loads the water engine).
 func Overlay(phrase string, initiallyVisible bool) g.Node {
 	if phrase == "" {
 		phrase = DefaultPhrase
