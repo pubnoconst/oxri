@@ -2,6 +2,7 @@ package routes
 
 import (
 	"errors"
+	"github.com/oxri/oxri-go/internal/domain"
 	"net/http"
 
 	"github.com/oxri/oxri-go/internal/auth"
@@ -39,10 +40,7 @@ func handleBookView(store *db.Store, authSvc *auth.Service, slug string) http.Ha
 }
 
 func handleBookEditForm(store *db.Store, authSvc *auth.Service, slug string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireAdminOrRedirect(w, r, authSvc) {
-			return
-		}
+	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		title, ok := db.BookTitle(slug)
 		if !ok {
 			errorpage.Render(w, http.StatusNotFound, "")
@@ -60,14 +58,11 @@ func handleBookEditForm(store *db.Store, authSvc *auth.Service, slug string) htt
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = booki.EditPage(slug, title, b.Body, "").Render(w)
-	}
+	})
 }
 
 func handleBookSave(store *db.Store, authSvc *auth.Service, slug string, limiter *ipRateLimiter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireAdminOrRedirect(w, r, authSvc) {
-			return
-		}
+	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		title, ok := db.BookTitle(slug)
 		if !ok {
 			errorpage.Render(w, http.StatusNotFound, "")
@@ -88,7 +83,7 @@ func handleBookSave(store *db.Store, authSvc *auth.Service, slug string, limiter
 		}
 
 		rawBody := r.FormValue("body")
-		if _, err := store.SaveBook(r.Context(), slug, rawBody); err != nil {
+		if _, err := store.SaveBook(r.Context(), cap, slug, rawBody); err != nil {
 			if errors.Is(err, db.ErrInvalidInput) || errors.Is(err, db.ErrBookTooLarge) {
 				safeEcho := db.SanitizeProseInput(rawBody)
 				if len(safeEcho) > db.MaxBookBodyBytes {
@@ -104,5 +99,5 @@ func handleBookSave(store *db.Store, authSvc *auth.Service, slug string, limiter
 		}
 
 		http.Redirect(w, r, "/"+slug, http.StatusSeeOther)
-	}
+	})
 }

@@ -265,13 +265,13 @@ func TestStoreCRUDAndBatchLifecycle(t *testing.T) {
 	}
 
 	// 6. ToggleBookmark
-	bm, err := store.ToggleBookmark(ctx, e1.ID)
+	bm, err := store.ToggleBookmark(ctx, testCap, e1.ID)
 	if err != nil || !bm {
 		t.Errorf("expected bookmark true, got %v, err=%v", bm, err)
 	}
 
 	// 7. Batch SetPublished (unpublish e1 and e3)
-	if err := store.SetPublished(ctx, []int64{e1.ID, e3.ID}, false); err != nil {
+	if err := store.SetPublished(ctx, testCap, []int64{e1.ID, e3.ID}, false); err != nil {
 		t.Fatal(err)
 	}
 	pubAfterUnpub, _ := store.List(ctx, false)
@@ -280,7 +280,7 @@ func TestStoreCRUDAndBatchLifecycle(t *testing.T) {
 	}
 
 	// 8. SetAllPublished(true)
-	if err := store.SetAllPublished(ctx, true); err != nil {
+	if err := store.SetAllPublished(ctx, testCap, true); err != nil {
 		t.Fatal(err)
 	}
 	pubAll, _ := store.List(ctx, false)
@@ -289,7 +289,7 @@ func TestStoreCRUDAndBatchLifecycle(t *testing.T) {
 	}
 
 	// 9. Delete selected
-	if err := store.Delete(ctx, []int64{e1.ID, e2.ID}); err != nil {
+	if err := store.Delete(ctx, testCap, []int64{e1.ID, e2.ID}); err != nil {
 		t.Fatal(err)
 	}
 	remaining, _ := store.List(ctx, true)
@@ -298,7 +298,7 @@ func TestStoreCRUDAndBatchLifecycle(t *testing.T) {
 	}
 
 	// 10. DeleteAll
-	if err := store.DeleteAll(ctx); err != nil {
+	if err := store.DeleteAll(ctx, testCap); err != nil {
 		t.Fatal(err)
 	}
 	empty, _ := store.List(ctx, true)
@@ -383,7 +383,7 @@ func TestStorageQuotaAndAutoVacatePriority(t *testing.T) {
 	}
 
 	// Auto-vacate only enough bytes for one entry -> must delete eUnpublished first!
-	plan1, err := store.AutoVacateBytes(ctx, eUnpublished.EstimatedBytes())
+	plan1, err := store.AutoVacateBytes(ctx, testCap, eUnpublished.EstimatedBytes())
 	if err != nil {
 		t.Fatalf("AutoVacateBytes step 1 failed: %v", err)
 	}
@@ -403,7 +403,7 @@ func TestStorageQuotaAndAutoVacatePriority(t *testing.T) {
 	}
 
 	// Auto-vacate again -> must delete eUnbookmarked next while preserving eBookmarked
-	plan2, err := store.AutoVacateBytes(ctx, eUnbookmarked.EstimatedBytes())
+	plan2, err := store.AutoVacateBytes(ctx, testCap, eUnbookmarked.EstimatedBytes())
 	if err != nil {
 		t.Fatalf("AutoVacateBytes step 2 failed: %v", err)
 	}

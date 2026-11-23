@@ -78,10 +78,14 @@ type PendingSubmission struct {
 }
 
 // SetPendingSubmission stashes a pending journal form submission for resubmission after vacating space.
-func (s *Store) SetPendingSubmission(sub *PendingSubmission) {
+func (s *Store) SetPendingSubmission(cap domain.AdminCap, sub *PendingSubmission) error {
+	if err := requireCap(cap); err != nil {
+		return err
+	}
 	s.idMu.Lock()
 	defer s.idMu.Unlock()
 	s.pendingSub = sub
+	return nil
 }
 
 // GetPendingSubmission returns the currently stashed pending journal submission, if any.
@@ -299,7 +303,10 @@ ORDER BY
 
 // AutoVacateBytes atomically computes the prioritized eviction plan and deletes the selected
 // unpublished (first) and un-bookmarked (second) entries inside a single database transaction.
-func (s *Store) AutoVacateBytes(ctx context.Context, requiredBytes int64) (AutoVacatePlan, error) {
+func (s *Store) AutoVacateBytes(ctx context.Context, cap domain.AdminCap, requiredBytes int64) (AutoVacatePlan, error) {
+	if err := requireCap(cap); err != nil {
+		return AutoVacatePlan{}, err
+	}
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 

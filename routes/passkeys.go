@@ -3,6 +3,7 @@ package routes
 import (
 	"encoding/json"
 	"errors"
+	"github.com/oxri/oxri-go/internal/domain"
 	"log"
 	"net/http"
 	"strings"
@@ -48,15 +49,7 @@ func loadWebAuthnCreds(r *http.Request, store *db.Store, rpID string) ([]db.Pass
 }
 
 func handlePasskeyRegisterBegin(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if _, err := serverfns.RequireFreshAuth(authSvc, r, auth.FreshAuthWindow); err != nil {
-			if errors.Is(err, serverfns.ErrStaleSession) {
-				http.Error(w, "Recent sign-in required. Please re-verify your identity to manage passkeys.", http.StatusForbidden)
-				return
-			}
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
+	return freshAdminOnly(authSvc, denyAPI, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		if store == nil || authSvc == nil {
 			http.Error(w, "Passkey storage is unavailable.", http.StatusServiceUnavailable)
 			return
@@ -93,19 +86,11 @@ func handlePasskeyRegisterBegin(store *db.Store, authSvc *auth.Service) http.Han
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_ = json.NewEncoder(w).Encode(opts)
-	}
+	})
 }
 
 func handlePasskeyRegisterFinish(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if _, err := serverfns.RequireFreshAuth(authSvc, r, auth.FreshAuthWindow); err != nil {
-			if errors.Is(err, serverfns.ErrStaleSession) {
-				http.Error(w, "Recent sign-in required. Please re-verify your identity to manage passkeys.", http.StatusForbidden)
-				return
-			}
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
+	return freshAdminOnly(authSvc, denyAPI, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		if store == nil || authSvc == nil {
 			http.Error(w, "Passkey storage is unavailable.", http.StatusServiceUnavailable)
 			return
@@ -161,26 +146,18 @@ func handlePasskeyRegisterFinish(store *db.Store, authSvc *auth.Service) http.Ha
 			CredentialJSON: credJSON,
 			CreatedAt:      time.Now().UTC(),
 		}
-		if err := store.SavePasskey(r.Context(), rec); err != nil {
+		if err := store.SavePasskey(r.Context(), cap, rec); err != nil {
 			http.Error(w, "Failed to save passkey.", http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok", "id": rec.ID})
-	}
+	})
 }
 
 func handlePasskeyDelete(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if _, err := serverfns.RequireFreshAuth(authSvc, r, auth.FreshAuthWindow); err != nil {
-			if errors.Is(err, serverfns.ErrStaleSession) {
-				http.Redirect(w, r, "/login?next=/settings&reauth=1", http.StatusSeeOther)
-				return
-			}
-			http.Redirect(w, r, "/login?next=/settings", http.StatusSeeOther)
-			return
-		}
+	return freshAdminOnly(authSvc, denyToSettingsSignIn, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		if store == nil {
 			http.Redirect(w, r, "/settings", http.StatusSeeOther)
 			return
@@ -189,11 +166,11 @@ func handlePasskeyDelete(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		if supported {
 			id := strings.TrimSpace(chi.URLParam(r, "id"))
 			if id != "" {
-				_ = store.DeletePasskey(r.Context(), id, rpID)
+				_ = store.DeletePasskey(r.Context(), cap, id, rpID)
 			}
 		}
 		http.Redirect(w, r, "/settings", http.StatusSeeOther)
-	}
+	})
 }
 
 func handlePasskeyLoginBegin(store *db.Store, authSvc *auth.Service, limiter *ipRateLimiter) http.HandlerFunc {

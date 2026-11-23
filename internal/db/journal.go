@@ -57,19 +57,12 @@ func boolToInt(b bool) int {
 	return 0
 }
 
-// Create parses a JournalInput into a canonical domain.ValidatedJournalEntry and atomically
-// checks the storage quota and inserts the entry inside a single database transaction.
-func (s *Store) Create(ctx context.Context, in JournalInput) (*Journal, error) {
-	entry, err := ParseValidatedEntry(in)
-	if err != nil {
-		return nil, err
-	}
-	return s.CreateValidated(ctx, entry)
-}
-
 // CreateValidated atomically checks the storage quota and inserts a validated domain entry
 // inside an explicit database transaction serialized by writeMu.
-func (s *Store) CreateValidated(ctx context.Context, entry domain.ValidatedJournalEntry) (*Journal, error) {
+func (s *Store) CreateValidated(ctx context.Context, cap domain.AdminCap, entry domain.ValidatedJournalEntry) (*Journal, error) {
+	if err := requireCap(cap); err != nil {
+		return nil, err
+	}
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
@@ -117,19 +110,12 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	}, nil
 }
 
-// Update parses a JournalInput into a canonical domain.ValidatedJournalEntry and atomically
-// checks the storage quota and updates the existing row inside a single database transaction.
-func (s *Store) Update(ctx context.Context, id int64, in JournalInput) error {
-	entry, err := ParseValidatedEntry(in)
-	if err != nil {
-		return err
-	}
-	return s.UpdateValidated(ctx, id, entry)
-}
-
 // UpdateValidated atomically checks the storage quota and updates an existing entry
 // inside an explicit database transaction serialized by writeMu.
-func (s *Store) UpdateValidated(ctx context.Context, id int64, entry domain.ValidatedJournalEntry) error {
+func (s *Store) UpdateValidated(ctx context.Context, cap domain.AdminCap, id int64, entry domain.ValidatedJournalEntry) error {
+	if err := requireCap(cap); err != nil {
+		return err
+	}
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
@@ -171,7 +157,10 @@ WHERE id = ?;`
 }
 
 // SetPublished sets the published status on the given IDs.
-func (s *Store) SetPublished(ctx context.Context, ids []int64, published bool) error {
+func (s *Store) SetPublished(ctx context.Context, cap domain.AdminCap, ids []int64, published bool) error {
+	if err := requireCap(cap); err != nil {
+		return err
+	}
 	if len(ids) == 0 {
 		return nil
 	}
@@ -194,7 +183,10 @@ func (s *Store) SetPublished(ctx context.Context, ids []int64, published bool) e
 }
 
 // SetAllPublished sets the published status across all journal entries.
-func (s *Store) SetAllPublished(ctx context.Context, published bool) error {
+func (s *Store) SetAllPublished(ctx context.Context, cap domain.AdminCap, published bool) error {
+	if err := requireCap(cap); err != nil {
+		return err
+	}
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
@@ -206,7 +198,10 @@ func (s *Store) SetAllPublished(ctx context.Context, published bool) error {
 }
 
 // ToggleBookmark atomically flips the bookmarked bit on an entry and returns its new state.
-func (s *Store) ToggleBookmark(ctx context.Context, id int64) (bool, error) {
+func (s *Store) ToggleBookmark(ctx context.Context, cap domain.AdminCap, id int64) (bool, error) {
+	if err := requireCap(cap); err != nil {
+		return false, err
+	}
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
@@ -239,7 +234,10 @@ func (s *Store) ToggleBookmark(ctx context.Context, id int64) (bool, error) {
 }
 
 // Delete removes one or more entries by ID permanently.
-func (s *Store) Delete(ctx context.Context, ids []int64) error {
+func (s *Store) Delete(ctx context.Context, cap domain.AdminCap, ids []int64) error {
+	if err := requireCap(cap); err != nil {
+		return err
+	}
 	if len(ids) == 0 {
 		return nil
 	}
@@ -268,7 +266,10 @@ func deleteTx(ctx context.Context, q queryExecer, ids []int64) error {
 }
 
 // DeleteAll removes all entries from the journals table.
-func (s *Store) DeleteAll(ctx context.Context) error {
+func (s *Store) DeleteAll(ctx context.Context, cap domain.AdminCap) error {
+	if err := requireCap(cap); err != nil {
+		return err
+	}
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 

@@ -67,7 +67,11 @@ func TestPasskeyRoutesAndStorePersistence(t *testing.T) {
 
 	// 3. Save a passkey record to Turso and verify /login shows "Sign in with passkey"
 	//    and /settings lists it with a Remove action
-	if err := store.SavePasskey(ctx, db.PasskeyRecord{
+	adminCap, ok := authSvc.Authenticate(sessionCookie.Value)
+	if !ok {
+		t.Fatalf("expected the test session to yield an AdminCap")
+	}
+	if err := store.SavePasskey(ctx, adminCap, db.PasskeyRecord{
 		ID:             "cred-test-1",
 		RPID:           "localhost",
 		Name:           "Proton Pass",
@@ -141,7 +145,11 @@ func TestPasskeyManagementRequiresFreshAuth(t *testing.T) {
 		Path:  "/",
 	}
 
-	if err := store.SavePasskey(ctx, db.PasskeyRecord{
+	adminCap, ok := authSvc.Authenticate(sessionCookie.Value)
+	if !ok {
+		t.Fatalf("expected the test session to yield an AdminCap")
+	}
+	if err := store.SavePasskey(ctx, adminCap, db.PasskeyRecord{
 		ID:             "cred-reauth-1",
 		RPID:           "localhost",
 		Name:           "Hardware Key",

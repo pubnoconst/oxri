@@ -62,11 +62,11 @@ func TestExportAndRestoreSnapshotRoundTrip(t *testing.T) {
 		t.Fatalf("Create journal: %v", err)
 	}
 
-	if _, err := srcStore.SaveBook(ctx, "book-i", "# Book I\n\nRestored philosophical treatise."); err != nil {
+	if _, err := srcStore.SaveBook(ctx, testCap, "book-i", "# Book I\n\nRestored philosophical treatise."); err != nil {
 		t.Fatalf("SaveBook: %v", err)
 	}
 
-	if err := srcStore.SavePasskey(ctx, PasskeyRecord{
+	if err := srcStore.SavePasskey(ctx, testCap, PasskeyRecord{
 		ID:             "cred-backup-1",
 		RPID:           "res-imperii.onrender.com",
 		Name:           "Proton Pass",

@@ -3,6 +3,7 @@ package routes
 import (
 	"errors"
 	"fmt"
+	"github.com/oxri/oxri-go/internal/domain"
 	"log"
 	"net/http"
 	"strconv"
@@ -24,19 +25,6 @@ func renderInternalError(w http.ResponseWriter, r *http.Request, status int, cau
 		log.Printf("[HTTP %d] Ref: %s | Method: %s | URL: %s | Cause: %v", status, ref, r.Method, r.URL.Path, cause)
 	}
 	errorpage.RenderWithReference(w, status, "", ref)
-}
-
-func requireAdminOrRedirect(w http.ResponseWriter, r *http.Request, authSvc *auth.Service) bool {
-	if _, err := serverfns.RequireAuth(authSvc, r); err != nil {
-		if r.Method == http.MethodGet {
-			next := serverfns.SanitizeRedirect(r.URL.Path)
-			http.Redirect(w, r, "/login?next="+next, http.StatusSeeOther)
-			return false
-		}
-		errorpage.Render(w, http.StatusForbidden, "")
-		return false
-	}
-	return true
 }
 
 func handleLoadingPage() http.HandlerFunc {
@@ -156,10 +144,7 @@ func handleJournalEntry(store *db.Store, authSvc *auth.Service) http.HandlerFunc
 }
 
 func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireAdminOrRedirect(w, r, authSvc) {
-			return
-		}
+	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		if store == nil {
 			errorpage.Render(w, http.StatusServiceUnavailable, "")
 			return
@@ -176,10 +161,10 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 			_ = editor.FormPage(true, formData).Render(w)
 			return
 		}
-		if _, err := store.CreateValidated(r.Context(), validated); err != nil {
+		if _, err := store.CreateValidated(r.Context(), cap, validated); err != nil {
 			if errors.Is(err, db.ErrQuotaExceeded) {
 				sanitizeFormDataForEcho(&formData)
-				store.SetPendingSubmission(&db.PendingSubmission{
+				_ = store.SetPendingSubmission(cap, &db.PendingSubmission{
 					IsEdit:     false,
 					MediaURL:   formData.MediaURL,
 					TagsRaw:    formData.Tags,
@@ -195,14 +180,11 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 			return
 		}
 		http.Redirect(w, r, "/journals", http.StatusSeeOther)
-	}
+	})
 }
 
 func handleJournalEditForm(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireAdminOrRedirect(w, r, authSvc) {
-			return
-		}
+	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		id, ok := parseEntryID(r)
 		if !ok {
 			errorpage.Render(w, http.StatusNotFound, "")
@@ -233,14 +215,11 @@ func handleJournalEditForm(store *db.Store, authSvc *auth.Service) http.HandlerF
 			Published:    entry.Published,
 			ExistingTags: existingTags,
 		}).Render(w)
-	}
+	})
 }
 
 func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireAdminOrRedirect(w, r, authSvc) {
-			return
-		}
+	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		id, ok := parseEntryID(r)
 		if !ok {
 			errorpage.Render(w, http.StatusNotFound, "")
@@ -263,14 +242,14 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 			_ = editor.FormPage(true, formData).Render(w)
 			return
 		}
-		if err := store.UpdateValidated(r.Context(), id, validated); err != nil {
+		if err := store.UpdateValidated(r.Context(), cap, id, validated); err != nil {
 			if errors.Is(err, db.ErrNotFound) {
 				errorpage.Render(w, http.StatusNotFound, "")
 				return
 			}
 			if errors.Is(err, db.ErrQuotaExceeded) {
 				sanitizeFormDataForEcho(&formData)
-				store.SetPendingSubmission(&db.PendingSubmission{
+				_ = store.SetPendingSubmission(cap, &db.PendingSubmission{
 					IsEdit:     true,
 					EntryID:    id,
 					MediaURL:   formData.MediaURL,
@@ -287,14 +266,11 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 			return
 		}
 		http.Redirect(w, r, "/journals", http.StatusSeeOther)
-	}
+	})
 }
 
 func handleJournalVacateSpacePage(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireAdminOrRedirect(w, r, authSvc) {
-			return
-		}
+	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		if store == nil {
 			errorpage.Render(w, http.StatusServiceUnavailable, "")
 			return
@@ -328,14 +304,11 @@ func handleJournalVacateSpacePage(store *db.Store, authSvc *auth.Service) http.H
 			PendingSub:        pendingSub,
 			AutoResubmitReady: autoResubmit,
 		}).Render(w)
-	}
+	})
 }
 
 func handleJournalVacateSpaceSubmit(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireAdminOrRedirect(w, r, authSvc) {
-			return
-		}
+	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		if store == nil {
 			errorpage.Render(w, http.StatusServiceUnavailable, "")
 			return
@@ -357,7 +330,7 @@ func handleJournalVacateSpaceSubmit(store *db.Store, authSvc *auth.Service) http
 					}
 				}
 			}
-			if _, err := store.AutoVacateBytes(r.Context(), requiredBytes); err != nil {
+			if _, err := store.AutoVacateBytes(r.Context(), cap, requiredBytes); err != nil {
 				renderInternalError(w, r, http.StatusInternalServerError, err)
 				return
 			}
@@ -368,7 +341,7 @@ func handleJournalVacateSpaceSubmit(store *db.Store, authSvc *auth.Service) http
 					ids = append(ids, id)
 				}
 			}
-			if err := store.Delete(r.Context(), ids); err != nil {
+			if err := store.Delete(r.Context(), cap, ids); err != nil {
 				renderInternalError(w, r, http.StatusInternalServerError, err)
 				return
 			}
@@ -378,14 +351,11 @@ func handleJournalVacateSpaceSubmit(store *db.Store, authSvc *auth.Service) http
 		}
 
 		http.Redirect(w, r, "/journals/vacate-space/?vacated=1", http.StatusSeeOther)
-	}
+	})
 }
 
 func handleJournalDelete(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireAdminOrRedirect(w, r, authSvc) {
-			return
-		}
+	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		id, ok := parseEntryID(r)
 		if !ok {
 			errorpage.Render(w, http.StatusNotFound, "")
@@ -395,19 +365,16 @@ func handleJournalDelete(store *db.Store, authSvc *auth.Service) http.HandlerFun
 			errorpage.Render(w, http.StatusServiceUnavailable, "")
 			return
 		}
-		if err := store.Delete(r.Context(), []int64{id}); err != nil {
+		if err := store.Delete(r.Context(), cap, []int64{id}); err != nil {
 			renderInternalError(w, r, http.StatusInternalServerError, err)
 			return
 		}
 		http.Redirect(w, r, "/journals", http.StatusSeeOther)
-	}
+	})
 }
 
 func handleJournalPublish(store *db.Store, authSvc *auth.Service, published bool) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireAdminOrRedirect(w, r, authSvc) {
-			return
-		}
+	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		id, ok := parseEntryID(r)
 		if !ok {
 			errorpage.Render(w, http.StatusNotFound, "")
@@ -417,19 +384,16 @@ func handleJournalPublish(store *db.Store, authSvc *auth.Service, published bool
 			errorpage.Render(w, http.StatusServiceUnavailable, "")
 			return
 		}
-		if err := store.SetPublished(r.Context(), []int64{id}, published); err != nil {
+		if err := store.SetPublished(r.Context(), cap, []int64{id}, published); err != nil {
 			renderInternalError(w, r, http.StatusInternalServerError, err)
 			return
 		}
 		http.Redirect(w, r, entryReturnTarget(r, id), http.StatusSeeOther)
-	}
+	})
 }
 
 func handleJournalBookmark(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireAdminOrRedirect(w, r, authSvc) {
-			return
-		}
+	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		id, ok := parseEntryID(r)
 		if !ok {
 			errorpage.Render(w, http.StatusNotFound, "")
@@ -439,7 +403,7 @@ func handleJournalBookmark(store *db.Store, authSvc *auth.Service) http.HandlerF
 			errorpage.Render(w, http.StatusServiceUnavailable, "")
 			return
 		}
-		if _, err := store.ToggleBookmark(r.Context(), id); err != nil {
+		if _, err := store.ToggleBookmark(r.Context(), cap, id); err != nil {
 			if errors.Is(err, db.ErrNotFound) {
 				errorpage.Render(w, http.StatusNotFound, "")
 				return
@@ -448,14 +412,11 @@ func handleJournalBookmark(store *db.Store, authSvc *auth.Service) http.HandlerF
 			return
 		}
 		http.Redirect(w, r, entryReturnTarget(r, id), http.StatusSeeOther)
-	}
+	})
 }
 
 func handleJournalBatch(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !requireAdminOrRedirect(w, r, authSvc) {
-			return
-		}
+	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		if store == nil {
 			errorpage.Render(w, http.StatusServiceUnavailable, "")
 			return
@@ -472,15 +433,15 @@ func handleJournalBatch(store *db.Store, authSvc *auth.Service) http.HandlerFunc
 		var err error
 		switch action {
 		case "publish_selected":
-			err = store.SetPublished(r.Context(), ids, true)
+			err = store.SetPublished(r.Context(), cap, ids, true)
 		case "unpublish_selected":
-			err = store.SetPublished(r.Context(), ids, false)
+			err = store.SetPublished(r.Context(), cap, ids, false)
 		case "delete_selected":
-			err = store.Delete(r.Context(), ids)
+			err = store.Delete(r.Context(), cap, ids)
 		case "unpublish_all":
-			err = store.SetAllPublished(r.Context(), false)
+			err = store.SetAllPublished(r.Context(), cap, false)
 		case "delete_all":
-			err = store.DeleteAll(r.Context())
+			err = store.DeleteAll(r.Context(), cap)
 		default:
 			errorpage.Render(w, http.StatusBadRequest, "")
 			return
@@ -490,7 +451,7 @@ func handleJournalBatch(store *db.Store, authSvc *auth.Service) http.HandlerFunc
 			return
 		}
 		http.Redirect(w, r, "/journals", http.StatusSeeOther)
-	}
+	})
 }
 
 func parseEntryID(r *http.Request) (int64, bool) {
