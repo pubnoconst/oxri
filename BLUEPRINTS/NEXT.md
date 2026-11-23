@@ -1,8 +1,8 @@
 # Next
 
-- **Base Commit on `main`**: `7f6cc82` (PR #35 — passkey end-to-end tests; PR #34 quick wins before it)
-- **Active Branch**: `v2-touch-ripple-2` (PR #36): press ripple with wall echoes and the adaptive quality governor; add-a-passkey moved inside the WebAuthn card; live session-dot ripple (RATIONALE 037).
-- **Retired branch**: `v2-touch-ripple` (local only, superseded by `v2-touch-ripple-2`; safe to delete).
+- **Base Commit on `main`**: `5f302ee` (PR #36 — press ripple, quality governor, settings polish)
+- **Active Branch**: `v2-dead-code` (PR #37): dead code and dead branches removed (RATIONALE 038).
+- **Branches**: `main`, `prod`, `v2` (live); `v1`, `fsharp-legacy`, `rust-experiment` (archived lineage, kept on purpose).
 - **Active Experiment / Undo Instructions**: None. To reset a device's water quality level: in the browser console, `localStorage.removeItem("res-imperii.water-quality")`.
 
 ## Principles
@@ -22,7 +22,7 @@
 
 ## Next on Mind
 
-1. Watch the press ripple on real devices: a phone, and Safari if available (the governor starts Safari at level 1, unverified).
+1. Watch the press ripple on a real phone. (No Safari device is available; the governor's cautious Safari start, level 1, stays unverified.)
 2. Continue the plan from step 3.
 3. **Edge tweets:** confirm the cause in Edge DevTools (look for "Tracking Prevention blocked …twitter.com").
 4. Run `mage backup` and author Books II and III via `/book-ii/edit` and `/book-iii/edit`.
