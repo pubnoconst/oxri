@@ -18,6 +18,7 @@ import (
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/internal/paging"
 	"github.com/oxri/oxri-go/views/layout"
+	"github.com/oxri/oxri-go/views/linen"
 	"github.com/oxri/oxri-go/views/loading"
 	"github.com/yuin/goldmark"
 	g "maragu.dev/gomponents"
@@ -532,6 +533,8 @@ func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 	}
 
 	return h.Article(h.Class(cls),
+		// Each card starts the weave at its own point (views/linen).
+		linen.Offset(fmt.Sprintf("entry:%d", item.Entry.ID)),
 		h.Header(h.Class("journal-card-meta"),
 			h.Div(h.Class("journal-meta-left"),
 				selectCb,

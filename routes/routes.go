@@ -22,6 +22,7 @@ import (
 	"github.com/oxri/oxri-go/views/errorpage"
 	"github.com/oxri/oxri-go/views/journals"
 	"github.com/oxri/oxri-go/views/landing"
+	"github.com/oxri/oxri-go/views/linen"
 	"github.com/oxri/oxri-go/views/loading"
 	"github.com/oxri/oxri-go/views/login"
 	"github.com/oxri/oxri-go/views/offline"
@@ -58,6 +59,7 @@ func NewRouter(cfg Config) http.Handler {
 	for _, style := range []assets.Asset{
 		landing.Style, errorpage.Style, booki.Style, login.Style,
 		settings.Style, journals.Style, editor.Style, loading.Style,
+		linen.Style,
 	} {
 		r.Get(style.Path(), style.Handler())
 	}
