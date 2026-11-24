@@ -44,6 +44,14 @@ func (v VacateSpaceView) pending() (pendingDetails, bool) {
 			h.Input(h.Type("hidden"), h.Name("media_url"), h.Value(p.MediaURL)),
 			h.Input(h.Type("hidden"), h.Name("tags"), h.Value(p.TagsRaw)),
 			h.Input(h.Type("hidden"), h.Name("body"), h.Value(p.Body)),
+			h.Input(h.Type("hidden"), h.Name("media_kind"), h.Value(p.Scripture.Kind)),
+			h.Input(h.Type("hidden"), h.Name("scripture"), h.Value(p.Scripture.Scripture)),
+			h.Input(h.Type("hidden"), h.Name("verse_book"), h.Value(p.Scripture.Book)),
+			h.Input(h.Type("hidden"), h.Name("verse_from"), h.Value(p.Scripture.From)),
+			h.Input(h.Type("hidden"), h.Name("verse_to"), h.Value(p.Scripture.To)),
+			h.Input(h.Type("hidden"), h.Name("verse_tr_choice"), h.Value(p.Scripture.TranslationChoice)),
+			h.Input(h.Type("hidden"), h.Name("verse_tr"), h.Value(p.Scripture.Translation)),
+			h.Input(h.Type("hidden"), h.Name("verse_text"), h.Value(p.Scripture.Text)),
 		}
 		if p.Published {
 			fields = append(fields, h.Input(h.Type("hidden"), h.Name("published"), h.Value("1")))

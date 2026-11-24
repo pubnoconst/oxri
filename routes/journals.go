@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/oxri/oxri-go/internal/domain"
@@ -15,6 +16,7 @@ import (
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/internal/paging"
 	"github.com/oxri/oxri-go/internal/tweet"
+	"github.com/oxri/oxri-go/internal/verse"
 	"github.com/oxri/oxri-go/serverfns"
 	"github.com/oxri/oxri-go/views/confirm"
 	"github.com/oxri/oxri-go/views/editor"
@@ -149,7 +151,7 @@ func handleJournalEntry(store *db.Store, authSvc *auth.Service, tweets *tweet.Fi
 	}
 }
 
-func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+func handleJournalCreate(store *db.Store, authSvc *auth.Service, passages *verse.Source) http.HandlerFunc {
 	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		if store == nil {
 			errorpage.Render(w, http.StatusServiceUnavailable, "")
@@ -157,7 +159,7 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		}
 
 		in, formData := parseJournalForm(r)
-		validated, err := db.ParseValidatedEntry(in)
+		validated, err := validateJournal(r.Context(), passages, in, formData.Scripture, nil)
 		if err != nil {
 			sanitizeFormDataForEcho(&formData)
 			formData.ErrorMsg = err.Error()
@@ -175,6 +177,7 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 					MediaURL:   formData.MediaURL,
 					TagsRaw:    formData.Tags,
 					Body:       formData.Body,
+					Scripture:  formData.Scripture,
 					Published:  formData.Published,
 					Bookmarked: formData.Bookmarked,
 					EntryBytes: validated.EstimatedBytes(db.RowOverheadBytes),
@@ -211,7 +214,7 @@ func handleJournalEditForm(store *db.Store, authSvc *auth.Service) http.HandlerF
 		}
 		existingTags, _ := store.TagsByUse(r.Context(), true)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = editor.FormPage(true, editor.FormData{
+		data := editor.FormData{
 			IsEdit:       true,
 			EntryID:      entry.ID,
 			MediaURL:     entry.MediaURL,
@@ -220,11 +223,16 @@ func handleJournalEditForm(store *db.Store, authSvc *auth.Service) http.HandlerF
 			Bookmarked:   entry.Bookmarked,
 			Published:    entry.Published,
 			ExistingTags: existingTags,
-		}).Render(w)
+		}
+		if p, ok := entry.Passage(); ok {
+			data.MediaURL = "" // the provider's chapter file, not a link to show
+			data.Scripture = scriptureFromPassage(p)
+		}
+		_ = editor.FormPage(true, data).Render(w)
 	})
 }
 
-func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+func handleJournalUpdate(store *db.Store, authSvc *auth.Service, passages *verse.Source) http.HandlerFunc {
 	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		id, ok := parseEntryID(r)
 		if !ok {
@@ -238,7 +246,12 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		in, formData := parseJournalForm(r)
 		formData.IsEdit = true
 		formData.EntryID = id
-		validated, err := db.ParseValidatedEntry(in)
+		prev, getErr := store.Get(r.Context(), id, true)
+		if getErr != nil && !errors.Is(getErr, db.ErrNotFound) {
+			renderInternalError(w, r, http.StatusInternalServerError, getErr)
+			return
+		}
+		validated, err := validateJournal(r.Context(), passages, in, formData.Scripture, prev)
 		if err != nil {
 			sanitizeFormDataForEcho(&formData)
 			formData.ErrorMsg = err.Error()
@@ -261,6 +274,7 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 					MediaURL:   formData.MediaURL,
 					TagsRaw:    formData.Tags,
 					Body:       formData.Body,
+					Scripture:  formData.Scripture,
 					Published:  formData.Published,
 					Bookmarked: formData.Bookmarked,
 					EntryBytes: validated.EstimatedBytes(db.RowOverheadBytes),
@@ -480,11 +494,36 @@ func parseEntryID(r *http.Request) (int64, bool) {
 	return id, err == nil && id > 0
 }
 
+// validateJournal turns the posted fields into an entry ready to store:
+// the media is either the link, or the Bible passage the scripture fields
+// name, checked against its provider (prev is the entry being edited).
+func validateJournal(ctx context.Context, passages *verse.Source, in db.JournalInput, s db.ScriptureInput, prev *db.Journal) (domain.ValidatedJournalEntry, error) {
+	choice, isBible, err := scriptureChoice(&in, s)
+	if err != nil {
+		return domain.ValidatedJournalEntry{}, err
+	}
+	entry, err := db.ParseValidatedEntry(in)
+	if err != nil || !isBible {
+		return entry, err
+	}
+	return quotePassage(ctx, passages, entry, choice, s.Text, prev)
+}
+
 func parseJournalForm(r *http.Request) (db.JournalInput, editor.FormData) {
 	_ = r.ParseForm()
 	mediaURL := r.FormValue("media_url")
 	tagsRaw := r.FormValue("tags")
 	body := r.FormValue("body")
+	scripture := db.ScriptureInput{
+		Kind:              r.FormValue("media_kind"),
+		Scripture:         r.FormValue("scripture"),
+		Book:              r.FormValue("verse_book"),
+		From:              r.FormValue("verse_from"),
+		To:                r.FormValue("verse_to"),
+		TranslationChoice: r.FormValue("verse_tr_choice"),
+		Translation:       r.FormValue("verse_tr"),
+		Text:              r.FormValue("verse_text"),
+	}
 	published := r.FormValue("published") == "1"
 	bookmarked := r.FormValue("bookmarked") == "1"
 
@@ -499,6 +538,7 @@ func parseJournalForm(r *http.Request) (db.JournalInput, editor.FormData) {
 		MediaURL:   mediaURL,
 		Tags:       tagsRaw,
 		Body:       body,
+		Scripture:  scripture,
 		Published:  published,
 		Bookmarked: bookmarked,
 	}
@@ -512,6 +552,7 @@ func sanitizeFormDataForEcho(fd *editor.FormData) {
 	fd.MediaURL = db.SanitizeMediaURLInput(fd.MediaURL)
 	fd.Tags = db.SanitizeTagsRawInput(fd.Tags)
 	fd.Body = db.SanitizeProseInput(fd.Body)
+	fd.Scripture = sanitizeScriptureForEcho(fd.Scripture)
 }
 
 func entryReturnTarget(r *http.Request, id int64) string {

@@ -17,6 +17,7 @@ import (
 	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/internal/tweet"
+	"github.com/oxri/oxri-go/internal/verse"
 	"github.com/oxri/oxri-go/serverfns"
 	"github.com/oxri/oxri-go/views/booki"
 	"github.com/oxri/oxri-go/views/editor"
@@ -37,6 +38,9 @@ type Config struct {
 	// Tweets fetches tweet snapshots in the background (NewTweetFiller). Nil
 	// (tests) never touches the network: tweets keep X's embed.
 	Tweets *tweet.Filler
+	// Passages checks the Bible passages an entry quotes against their
+	// provider on save (verse.NewSource). Nil (tests) never touches the network.
+	Passages *verse.Source
 }
 
 // NewRouter builds and returns the top-level Chi HTTP handler.
@@ -96,7 +100,7 @@ func NewRouter(cfg Config) http.Handler {
 	r.Get("/journals", handleJournalsCatalog(cfg.AuthService))
 	r.Get("/journals/content", handleJournalsCatalogContent(cfg.Store, cfg.AuthService, cfg.Tweets))
 	r.Get("/journals/new", handleJournalNew(cfg.Store, cfg.AuthService))
-	r.Post("/journals", handleJournalCreate(cfg.Store, cfg.AuthService))
+	r.Post("/journals", handleJournalCreate(cfg.Store, cfg.AuthService, cfg.Passages))
 	r.Post("/journals/batch", handleJournalBatch(cfg.Store, cfg.AuthService))
 	r.Get("/journals/batch/confirm", handleJournalBatchConfirm(cfg.AuthService))
 	r.Get("/journals/vacate-space", handleJournalVacateSpacePage(cfg.Store, cfg.AuthService))
@@ -105,7 +109,7 @@ func NewRouter(cfg Config) http.Handler {
 	r.Post("/journals/vacate-space/", handleJournalVacateSpaceSubmit(cfg.Store, cfg.AuthService))
 	r.Get("/journals/{id}", handleJournalEntry(cfg.Store, cfg.AuthService, cfg.Tweets))
 	r.Get("/journals/{id}/edit", handleJournalEditForm(cfg.Store, cfg.AuthService))
-	r.Post("/journals/{id}", handleJournalUpdate(cfg.Store, cfg.AuthService))
+	r.Post("/journals/{id}", handleJournalUpdate(cfg.Store, cfg.AuthService, cfg.Passages))
 	r.Get("/journals/{id}/delete", handleJournalDeleteConfirm(cfg.AuthService))
 	r.Post("/journals/{id}/delete", handleJournalDelete(cfg.Store, cfg.AuthService))
 	r.Post("/journals/{id}/publish", handleJournalPublish(cfg.Store, cfg.AuthService, true))

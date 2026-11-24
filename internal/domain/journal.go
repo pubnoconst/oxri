@@ -103,6 +103,7 @@ type ValidatedJournalEntry struct {
 	body       string
 	bookmarked bool
 	published  bool
+	passage    string // encoded Passage, or "" (WithPassage)
 }
 
 // ParseJournalEntry parses and validates raw journal fields into a ValidatedJournalEntry.
@@ -205,9 +206,28 @@ func (e ValidatedJournalEntry) Published() bool {
 	return e.published
 }
 
+// WithPassage returns the entry quoting p, the Bible passage its media link
+// points to. p is validated (marks included) and stored encoded.
+func (e ValidatedJournalEntry) WithPassage(p Passage) (ValidatedJournalEntry, error) {
+	if err := ValidatePassage(p); err != nil {
+		return ValidatedJournalEntry{}, err
+	}
+	enc, err := EncodePassage(p)
+	if err != nil {
+		return ValidatedJournalEntry{}, err
+	}
+	e.passage = enc
+	return e, nil
+}
+
+// PassageJSON is the encoded passage, or "" when the entry quotes none.
+func (e ValidatedJournalEntry) PassageJSON() string {
+	return e.passage
+}
+
 // EstimatedBytes returns the exact UTF-8 byte footprint of the entry plus rowOverhead.
 func (e ValidatedJournalEntry) EstimatedBytes(rowOverhead int64) int64 {
-	total := rowOverhead + int64(len(e.mediaURL)) + int64(len(e.body))
+	total := rowOverhead + int64(len(e.mediaURL)) + int64(len(e.body)) + int64(len(e.passage))
 	for _, t := range e.tags {
 		total += int64(len(t))
 	}

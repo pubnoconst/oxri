@@ -29,7 +29,7 @@ const (
 		"img-src 'self' data: https: http:; " +
 		"media-src 'self' https: http:; " +
 		"frame-src https://platform.twitter.com https://syndication.twitter.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; " +
-		"connect-src 'self'; " +
+		"connect-src 'self' https://bible.helloao.org; " +
 		"object-src 'none'; " +
 		"base-uri 'self'; " +
 		"form-action 'self'; " +

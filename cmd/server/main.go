@@ -12,6 +12,7 @@ import (
 
 	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/db"
+	"github.com/oxri/oxri-go/internal/verse"
 	"github.com/oxri/oxri-go/routes"
 )
 
@@ -80,6 +81,7 @@ func main() {
 		AuthService: authSvc,
 		Store:       store,
 		Tweets:      routes.NewTweetFiller(store, &http.Client{Timeout: 10 * time.Second}),
+		Passages:    verse.NewSource(&http.Client{Timeout: 10 * time.Second}),
 	})
 
 	server := &http.Server{

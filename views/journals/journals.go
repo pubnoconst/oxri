@@ -17,10 +17,12 @@ import (
 	"unicode/utf8"
 
 	"github.com/oxri/oxri-go/internal/db"
+	"github.com/oxri/oxri-go/internal/domain"
 	"github.com/oxri/oxri-go/internal/paging"
 	"github.com/oxri/oxri-go/internal/tweet"
 	"github.com/oxri/oxri-go/views/layout"
 	"github.com/oxri/oxri-go/views/loading"
+	passageview "github.com/oxri/oxri-go/views/passage"
 	tweetview "github.com/oxri/oxri-go/views/tweet"
 	"github.com/yuin/goldmark"
 	g "maragu.dev/gomponents"
@@ -34,9 +36,9 @@ var StyleCSS string
 const StylePath = "/views/journals/journals.css"
 
 // Style is the content-hashed handle for StyleCSS (URL and route handler).
-// The tweet box's stylesheet (views/tweet) is folded in: journal cards are
-// where tweets appear.
-var Style = assets.Component(StylePath, StyleCSS+"\n"+tweetview.StyleCSS)
+// The clipping stylesheets (views/tweet, then views/passage, which builds on
+// it) are folded in: journal cards are where clippings appear.
+var Style = assets.Component(StylePath, StyleCSS+"\n"+tweetview.StyleCSS+"\n"+passageview.StyleCSS)
 
 const MaxExcerptRunes = 280
 
@@ -58,6 +60,9 @@ type RenderedEntry struct {
 	// Tweet is the site's own drawing of the linked post on X, when its
 	// snapshot exists (routes attach it); nil leaves the slot to X's embed.
 	Tweet *tweet.Snapshot
+	// Passage is the Bible passage the entry quotes, drawn by the server
+	// (views/passage); nil for any other link.
+	Passage *domain.Passage
 }
 
 // CatalogPageSize is how many entries one catalog page shows. Most entries
@@ -225,7 +230,12 @@ func RenderSingle(j db.Journal) RenderedEntry {
 	}
 	rendered := RenderMarkdown(j.Body)
 	estBytes := j.EstimatedBytes()
+	var passage *domain.Passage
+	if p, ok := j.Passage(); ok {
+		passage = &p
+	}
 	return RenderedEntry{
+		Passage:        passage,
 		Entry:          j,
 		RenderedHTML:   rendered,
 		Excerpt:        Excerpt280(rendered),
@@ -465,6 +475,12 @@ func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 // the server (views/tweet) and marked mounted, so journal-media.js leaves it;
 // anything else is filled in the browser from data-media-url.
 func mediaSlot(item RenderedEntry) g.Node {
+	if item.Passage != nil {
+		return h.Div(h.Class("journal-media-slot journal-preview-media"),
+			g.Attr("data-media-url", item.Entry.MediaURL), g.Attr("data-media-mounted", item.Entry.MediaURL),
+			passageview.Box(*item.Passage),
+		)
+	}
 	if item.Tweet != nil {
 		return h.Div(h.Class("journal-media-slot journal-preview-media"),
 			g.Attr("data-media-url", item.Entry.MediaURL), g.Attr("data-media-mounted", item.Entry.MediaURL),
