@@ -352,8 +352,11 @@ func paginationNav(view CatalogView) g.Node {
 }
 
 func renderJournalsHeader(isAuth bool) g.Node {
-	var authLink g.Node
+	// Signed out, a reader is offered only "Author sign in": never an action
+	// they can't take.
+	var newEntry, authLink g.Node
 	if isAuth {
+		newEntry = h.A(h.Class("new-entry-link btn btn-neutral"), h.Href("/journals/new"), g.Text("Add new entry"))
 		authLink = h.Form(h.Class("auth-action-form"), h.Method("POST"), h.Action("/logout"),
 			h.Button(h.Type("submit"), h.Class("auth-action-link"), g.Text("Sign out")),
 		)
@@ -366,7 +369,7 @@ func renderJournalsHeader(isAuth bool) g.Node {
 		h.Div(h.Class("journals-title-row"),
 			h.H1(g.Text("Journals")),
 			h.Div(h.Class("journals-actions"),
-				h.A(h.Class("new-entry-link btn btn-neutral"), h.Href("/journals/new"), g.Text("Add new entry")),
+				newEntry,
 				authLink,
 			),
 		),
