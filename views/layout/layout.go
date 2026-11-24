@@ -58,7 +58,7 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 
 // BackLink renders a quiet navigation return link with a pure-CSS circular chevron.
 func BackLink(href, label string) g.Node {
-	return h.A(h.Class("back-link"), h.Href(href),
+	return h.A(h.Class("back-link link-quiet"), h.Href(href),
 		h.Span(h.Class("back-icon"), g.Attr("aria-hidden", "true")),
 		h.Span(h.Class("back-label"), g.Text(label)),
 	)

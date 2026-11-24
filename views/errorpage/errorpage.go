@@ -91,7 +91,7 @@ func Page(status int, message, reference, qrDataURI string) g.Node {
 						h.P(g.Text("Scan for the reference code")),
 					),
 				),
-				h.A(h.Class("error-home-link"), h.Href("/"), g.Text("Return home")),
+				h.A(h.Class("error-home-link link-plain"), h.Href("/"), g.Text("Return home")),
 			),
 		),
 	)

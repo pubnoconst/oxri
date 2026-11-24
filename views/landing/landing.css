@@ -42,19 +42,10 @@
   margin-top: 0.35rem;
 }
 
-/* Links inherit the theme color; only interactive links receive a small scale */
+/* The books and Journals are plain links, Log in / Settings / Log out quiet
+   ones (site.css .link-plain, .link-quiet). */
 .landing-nav a {
   display: inline-block;
-  color: inherit;
-  text-decoration: none;
-  transition: transform 160ms ease;
-  transform-origin: right center;
-}
-
-/* Keep hover and keyboard-focus feedback visible but deliberately subtle */
-.landing-nav a:hover,
-.landing-nav a:focus-visible {
-  transform: scale(1.04);
 }
 
 /* A low-contrast divider separates the books from the journal link */
@@ -86,26 +77,6 @@
 
 .landing-auth {
   font-size: 0.95rem;
-  opacity: 0.55;
-  transition: opacity 160ms ease, transform 160ms ease;
-}
-
-button.landing-auth {
-  display: inline-block;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 0.95rem;
-  color: inherit;
-  cursor: pointer;
-  transform-origin: right center;
-}
-
-.landing-auth:hover,
-.landing-auth:focus-visible {
-  opacity: 1;
-  transform: scale(1.04);
 }
 
 /* On narrow screens, use the available width and start the menu a little lower */
@@ -116,10 +87,3 @@ button.landing-auth {
   }
 }
 
-/* Honor motion preferences by removing the scale transition */
-@media (prefers-reduced-motion: reduce) {
-  .landing-nav a,
-  button.landing-auth {
-    transition: none;
-  }
-}

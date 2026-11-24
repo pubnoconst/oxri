@@ -276,7 +276,7 @@ func CatalogContentFragment(isAuth bool, view CatalogView) g.Node {
 
 		var clearLink g.Node
 		if view.HasFilters() {
-			clearLink = h.A(h.Href("/journals"), h.Class("filter-clear-link"), g.Text("Clear"))
+			clearLink = h.A(h.Href("/journals"), h.Class("filter-clear-link link-quiet"), g.Text("Clear"))
 		}
 
 		var tagPills g.Node
@@ -293,7 +293,7 @@ func CatalogContentFragment(isAuth bool, view CatalogView) g.Node {
 					morePills = append(morePills, view.tagPill(tag))
 				}
 				pills = append(pills, h.Details(h.Class("tag-filter-more"),
-					h.Summary(g.Text(fmt.Sprintf("More tags (%d)", len(more)))),
+					h.Summary(h.Class("link-quiet"), g.Text(fmt.Sprintf("More tags (%d)", len(more)))),
 					h.Div(h.Class("tag-filter-more-list"), g.Group(morePills)),
 				))
 			}
@@ -400,10 +400,10 @@ func renderJournalsHeader(isAuth bool) g.Node {
 	if isAuth {
 		newEntry = h.A(h.Class("new-entry-link btn btn-neutral"), h.Href("/journals/new"), g.Text("Add new entry"))
 		authLink = h.Form(h.Class("auth-action-form"), h.Method("POST"), h.Action("/logout"),
-			h.Button(h.Type("submit"), h.Class("auth-action-link"), g.Text("Sign out")),
+			h.Button(h.Type("submit"), h.Class("auth-action-link link-quiet"), g.Text("Sign out")),
 		)
 	} else {
-		authLink = h.A(h.Class("auth-action-link"), h.Href("/login?next=/journals"), g.Text("Author sign in"))
+		authLink = h.A(h.Class("auth-action-link link-quiet"), h.Href("/login?next=/journals"), g.Text("Author sign in"))
 	}
 
 	return h.Header(h.Class("journals-header"),
@@ -528,7 +528,7 @@ func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 
 	var dateNode g.Node
 	if isCollage {
-		dateNode = h.A(h.Class("entry-date entry-card-link"), h.Href(EntryURL(item.Entry.ID)), g.Text(item.FormattedDate))
+		dateNode = h.A(h.Class("entry-date entry-card-link link-quiet"), h.Href(EntryURL(item.Entry.ID)), g.Text(item.FormattedDate))
 	} else {
 		dateNode = h.Span(h.Class("entry-date"), g.Text(item.FormattedDate))
 	}
