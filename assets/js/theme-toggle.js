@@ -17,8 +17,18 @@
     }
   }
 
+  // The browser chrome (status bar, installed-app title bar) follows the page
+  // colour of the chosen theme; layout.go sets the system-theme defaults.
+  function syncThemeColor(theme) {
+    const page = theme === "dark" ? "#0f1113" : "#f5f4f0";
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+      m.setAttribute("content", page);
+    });
+  }
+
   function applyTheme(theme) {
     root.dataset.theme = theme;
+    syncThemeColor(theme);
     try {
       window.sessionStorage.setItem(storageKey, theme);
     } catch {
@@ -27,7 +37,10 @@
   }
 
   const savedTheme = readSessionTheme();
-  if (savedTheme) root.dataset.theme = savedTheme;
+  if (savedTheme) {
+    root.dataset.theme = savedTheme;
+    syncThemeColor(savedTheme);
+  }
 
   // Double-clicking on empty background toggles theme site-wide.
   // Interactions with text selections, links, buttons, form controls, code,

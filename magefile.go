@@ -34,6 +34,12 @@ func Build() error {
 	return sh.RunWith(envWithCgoDisabled(), "go", "build", "-trimpath", "-o", binName, "./cmd/server")
 }
 
+// Icons redraws the app icons (cmd/icongen) into assets/icons/.
+func Icons() error {
+	fmt.Println("==> Drawing app icons (cmd/icongen)...")
+	return sh.RunWithV(envWithCgoDisabled(), "go", "run", "./cmd/icongen", "assets/icons")
+}
+
 // Run starts the development server with CGO disabled.
 func Run() error {
 	fmt.Println("==> Starting Res Imperii server (CGO_ENABLED=0)...")

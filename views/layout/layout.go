@@ -15,6 +15,15 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 		h.TitleEl(g.Text(title)),
 		h.Link(h.Rel("icon"), h.Type("image/png"), h.Href(assets.Favicon.URL())),
 
+		// Installable web app: manifest, home-screen icon (iOS), and the browser
+		// chrome coloured like the page in each theme (theme-toggle.js keeps it
+		// in step with a manual light/dark switch).
+		h.Link(h.Rel("manifest"), h.Href("/manifest.webmanifest")),
+		h.Link(h.Rel("apple-touch-icon"), h.Href(assets.AppleTouchIcon.URL())),
+		h.Meta(h.Name("theme-color"), g.Attr("media", "(prefers-color-scheme: light)"), h.Content("#f5f4f0")),
+		h.Meta(h.Name("theme-color"), g.Attr("media", "(prefers-color-scheme: dark)"), h.Content("#0f1113")),
+		h.Meta(h.Name("apple-mobile-web-app-title"), h.Content("Res Imperii")),
+
 		// EB Garamond Typeface
 		h.Link(h.Rel("preconnect"), h.Href("https://fonts.googleapis.com")),
 		h.Link(h.Rel("preconnect"), h.Href("https://fonts.gstatic.com"), g.Attr("crossorigin", "")),
