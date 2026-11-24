@@ -1,7 +1,7 @@
 # Next
 
 - **Base Commit on `main`**: `ac1ec45` (PR #45 — dot-matrix loaders on phones)
-- **Active Branch**: `v2-dot-matrix` (PR #46): full dot matrix on every device; the water ripple is retired and archived on the `water-ripple` branch. Turn-signal sweep; the tweet loading line is centred (RATIONALE 047).
+- **Active Branch**: `v2-dot-matrix` (PR #46): full dot matrix on every device; the water ripple is retired and archived on the `water-ripple` branch. Seeded puzzle = working on your action, seeded twinkle = downloading, comet = waiting on you; the tweet loading line is centred; cards no longer snap open when tweets arrive close together (RATIONALE 047).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main`, `prod`, `v2` (live); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
@@ -23,7 +23,7 @@
 
 ## Next on Mind
 
-1. On the S9+ (and desktop), after PR #46 ships: the turn-signal sweep, the centred "Loading preview" line, no water anywhere. The owner also mentioned a Grok-style "solving Rubik's cube" matrix as an alternative motion; the column keyframes in `site.css` are the place to try it.
+1. On the S9+ (and desktop), after PR #46 ships: seeded twinkles on tweet slots, the puzzle on Confirming and sign-in, the comet on passkey prompts, and cards unrolling smoothly (no snap) as tweets arrive.
    - Next budget-phone candidates: build tweets only when their card nears the screen, a couple at a time (12 iframes at once is the heaviest thing left on a page); check what the catalog does if `/journals/content` fails or stalls (Render cold start on slow mobile data).
 2. Continue the plan from step 3.
 3. **Edge tweets (deferred by the owner, "we will address Edge later"):** tweets take a long time to load in Edge. Start in Edge DevTools on `/journals`: look for "Tracking Prevention blocked …twitter.com" and check the network timing of `platform.twitter.com` / `syndication.twitter.com`. The 12 s link-card fallback still bounds the worst case.
