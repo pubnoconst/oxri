@@ -1,5 +1,5 @@
 // Package tweet draws a post on X as a clipping: a slip of paper laid on the
-// card's linen, the source and date along the top like a newspaper cutting,
+// card (depth 2), the source and date along the top like a newspaper cutting,
 // the words in the site's type, signed by the author at the bottom. No script
 // from X. The data is a snapshot taken once (internal/tweet).
 //

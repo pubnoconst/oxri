@@ -146,7 +146,7 @@
   padding: 1.15rem 1.25rem;
   border: 1px solid var(--border-input);
   border-radius: var(--radius-card);
-  background: var(--surface-card);
+  background: var(--depth-1-surface);
   color: var(--page-ink);
   font-family: var(--font-mono);
   font-size: 0.92rem;
@@ -167,7 +167,7 @@
   padding: 1.25rem 1.5rem;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  background: var(--fabric-card);
+  background: var(--depth-1-surface);
   font-size: 1.12rem;
   line-height: 1.72;
   box-sizing: border-box;

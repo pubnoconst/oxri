@@ -22,7 +22,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--fabric-page);
+  background: var(--depth-0-surface);
   color: var(--page-ink);
   font-family: var(--font-serif);
   animation: 220ms ease-in-out both page-fade-in;
@@ -58,31 +58,33 @@ p, h1, h2, h3, h4, h5, h6 {
   --accent-active: #3b6e44;
   --accent-danger: #c74e4a;
 
-  /* Derived Surfaces & Borders */
-  --surface-subtle: color-mix(in srgb, var(--page) 94%, var(--page-ink));
+  /* Depth. Every surface sits at one depth, and each depth is a surface
+     colour with the shadow that goes with it (HIG §4). Light comes from
+     above: in light, each step up is a little nearer white; in dark, each
+     step up is a little lighter, the way dark interfaces show height.
+       sunk  wells cut into a surface: inputs, code, quoted posts
+       0     the page
+       1     cards and panels, lifted off the page
+       2     things laid on a card: post clippings, embedded media */
+  --depth-sunk-surface: color-mix(in srgb, var(--page) 94%, var(--page-ink));
+  --depth-0-surface: var(--page);
+  --depth-1-surface: color-mix(in srgb, var(--page) 45%, #ffffff);
+  --depth-1-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 1px rgba(60, 55, 45, 0.05),
+    0 8px 22px -10px rgba(60, 55, 45, 0.16),
+    0 22px 44px -26px rgba(60, 55, 45, 0.18);
+  --depth-2-surface: color-mix(in srgb, var(--page) 20%, #ffffff);
+  --depth-2-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.04),
+    0 6px 14px -10px rgba(40, 35, 25, 0.35);
+
+  /* Borders */
   --border-subtle: color-mix(in srgb, var(--page-ink) 11%, transparent);
   --border-card: color-mix(in srgb, var(--page-ink) 15%, transparent);
   --border-input: color-mix(in srgb, var(--page-ink) 20%, transparent);
   --border-focus: color-mix(in srgb, var(--page-ink) 45%, transparent);
   --checkbox-bg: #ffffff;
-
-  /* Linen: woven-cloth surfaces drawn by inline SVG noise (no image files).
-     The page is one cloth; every card is its own piece of cloth, lifted off
-     it by shadow and told apart by its weave (dark: a coarser card cloth on
-     the same base), never by a translucent-looking tint.
-     The four cloths (--linen-page-light, --linen-card-light, --linen-page-dark,
-     --linen-card-dark) are drawn in Go: views/linen, two coprime noise tiles
-     each, served as /views/linen/linen.css. */
-  --linen-page: var(--linen-page-light);
-  --linen-card: var(--linen-card-light);
-  --surface-card: color-mix(in srgb, var(--page) 45%, #ffffff);
-  --shadow-card:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 1px 1px rgba(60, 55, 45, 0.05),
-    0 8px 22px -10px rgba(60, 55, 45, 0.16),
-    0 22px 44px -26px rgba(60, 55, 45, 0.18);
-  --fabric-page: var(--linen-page), var(--page);
-  --fabric-card: var(--linen-card), var(--surface-card);
 
   /* Border Radii */
   --radius-card: 0.5rem;
@@ -111,14 +113,16 @@ p, h1, h2, h3, h4, h5, h6 {
     --accent-active: #87b382;
     --accent-danger: #e06c68;
     --checkbox-bg: #181b1e;
-    --linen-page: var(--linen-page-dark);
-    --linen-card: var(--linen-card-dark);
-    --surface-card: color-mix(in srgb, var(--page) 98.5%, #ffffff);
-    --shadow-card:
+    --depth-1-surface: color-mix(in srgb, var(--page) 95.5%, #ffffff);
+    --depth-1-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.035),
       0 1px 1px rgba(0, 0, 0, 0.35),
       0 10px 24px -8px rgba(0, 0, 0, 0.55),
       0 24px 48px -24px rgba(0, 0, 0, 0.6);
+    --depth-2-surface: color-mix(in srgb, var(--page) 92%, #ffffff);
+    --depth-2-shadow:
+      0 1px 0 rgba(0, 0, 0, 0.3),
+      0 6px 14px -8px rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -131,14 +135,16 @@ p, h1, h2, h3, h4, h5, h6 {
   --accent-active: #3b6e44;
   --accent-danger: #c74e4a;
   --checkbox-bg: #ffffff;
-  --linen-page: var(--linen-page-light);
-  --linen-card: var(--linen-card-light);
-  --surface-card: color-mix(in srgb, var(--page) 45%, #ffffff);
-  --shadow-card:
+  --depth-1-surface: color-mix(in srgb, var(--page) 45%, #ffffff);
+  --depth-1-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
     0 1px 1px rgba(60, 55, 45, 0.05),
     0 8px 22px -10px rgba(60, 55, 45, 0.16),
     0 22px 44px -26px rgba(60, 55, 45, 0.18);
+  --depth-2-surface: color-mix(in srgb, var(--page) 20%, #ffffff);
+  --depth-2-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.04),
+    0 6px 14px -10px rgba(40, 35, 25, 0.35);
 }
 
 :root[data-theme="dark"] {
@@ -149,14 +155,16 @@ p, h1, h2, h3, h4, h5, h6 {
   --accent-active: #87b382;
   --accent-danger: #e06c68;
   --checkbox-bg: #181b1e;
-  --linen-page: var(--linen-page-dark);
-  --linen-card: var(--linen-card-dark);
-  --surface-card: color-mix(in srgb, var(--page) 98.5%, #ffffff);
-  --shadow-card:
+  --depth-1-surface: color-mix(in srgb, var(--page) 95.5%, #ffffff);
+  --depth-1-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.035),
     0 1px 1px rgba(0, 0, 0, 0.35),
     0 10px 24px -8px rgba(0, 0, 0, 0.55),
     0 24px 48px -24px rgba(0, 0, 0, 0.6);
+  --depth-2-surface: color-mix(in srgb, var(--page) 92%, #ffffff);
+  --depth-2-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.3),
+    0 6px 14px -8px rgba(0, 0, 0, 0.6);
 }
 
 /* Consistent selection boxes (plain white in light mode, regardless of OS dark-mode setting) */
@@ -257,7 +265,7 @@ a {
 }
 
 .btn-neutral {
-  background: var(--surface-card);
+  background: var(--depth-1-surface);
   color: var(--page-ink);
   border-color: var(--border-card);
 }
@@ -266,12 +274,12 @@ a {
 }
 
 .btn-destructive {
-  background: var(--surface-card);
+  background: var(--depth-1-surface);
   color: var(--accent-danger);
   border-color: color-mix(in srgb, var(--accent-danger) 35%, transparent);
 }
 .btn-destructive:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent-danger) 10%, var(--surface-card));
+  background: color-mix(in srgb, var(--accent-danger) 10%, var(--depth-1-surface));
   border-color: var(--accent-danger);
 }
 
@@ -423,7 +431,7 @@ a {
   height: auto;
   border-radius: var(--radius-card);
   border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--depth-2-shadow);
   object-fit: contain;
 }
 
@@ -435,14 +443,14 @@ a {
   aspect-ratio: 16 / 9;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--depth-2-shadow);
 }
 
 .journal-preview-media audio {
   width: min(90%, 30rem);
   margin: 0.4rem 0;
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--depth-2-shadow);
 }
 
 .journal-preview-media .tweet-embed-container {
@@ -515,8 +523,8 @@ a {
   width: min(100%, 28rem);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  background: var(--fabric-card);
-  box-shadow: var(--shadow-card);
+  background: var(--depth-1-surface);
+  box-shadow: var(--depth-1-shadow);
   text-align: center;
   transition: opacity 220ms ease;
 }

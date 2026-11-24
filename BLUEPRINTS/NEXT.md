@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `2ccca19` (PR #56 — tweet clippings)
-- **Active Branch**: `tags-by-use` (PR #57): the catalog leads with the most used tags; editor suggestions ranked by use (RATIONALE 058).
+- **Base Commit on `main`**: `1fe7747` (PR #57 — tags by use)
+- **Active Branch**: `depth-tokens` (PR #58): the linen is replaced by named depths, HIG §4 (RATIONALE 059).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
@@ -10,7 +10,7 @@
 
 The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG.md`](HIG.md).
 
-- **Design:** Subtlety is the key. Linen is felt, not seen. Cards are their own cloth, told apart by weave and shadow, never by tint. Waiting is one quiet 3×3 dot matrix: CSS-drawn, opacity-only, the same on every device.
+- **Design:** Subtlety is the key. Depth, not decoration: every surface sits at one depth (HIG §4: `--depth-{sunk,0,1,2}-surface` and `-shadow`), never told apart by texture or tint. Waiting is one quiet 3×3 dot matrix: CSS-drawn, opacity-only, the same on every device.
 - **Code:** Many small modules, each with one reason to change. Diligence can betray you; the type system won't. Use packages where the compiler should enforce a boundary, and files for cohesion within one.
 
 ## Modularity / type-safety plan (one PR each, no visible change, tests green)

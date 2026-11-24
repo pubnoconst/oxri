@@ -34,8 +34,8 @@
   padding: var(--space-card-pad);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  background: var(--fabric-card);
-  box-shadow: var(--shadow-card);
+  background: var(--depth-1-surface);
+  box-shadow: var(--depth-1-shadow);
 }
 
 .auth-error {

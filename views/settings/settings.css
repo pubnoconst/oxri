@@ -56,8 +56,8 @@
   padding: var(--space-card-pad);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  background: var(--fabric-card);
-  box-shadow: var(--shadow-card);
+  background: var(--depth-1-surface);
+  box-shadow: var(--depth-1-shadow);
   box-sizing: border-box;
 }
 
@@ -209,7 +209,7 @@
 .meta-code {
   padding: 0.1rem 0.4rem;
   border-radius: var(--radius-control);
-  background: var(--surface-subtle);
+  background: var(--depth-sunk-surface);
   font-family: var(--font-mono);
   font-size: 0.82rem;
 }
@@ -238,7 +238,7 @@
 }
 
 .badge-pending {
-  background: var(--surface-subtle);
+  background: var(--depth-sunk-surface);
   color: var(--page-ink);
   opacity: 0.75;
   border: 1px solid var(--border-card);
@@ -350,7 +350,7 @@
   padding: 1rem 1.25rem;
   border: 1px dashed var(--border-input);
   border-radius: var(--radius-control);
-  background: var(--surface-subtle);
+  background: var(--depth-sunk-surface);
   font-size: 0.9rem;
   line-height: 1.5;
 }
