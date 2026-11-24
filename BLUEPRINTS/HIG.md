@@ -117,6 +117,7 @@ Waiting is shown with exactly one thing: a 3×3 matrix of 4 px dots, in `--page-
   - **Inline**, where the result will appear: the tweet slot's centred "Loading preview" line.
   - **Overlay:** "Confirming, please wait." covers the page for form saves (`data-confirm-loading`).
   - **Navigation:** the page dims to 60% at once. If the next page hasn't arrived after 180 ms, a small matrix appears at the bottom.
+  - **Page still loading its content** (the journals catalog waiting on the database): the loader stands in that same bottom-centre spot (`.page-dot-loading`), never at the top of the page, so following a link and waiting for the content read as one continuous wait.
 - **No box and no shadow around a loader.** A placeholder card is never drawn for content that hasn't arrived.
 - **Reduced motion:** the dots stand still at 60% opacity, and the label carries the meaning.
 

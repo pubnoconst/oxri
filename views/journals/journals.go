@@ -395,7 +395,9 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 				g.Attr("hx-get", contentURL),
 				g.Attr("hx-trigger", "load"),
 				g.Attr("hx-swap", "innerHTML swap:120ms"),
-				h.P(h.Class("journals-empty journals-loading-placeholder"), g.Attr("aria-live", "polite"), loading.Dots("Loading entries…", loading.Twinkle)),
+				// Bottom centre, where a slow navigation's loader stands (site.css
+				// .page-dot-loading); the HTMX swap replaces it with the catalog.
+				h.P(h.Class("page-dot-loading"), g.Attr("role", "status"), g.Attr("aria-live", "polite"), loading.Dots("Loading entries…", loading.Twinkle)),
 			),
 		),
 		h.Script(h.Src(assets.JournalMediaJS.URL())),
