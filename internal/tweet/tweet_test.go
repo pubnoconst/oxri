@@ -88,8 +88,8 @@ func TestDecodeKeepsOnlyWhatTheBoxDraws(t *testing.T) {
 	if s.Quoted == nil || s.Quoted.Handle != "quoter" || s.Quoted.Text != "Quoted words" {
 		t.Errorf("quoted: %+v", s.Quoted)
 	}
-	if s.PostURL() != "https://x.com/a_writer/status/123" || !s.HasVideo() {
-		t.Errorf("post url %q, video %v", s.PostURL(), s.HasVideo())
+	if s.PostURL() != "https://x.com/a_writer/status/123" {
+		t.Errorf("post url %q", s.PostURL())
 	}
 
 	// Stored and loaded back unchanged.

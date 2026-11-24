@@ -19,10 +19,8 @@
     overlay.setAttribute("hidden", "");
   }
 
-  window.ResImperiiLoading = {
-    show: showOverlay,
-    hide: hideOverlay,
-  };
+  // vacate-space.js shows the overlay when it saves automatically.
+  window.ResImperiiLoading = { show: showOverlay };
 
   if (!overlay) return;
 

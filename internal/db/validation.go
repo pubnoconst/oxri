@@ -41,19 +41,3 @@ func ParseTags(raw string) []string {
 func ParseValidatedEntry(in JournalInput) (domain.ValidatedJournalEntry, error) {
 	return domain.ParseJournalEntry(in.MediaURL, in.Tags, in.Body, in.Bookmarked, in.Published)
 }
-
-// ValidateInput validates a JournalInput by parsing it through domain.ParseJournalEntry
-// and returning the normalized JournalInput.
-func ValidateInput(in JournalInput) (JournalInput, error) {
-	entry, err := ParseValidatedEntry(in)
-	if err != nil {
-		return in, err
-	}
-	return JournalInput{
-		MediaURL:   entry.MediaURL(),
-		Tags:       entry.Tags(),
-		Body:       entry.Body(),
-		Bookmarked: entry.Bookmarked(),
-		Published:  entry.Published(),
-	}, nil
-}

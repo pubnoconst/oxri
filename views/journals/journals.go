@@ -257,13 +257,6 @@ func ActionURL(id int64, action string) string {
 	return fmt.Sprintf("/journals/%d/%s", id, action)
 }
 
-// Page renders a simple catalog view for a slice of rendered entries.
-func Page(isAuth bool, entries []RenderedEntry) g.Node {
-	return CatalogPage(isAuth, CatalogView{
-		Entries: entries,
-	})
-}
-
 // CatalogContentFragment renders the filter bar, batch action toolbar, and collage cards
 // so they can be populated asynchronously via HTMX (/journals/content) after the page shell loads.
 func CatalogContentFragment(isAuth bool, view CatalogView) g.Node {
@@ -444,27 +437,6 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 				// Bottom centre, where a slow navigation's loader stands (site.css
 				// .page-dot-loading); the HTMX swap replaces it with the catalog.
 				h.P(h.Class("page-dot-loading"), g.Attr("role", "status"), g.Attr("aria-live", "polite"), loading.Dots("Loading entries…", loading.Twinkle)),
-			),
-		),
-		h.Script(h.Src(assets.JournalMediaJS.URL())),
-		catalogScript,
-	)
-}
-
-// CatalogPage renders the main /journals collage grid with search, tag filters, and batch management.
-func CatalogPage(isAuth bool, view CatalogView) g.Node {
-	var catalogScript g.Node
-	if isAuth {
-		catalogScript = h.Script(h.Src(assets.JournalsCatalogJS.URL()))
-	}
-
-	return layout.Doc(
-		"Journals - RES IMPERII",
-		Style.URL(),
-		h.Main(h.Class("journals-page"),
-			renderJournalsHeader(isAuth),
-			h.Div(h.ID("journals-catalog-stage"),
-				CatalogContentFragment(isAuth, view),
 			),
 		),
 		h.Script(h.Src(assets.JournalMediaJS.URL())),

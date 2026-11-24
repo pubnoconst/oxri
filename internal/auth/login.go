@@ -74,10 +74,10 @@ func failureDelay(n int) time.Duration {
 // RFC 6238 code for clientIP, returning a new session ID on success. Failures
 // return a *LoginError carrying RetryAfter.
 func (s *Service) LoginTOTP(clientIP, password, code string) (string, error) {
-	return s.login(clientIP, password, code, true)
+	return s.login(clientIP, password, code)
 }
 
-func (s *Service) login(clientIP, password, code string, checkPassword bool) (string, error) {
+func (s *Service) login(clientIP, password, code string) (string, error) {
 	if !s.HasTOTP() {
 		return "", ErrTOTPNotConfigured
 	}
@@ -119,7 +119,7 @@ func (s *Service) login(clientIP, password, code string, checkPassword bool) (st
 
 	// 4. Evaluate both factors (both always, so neither can be probed alone).
 	pwOK := true
-	if checkPassword && s.passwordHash != "" {
+	if s.passwordHash != "" {
 		pwOK = VerifyPassword(s.passwordHash, password)
 	}
 	matchedStep, totpOK := VerifyTOTP(s.totpSecret, code, now)

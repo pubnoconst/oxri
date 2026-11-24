@@ -84,7 +84,6 @@ func NewRouter(cfg Config) http.Handler {
 		_, _ = w.Write([]byte("ok"))
 	})
 	r.Get("/", handleLanding(cfg.AuthService))
-	r.Get("/loading", handleLoadingPage())
 
 	bookWriteLimiter := newIPRateLimiter(20, 5*time.Minute)
 	for _, slug := range []string{"book-i", "book-ii", "book-iii"} {

@@ -69,14 +69,6 @@ func (d FormData) ExistingTagsCSV() string {
 	return strings.Join(d.ExistingTags, ",")
 }
 
-// Page renders a fresh journal editor with default starter content.
-func Page(isAuth bool) g.Node {
-	return FormPage(isAuth, FormData{
-		Published: true,
-		Body:      DefaultBody,
-	})
-}
-
 // FormPage renders the journal compose and live preview view.
 func FormPage(isAuth bool, data FormData) g.Node {
 	eyebrow := "JOURNALS / NEW ENTRY"

@@ -1,14 +1,5 @@
-/* Standalone smooth loading state using shared design tokens. */
-.loading-page {
-  min-height: 100svh;
-  width: 100%;
-  display: grid;
-  place-items: center;
-  padding: var(--space-page-y) var(--space-page-x);
-  box-sizing: border-box;
-  animation: loadingPageEaseIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
+/* "Confirming, please wait.": the full-screen overlay shown while a form
+   the site has to work on is submitted (views/loading Overlay). */
 .loading-overlay {
   position: fixed;
   inset: 0;
@@ -17,6 +8,7 @@
   place-items: center;
   padding: var(--space-page-y) var(--space-page-x);
   box-sizing: border-box;
+  overflow: hidden;
   background: var(--depth-0-surface);
   opacity: 0;
   pointer-events: none;
@@ -32,16 +24,6 @@
   pointer-events: all;
 }
 
-.loading-page,
-.loading-overlay {
-  overflow: hidden;
-}
-
-.loading-page {
-  position: relative;
-  background: var(--depth-0-surface);
-}
-
 .loading-phrase {
   position: relative;
   z-index: 2;
@@ -55,23 +37,6 @@
   letter-spacing: 0.015em;
   color: var(--page-ink);
   user-select: none;
-}
-
-@keyframes loadingPageEaseIn {
-  from {
-    opacity: 0;
-    transform: translateY(0.35rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .loading-page {
-    animation: none;
-  }
 }
 
 /* The dot matrix sits beside the still phrase; the matrix is the motion. */

@@ -483,13 +483,8 @@
     });
   }
 
-  window.ResImperiiMedia = {
-    safeUrl,
-    getActiveTheme,
-    createMedia,
-    createLinkFallback,
-    mountCatalogSlots,
-  };
+  // The journal editor's live preview reuses these two.
+  window.ResImperiiMedia = { safeUrl, createMedia };
 
   // X's widgets.js is no longer preloaded: tweets with a snapshot are drawn
   // by the server, and the script loads only for an embed that is needed

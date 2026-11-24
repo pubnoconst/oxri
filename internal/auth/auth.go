@@ -82,13 +82,6 @@ func acquireCapMinter() domain.CapMinter {
 	return pkgCapMinter
 }
 
-// NewService initializes the authentication service with an RFC 6238 Base32 TOTP secret.
-func NewService(totpSecret string) (*Service, error) {
-	return NewServiceWithOptions(ServiceOptions{
-		TOTPSecret: totpSecret,
-	})
-}
-
 // NewServiceWithOptions initializes the authentication service with explicit options.
 func NewServiceWithOptions(opts ServiceOptions) (*Service, error) {
 	totpSecret := NormalizeTOTPSecret(opts.TOTPSecret)
@@ -253,19 +246,6 @@ func (s *Service) HasTOTP() bool {
 // HasPassword reports whether an Argon2id password hash is configured alongside TOTP.
 func (s *Service) HasPassword() bool {
 	return s != nil && s.passwordHash != ""
-}
-
-// AuthenticateTOTP verifies a 6-digit RFC 6238 TOTP code immediately with single-use
-// replay protection and per-IP failed-attempt lockout, returning a new 256-bit session identifier.
-func (s *Service) AuthenticateTOTP(code string) (string, error) {
-	return s.AuthenticateTOTPForIP("local", code)
-}
-
-// AuthenticateTOTPForIP verifies a 6-digit RFC 6238 TOTP code for clientIP
-// under the same policy as LoginTOTP (holds, lockout, global budget, replay),
-// without the password factor.
-func (s *Service) AuthenticateTOTPForIP(clientIP, code string) (string, error) {
-	return s.login(clientIP, "", code, false)
 }
 
 // Authenticate checks if a session ID is valid and active.

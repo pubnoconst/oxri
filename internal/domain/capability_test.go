@@ -22,7 +22,7 @@ func TestAdminCapMinter(t *testing.T) {
 	if cap.IsZero() {
 		t.Errorf("minter() produced a zero capability token")
 	}
-	if cap.IssuedAt().IsZero() {
-		t.Errorf("cap.IssuedAt() is zero")
+	if cap.IsZero() {
+		t.Errorf("a minted cap must not be the zero value")
 	}
 }

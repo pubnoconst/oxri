@@ -35,12 +35,6 @@ var canonicalBooks = map[string]string{
 	"book-iii": "Book III",
 }
 
-// IsValidBookSlug reports whether slug is one of the canonical Res Imperii books.
-func IsValidBookSlug(slug string) bool {
-	_, ok := canonicalBooks[slug]
-	return ok
-}
-
 // BookTitle returns the canonical title ("Book I", "Book II", "Book III") for slug.
 func BookTitle(slug string) (string, bool) {
 	t, ok := canonicalBooks[slug]
