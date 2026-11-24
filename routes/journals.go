@@ -151,7 +151,7 @@ func handleJournalEntry(store *db.Store, authSvc *auth.Service, tweets *tweet.Fi
 	}
 }
 
-func handleJournalCreate(store *db.Store, authSvc *auth.Service, passages *verse.Source) http.HandlerFunc {
+func handleJournalCreate(store *db.Store, authSvc *auth.Service, passages *verse.Source, tweets *tweet.Filler) http.HandlerFunc {
 	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		if store == nil {
 			errorpage.Render(w, http.StatusServiceUnavailable, "")
@@ -188,6 +188,7 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service, passages *verse
 			renderInternalError(w, r, http.StatusInternalServerError, err)
 			return
 		}
+		tweets.Now(r.Context(), validated.MediaURL())
 		http.Redirect(w, r, "/journals", http.StatusSeeOther)
 	})
 }
@@ -232,7 +233,7 @@ func handleJournalEditForm(store *db.Store, authSvc *auth.Service) http.HandlerF
 	})
 }
 
-func handleJournalUpdate(store *db.Store, authSvc *auth.Service, passages *verse.Source) http.HandlerFunc {
+func handleJournalUpdate(store *db.Store, authSvc *auth.Service, passages *verse.Source, tweets *tweet.Filler) http.HandlerFunc {
 	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		id, ok := parseEntryID(r)
 		if !ok {
@@ -285,6 +286,7 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service, passages *verse
 			renderInternalError(w, r, http.StatusInternalServerError, err)
 			return
 		}
+		tweets.Now(r.Context(), validated.MediaURL())
 		http.Redirect(w, r, "/journals", http.StatusSeeOther)
 	})
 }
