@@ -1,6 +1,8 @@
 package journals
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -62,5 +64,35 @@ func TestNewEntryLinkOnlyForAuthor(t *testing.T) {
 	}
 	if out := render(true); !strings.Contains(out, "Add new entry") {
 		t.Errorf("author's catalog lost its new-entry link")
+	}
+}
+
+// The catalog leads with the most used tags; a selected tag is always shown;
+// the rest wait, alphabetical, behind "More tags".
+func TestCatalogTagGroups(t *testing.T) {
+	var byUse []string
+	for i := 0; i < CatalogTagLimit+4; i++ {
+		byUse = append(byUse, fmt.Sprintf("T%02d", CatalogTagLimit+4-i)) // reverse-alphabetical, by use
+	}
+	view := CatalogView{AllTags: byUse, SelectedTags: []string{byUse[len(byUse)-1]}}
+	shown, more := view.TagGroups()
+	if len(shown) != CatalogTagLimit+1 || shown[0] != byUse[0] || shown[len(shown)-1] != byUse[len(byUse)-1] {
+		t.Errorf("shown: %v", shown)
+	}
+	if len(more) != 3 || !sort.StringsAreSorted(more) {
+		t.Errorf("more: %v (want 3, alphabetical)", more)
+	}
+
+	var b strings.Builder
+	_ = CatalogContentFragment(false, view).Render(&b)
+	out := b.String()
+	if !strings.Contains(out, `<details class="tag-filter-more"><summary>More tags (3)</summary>`) {
+		t.Errorf("missing More tags disclosure")
+	}
+	small := CatalogView{AllTags: byUse[:3]}
+	b.Reset()
+	_ = CatalogContentFragment(false, small).Render(&b)
+	if strings.Contains(b.String(), "tag-filter-more") {
+		t.Errorf("no disclosure when every tag fits")
 	}
 }

@@ -206,6 +206,59 @@ button.auth-action-link {
   color: var(--page);
 }
 
+/* The rest of the tags (alphabetical) behind a quiet "More tags (N)": shut,
+   it is a line of text at the end of the row; open, its pills wrap on a row
+   of their own. No script (<details>). */
+.tag-filter-more > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.16rem 0.2rem;
+  font-family: var(--font-serif);
+  font-size: 0.74rem;
+  opacity: 0.65;
+  cursor: pointer;
+  list-style: none;
+  text-underline-offset: 0.2em;
+}
+
+.tag-filter-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.tag-filter-more > summary::after {
+  content: "▸";
+  font-size: 0.7em;
+  transition: transform 140ms ease;
+}
+
+.tag-filter-more[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+.tag-filter-more > summary:hover,
+.tag-filter-more > summary:focus-visible {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.tag-filter-more[open] {
+  flex-basis: 100%;
+}
+
+.tag-filter-more-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tag-filter-more > summary::after {
+    transition: none;
+  }
+}
+
 /* Batch selection toolbar */
 .journals-batch-bar {
   display: flex;

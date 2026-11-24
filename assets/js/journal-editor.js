@@ -216,17 +216,22 @@
 
     if (committedSet.size >= MAX_TAG_COUNT) return;
 
-    const matches = existingTags.filter((tag) => {
-      if (committedSet.has(tag)) return false;
-      if (!activeToken) return true;
-      return tag.startsWith(activeToken) && tag !== activeToken;
-    });
+    // existingTags arrives most used first (db.TagsByUse). With nothing typed,
+    // offer the most used; while typing, tags that start with the text come
+    // first, then tags that merely contain it, each group still by use.
+    const open = existingTags.filter((tag) => !committedSet.has(tag) && tag !== activeToken);
+    const matches = activeToken
+      ? [
+          ...open.filter((tag) => tag.startsWith(activeToken)),
+          ...open.filter((tag) => !tag.startsWith(activeToken) && tag.toLowerCase().includes(activeToken.toLowerCase())),
+        ]
+      : open;
 
     if (matches.length === 0) return;
 
     const label = document.createElement("span");
     label.className = "tag-suggestion-label";
-    label.textContent = "Suggestions:";
+    label.textContent = activeToken ? "Suggestions:" : "Most used:";
     tagSuggestions.append(label);
 
     matches.slice(0, 8).forEach((tag) => {

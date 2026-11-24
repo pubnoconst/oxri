@@ -218,10 +218,10 @@ func TestStoreCRUDAndBatchLifecycle(t *testing.T) {
 		t.Errorf("Update verification failed: %+v, err=%v", updated, err)
 	}
 
-	// 5b. DistinctTags & ListFiltered (search + tag filter)
-	tags, err := store.DistinctTags(ctx, false)
+	// 5b. TagsByUse & ListFiltered (search + tag filter)
+	tags, err := store.TagsByUse(ctx, false)
 	if err != nil {
-		t.Fatalf("DistinctTags failed: %v", err)
+		t.Fatalf("TagsByUse failed: %v", err)
 	}
 	if len(tags) < 3 {
 		t.Errorf("expected at least 3 distinct tags, got %v", tags)

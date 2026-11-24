@@ -86,7 +86,7 @@ func handleJournalsCatalogContent(store *db.Store, authSvc *auth.Service, tweets
 				renderInternalError(w, r, http.StatusInternalServerError, err)
 				return
 			}
-			allTags, _ = store.DistinctTags(r.Context(), isAuth)
+			allTags, _ = store.TagsByUse(r.Context(), isAuth)
 		}
 		// Only this page's entries are rendered (Markdown included): the DOM and
 		// the number of tweet iframes stay bounded however large the archive grows.
@@ -114,7 +114,7 @@ func handleJournalNew(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 		var existingTags []string
 		if store != nil {
 			// Non-blocking read of cached tags (never blocks page load on remote DB)
-			existingTags = store.DistinctTagsCachedOnly(isAuth)
+			existingTags = store.TagsByUseCachedOnly(isAuth)
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -169,7 +169,7 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		if err != nil {
 			sanitizeFormDataForEcho(&formData)
 			formData.ErrorMsg = err.Error()
-			formData.ExistingTags, _ = store.DistinctTags(r.Context(), true)
+			formData.ExistingTags, _ = store.TagsByUse(r.Context(), true)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			_ = editor.FormPage(true, formData).Render(w)
@@ -217,7 +217,7 @@ func handleJournalEditForm(store *db.Store, authSvc *auth.Service) http.HandlerF
 			renderInternalError(w, r, http.StatusInternalServerError, err)
 			return
 		}
-		existingTags, _ := store.DistinctTags(r.Context(), true)
+		existingTags, _ := store.TagsByUse(r.Context(), true)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = editor.FormPage(true, editor.FormData{
 			IsEdit:       true,
@@ -250,7 +250,7 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		if err != nil {
 			sanitizeFormDataForEcho(&formData)
 			formData.ErrorMsg = err.Error()
-			formData.ExistingTags, _ = store.DistinctTags(r.Context(), true)
+			formData.ExistingTags, _ = store.TagsByUse(r.Context(), true)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			_ = editor.FormPage(true, formData).Render(w)
