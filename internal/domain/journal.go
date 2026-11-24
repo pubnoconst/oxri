@@ -206,11 +206,18 @@ func (e ValidatedJournalEntry) Published() bool {
 	return e.published
 }
 
-// WithPassage returns the entry quoting p, the Bible passage its media link
-// points to. p is validated (marks included) and stored encoded.
+// WithPassage returns the entry quoting p, the Bible passage that is its
+// media. p is validated and stored encoded. The passage is part of the
+// journal, so its text and the entry's own words share the one limit,
+// MaxJournalBodyLength.
 func (e ValidatedJournalEntry) WithPassage(p Passage) (ValidatedJournalEntry, error) {
 	if err := ValidatePassage(p); err != nil {
 		return ValidatedJournalEntry{}, err
+	}
+	quoted := utf8.RuneCountInString(p.Text)
+	if total := utf8.RuneCountInString(e.body) + quoted; total > MaxJournalBodyLength {
+		return ValidatedJournalEntry{}, fmt.Errorf("%w: the passage (%d characters) and the entry (%d) come to %d characters; the limit is %d for both together",
+			ErrInvalidJournalInput, quoted, total-quoted, total, MaxJournalBodyLength)
 	}
 	enc, err := EncodePassage(p)
 	if err != nil {

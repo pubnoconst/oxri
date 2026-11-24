@@ -407,6 +407,11 @@
   window.ResImperiiScripture = {
     /** Whether the media is scripture rather than a link. */
     active: () => kind.value === "scripture",
+    /**
+     * How many characters the loaded passage has (0 before it loads): it
+     * counts toward the entry's limit (domain WithPassage).
+     */
+    quotedLength: () => (kind.value === "scripture" && state?.phase === "ready" && state.passage ? Array.from(state.passage.text).length : 0),
     update,
   };
 })();

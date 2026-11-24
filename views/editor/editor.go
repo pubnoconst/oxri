@@ -217,7 +217,7 @@ func FormPage(isAuth bool, data FormData) g.Node {
 								h.MaxLength(strconv.Itoa(domain.MaxJournalBodyLength)),
 								g.Text(data.Body),
 							),
-							h.P(h.Class("field-hint"), g.Textf("Up to %s characters.", formatThousands(domain.MaxJournalBodyLength))),
+							h.P(h.Class("field-hint"), g.Textf("Up to %s characters, a quoted Bible passage included.", formatThousands(domain.MaxJournalBodyLength))),
 							h.P(h.ID("body-error"), h.Class("field-error"), g.Attr("aria-live", "polite")),
 						),
 						optionsBlock,

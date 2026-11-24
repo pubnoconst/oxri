@@ -57,7 +57,7 @@ func TestJournalBodyCapEndToEnd(t *testing.T) {
 		`maxlength="` + cap + `"`,
 		`id="body-char-count"`,
 		" / " + cap + "</span>", // the counter (the new-entry form is pre-filled, so not necessarily 0)
-		"Up to 2,000 characters.",
+		"Up to 2,000 characters, a quoted Bible passage included.",
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("editor is missing %q", want)

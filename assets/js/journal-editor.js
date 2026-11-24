@@ -348,13 +348,20 @@
   function updateContent() {
     const raw = contentInput.value;
     const bodyLen = Array.from(raw).length; // characters (code points), as the server counts
+    // A quoted Bible passage shares the entry's limit (domain WithPassage).
+    const quoted = window.ResImperiiScripture ? window.ResImperiiScripture.quotedLength() : 0;
+    const total = bodyLen + quoted;
     if (bodyCount && Number.isFinite(MAX_BODY_LEN)) {
-      bodyCount.textContent = `${bodyLen} / ${MAX_BODY_LEN}`;
-      bodyCount.classList.toggle("is-invalid", bodyLen > MAX_BODY_LEN);
+      bodyCount.textContent = quoted ? `${bodyLen} + ${quoted} quoted / ${MAX_BODY_LEN}` : `${bodyLen} / ${MAX_BODY_LEN}`;
+      bodyCount.classList.toggle("is-invalid", total > MAX_BODY_LEN);
     }
-    if (bodyLen > MAX_BODY_LEN) {
+    if (total > MAX_BODY_LEN) {
       isBodyValid = false;
-      if (bodyError) bodyError.textContent = `Too long: ${bodyLen} characters. The limit is ${MAX_BODY_LEN}.`;
+      if (bodyError) {
+        bodyError.textContent = quoted
+          ? `Too long: ${bodyLen} characters plus the ${quoted}-character passage come to ${total}. The limit is ${MAX_BODY_LEN} for both together.`
+          : `Too long: ${bodyLen} characters. The limit is ${MAX_BODY_LEN}.`;
+      }
     } else if (raw.trim().length === 0) {
       isBodyValid = false;
       if (bodyError) bodyError.textContent = "Required: journal entry cannot be empty.";
@@ -390,7 +397,10 @@
 
   contentInput.addEventListener("input", updateContent);
   mediaInput.addEventListener("input", updateMedia);
-  document.addEventListener("scripture:change", updateMedia);
+  document.addEventListener("scripture:change", () => {
+    updateMedia();
+    updateContent(); // the passage counts toward the limit
+  });
   tagsInput.addEventListener("input", updateTags);
 
   if (form) {

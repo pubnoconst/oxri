@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/oxri/oxri-go/internal/db"
+	"github.com/oxri/oxri-go/internal/domain"
 	"github.com/oxri/oxri-go/internal/verse"
 )
 
@@ -176,5 +177,40 @@ func TestNewEntryFormOffersScripture(t *testing.T) {
 func TestBibleProviderAllowedByCSP(t *testing.T) {
 	if !strings.Contains(ContentSecurityPolicy, "connect-src 'self' https://bible.helloao.org;") {
 		t.Errorf("the editor can't fetch verses: %s", ContentSecurityPolicy)
+	}
+}
+
+// The passage counts toward the journal's limit: the entry's own words and
+// the quoted text share domain.MaxJournalBodyLength.
+func TestScriptureSharesTheEntryLimit(t *testing.T) {
+	ctx := context.Background()
+	store, err := db.Open(ctx, ":memory:", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = store.Close() }()
+	authSvc, session := createTestTOTPAuth(t)
+	defer func() { _ = authSvc.Close() }()
+	var calls atomic.Int32
+	router := NewRouter(Config{Store: store, AuthService: authSvc, Passages: fakeHelloAO(&calls)})
+	post := func(body string) int {
+		form := scriptureForm(gen12_3to4, url.Values{"body": {body}})
+		req := httptest.NewRequest(http.MethodPost, "/journals", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Sec-Fetch-Site", "same-origin")
+		req.AddCookie(session)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	room := domain.MaxJournalBodyLength - len([]rune(gen12_3to4))
+	if code := post(strings.Repeat("a", room+1)); code != http.StatusUnprocessableEntity {
+		t.Errorf("one character over the shared limit: got %d, want 422", code)
+	}
+	if all, _ := store.List(ctx, true); len(all) != 0 {
+		t.Fatalf("an over-limit entry was stored")
+	}
+	if code := post(strings.Repeat("a", room)); code != http.StatusSeeOther {
+		t.Errorf("exactly at the shared limit: got %d, want 303", code)
 	}
 }

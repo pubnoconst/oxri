@@ -48,6 +48,8 @@ interface ResImperiiScriptureAPI {
   active(): boolean;
   /** Shows the chosen passage in `container`; true once it is ready to save. */
   update(container: HTMLElement): boolean;
+  /** Characters in the loaded passage (0 before it loads); they count toward the entry's limit. */
+  quotedLength(): number;
 }
 
 interface Window {
