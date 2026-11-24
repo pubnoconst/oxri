@@ -115,37 +115,22 @@ func (s *Store) ListFiltered(ctx context.Context, filter ListFilter) ([]Journal,
 	return out, nil
 }
 
-// DistinctTags returns all unique non-empty tags currently stored across tag1, tag2, and tag3,
-// sorted alphabetically.
-func (s *Store) DistinctTags(ctx context.Context, includeUnpublished bool) ([]string, error) {
+// TagsByUse returns the distinct tags of visible entries, most used first
+// (ties alphabetical). The catalog shows the head of this list and the editor
+// suggests from it, so an archive with many tags still leads with the ones
+// the author actually uses.
+func (s *Store) TagsByUse(ctx context.Context, includeUnpublished bool) ([]string, error) {
 	all, err := s.allEntriesCached(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	seen := make(map[string]struct{})
-	var tags []string
-	for _, j := range all {
-		if !includeUnpublished && !j.Published {
-			continue
-		}
-		for _, t := range []string{j.Tag1, j.Tag2, j.Tag3} {
-			if t == "" {
-				continue
-			}
-			if _, ok := seen[t]; !ok {
-				seen[t] = struct{}{}
-				tags = append(tags, t)
-			}
-		}
-	}
-	sort.Strings(tags)
-	return tags, nil
+	return tagsByUse(all, includeUnpublished), nil
 }
 
-// DistinctTagsCachedOnly returns distinct tags if the in-memory read cache is currently warm,
-// without blocking on a remote network round-trip (and triggers an async cache warm if cold).
-func (s *Store) DistinctTagsCachedOnly(includeUnpublished bool) []string {
+// TagsByUseCachedOnly is TagsByUse from the in-memory read cache only: it
+// never waits on the database (a cold cache returns nil and warms itself in
+// the background).
+func (s *Store) TagsByUseCachedOnly(includeUnpublished bool) []string {
 	s.cacheMu.RLock()
 	valid := s.cacheValid && time.Since(s.cacheLoadedAt) < readCacheTTL
 	var snapshot []Journal
@@ -163,24 +148,33 @@ func (s *Store) DistinctTagsCachedOnly(includeUnpublished bool) []string {
 		}()
 		return nil
 	}
+	return tagsByUse(snapshot, includeUnpublished)
+}
 
-	seen := make(map[string]struct{})
-	var tags []string
-	for _, j := range snapshot {
+// tagsByUse counts each tag over the visible entries and orders them by
+// count, then name.
+func tagsByUse(entries []Journal, includeUnpublished bool) []string {
+	counts := make(map[string]int)
+	for _, j := range entries {
 		if !includeUnpublished && !j.Published {
 			continue
 		}
 		for _, t := range []string{j.Tag1, j.Tag2, j.Tag3} {
-			if t == "" {
-				continue
-			}
-			if _, ok := seen[t]; !ok {
-				seen[t] = struct{}{}
-				tags = append(tags, t)
+			if t != "" {
+				counts[t]++
 			}
 		}
 	}
-	sort.Strings(tags)
+	tags := make([]string, 0, len(counts))
+	for t := range counts {
+		tags = append(tags, t)
+	}
+	sort.Slice(tags, func(a, b int) bool {
+		if counts[tags[a]] != counts[tags[b]] {
+			return counts[tags[a]] > counts[tags[b]]
+		}
+		return tags[a] < tags[b]
+	})
 	return tags
 }
 

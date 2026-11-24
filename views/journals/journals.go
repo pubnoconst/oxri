@@ -10,6 +10,7 @@ import (
 	"html"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -100,6 +101,38 @@ func (v CatalogView) PageURL(n int) string {
 		return "/journals?" + encoded
 	}
 	return "/journals"
+}
+
+// CatalogTagLimit is how many tags the catalog shows before "More tags": the
+// most used ones (AllTags is ordered by use, db.TagsByUse).
+const CatalogTagLimit = 12
+
+// TagGroups splits AllTags into the ones shown at once (the most used, plus
+// any selected tag, so a filter in effect is always visible and removable)
+// and the rest, alphabetical, behind "More tags".
+func (v CatalogView) TagGroups() (shown, more []string) {
+	for i, tag := range v.AllTags {
+		if i < CatalogTagLimit || v.IsTagSelected(tag) {
+			shown = append(shown, tag)
+		} else {
+			more = append(more, tag)
+		}
+	}
+	sort.Strings(more)
+	return shown, more
+}
+
+func (v CatalogView) tagPill(tag string) g.Node {
+	cls := "tag-filter-pill"
+	if v.IsTagSelected(tag) {
+		cls += " is-active"
+	}
+	return h.A(
+		h.Href(v.ToggleTagURL(tag)),
+		h.Class(cls),
+		g.Attr("aria-pressed", fmt.Sprintf("%t", v.IsTagSelected(tag))),
+		g.Text(tag),
+	)
 }
 
 func (v CatalogView) HasFilters() bool {
@@ -249,18 +282,20 @@ func CatalogContentFragment(isAuth bool, view CatalogView) g.Node {
 
 		var tagPills g.Node
 		if len(view.AllTags) > 0 {
-			pills := make([]g.Node, 0, len(view.AllTags)+1)
+			shown, more := view.TagGroups()
+			pills := make([]g.Node, 0, len(shown)+2)
 			pills = append(pills, h.Span(h.Class("tag-filter-label"), g.Text("Tags:")))
-			for _, tag := range view.AllTags {
-				cls := "tag-filter-pill"
-				if view.IsTagSelected(tag) {
-					cls += " is-active"
+			for _, tag := range shown {
+				pills = append(pills, view.tagPill(tag))
+			}
+			if len(more) > 0 {
+				morePills := make([]g.Node, 0, len(more))
+				for _, tag := range more {
+					morePills = append(morePills, view.tagPill(tag))
 				}
-				pills = append(pills, h.A(
-					h.Href(view.ToggleTagURL(tag)),
-					h.Class(cls),
-					g.Attr("aria-pressed", fmt.Sprintf("%t", view.IsTagSelected(tag))),
-					g.Text(tag),
+				pills = append(pills, h.Details(h.Class("tag-filter-more"),
+					h.Summary(g.Text(fmt.Sprintf("More tags (%d)", len(more)))),
+					h.Div(h.Class("tag-filter-more-list"), g.Group(morePills)),
 				))
 			}
 			tagPills = h.Div(h.Class("journals-tag-filters"), g.Attr("role", "group"), g.Attr("aria-label", "Filter by tag"), g.Group(pills))
