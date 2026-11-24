@@ -20,6 +20,10 @@
   const tagsError = document.getElementById("tags-error");
   const tagSuggestions = document.getElementById("tag-suggestions");
   const bodyError = document.getElementById("body-error");
+  const bodyCount = document.getElementById("body-char-count");
+  // The body limit comes from the textarea's maxlength (set from the Go domain
+  // constant), so it is defined in exactly one place.
+  const MAX_BODY_LEN = contentInput && contentInput.maxLength > 0 ? contentInput.maxLength : Infinity;
   const submitBtn = document.getElementById("publish-submit-btn");
   const form = document.getElementById("journal-editor-form");
 
@@ -312,7 +316,15 @@
 
   function updateContent() {
     const raw = contentInput.value;
-    if (raw.trim().length === 0) {
+    const bodyLen = Array.from(raw).length; // characters (code points), as the server counts
+    if (bodyCount && Number.isFinite(MAX_BODY_LEN)) {
+      bodyCount.textContent = `${bodyLen} / ${MAX_BODY_LEN}`;
+      bodyCount.classList.toggle("is-invalid", bodyLen > MAX_BODY_LEN);
+    }
+    if (bodyLen > MAX_BODY_LEN) {
+      isBodyValid = false;
+      if (bodyError) bodyError.textContent = `Too long: ${bodyLen} characters. The limit is ${MAX_BODY_LEN}.`;
+    } else if (raw.trim().length === 0) {
       isBodyValid = false;
       if (bodyError) bodyError.textContent = "Required: journal entry cannot be empty.";
     } else {
