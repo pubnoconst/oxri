@@ -6,7 +6,6 @@ import (
 
 	"github.com/oxri/oxri-go/assets"
 
-	"github.com/oxri/oxri-go/views/layout"
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 )
@@ -39,8 +38,8 @@ var (
 	Puzzle = Motion{"puzzle"}
 	// Twinkle: something is downloading (tweets, the catalog, a page).
 	Twinkle = Motion{"twinkle"}
-	// Comet: waiting on you (passkey prompts).
-	Comet = Motion{"comet"}
+	// The third motion, the comet ("waiting on you"), is only ever started in
+	// the browser, by passkey.js while a passkey prompt is open.
 )
 
 // Dots renders the site's loader: a 3x3 dot matrix in the given motion and a
@@ -60,32 +59,6 @@ func dotMatrix(m Motion) g.Node {
 		dots[i] = h.I()
 	}
 	return h.Span(h.Class("dot-matrix"), g.Attr("data-motion", m.name), g.Attr("aria-hidden", "true"), g.Group(dots))
-}
-
-// Page renders the standalone awaiting confirmation view inside the base layout shell.
-func Page(phrase string) g.Node {
-	if phrase == "" {
-		phrase = DefaultPhrase
-	}
-	return layout.Doc(
-		"RES IMPERII",
-		Style.URL(),
-		Stage(phrase),
-		h.Script(h.Src(assets.LoadingTransitionJS.URL())),
-	)
-}
-
-// Stage renders the centered loading phrase stage.
-func Stage(phrase string) g.Node {
-	if phrase == "" {
-		phrase = DefaultPhrase
-	}
-	return h.Main(
-		h.Class("loading-page"),
-		g.Attr("aria-live", "polite"),
-		g.Attr("aria-busy", "true"),
-		h.Div(h.Class("loading-phrase-row"), dotMatrix(Puzzle), phraseNode(phrase)),
-	)
 }
 
 // Overlay renders the full-screen confirmation overlay for form submissions and auto-resubmits.

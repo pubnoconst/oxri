@@ -59,7 +59,7 @@ const sample = `{
   "display_text_range": [0, 71],
   "text": "Fish &amp; chips <b>bold</b>\n\n\n\nsee https://t.co/abc and more text here https://t.co/media",
   "entities": {"urls": [{"url": "https://t.co/abc", "display_url": "example.com/page"}]},
-  "user": {"name": "A‮Writer", "screen_name": "a_writer", "profile_image_url_https": "https://pbs.twimg.com/profile_images/1/a_normal.jpg"},
+  "user": {"name": "A\u202eWriter", "screen_name": "a_writer", "profile_image_url_https": "https://pbs.twimg.com/profile_images/1/a_normal.jpg"},
   "mediaDetails": [
     {"type": "photo", "media_url_https": "https://pbs.twimg.com/media/one.jpg", "original_info": {"width": 528, "height": 387}},
     {"type": "video", "media_url_https": "https://pbs.twimg.com/ext_tw_video_thumb/2/pu/img/p.jpg", "original_info": {"width": 1280, "height": 720}},
@@ -88,8 +88,8 @@ func TestDecodeKeepsOnlyWhatTheBoxDraws(t *testing.T) {
 	if s.Quoted == nil || s.Quoted.Handle != "quoter" || s.Quoted.Text != "Quoted words" {
 		t.Errorf("quoted: %+v", s.Quoted)
 	}
-	if s.PostURL() != "https://x.com/a_writer/status/123" || !s.HasVideo() {
-		t.Errorf("post url %q, video %v", s.PostURL(), s.HasVideo())
+	if s.PostURL() != "https://x.com/a_writer/status/123" {
+		t.Errorf("post url %q", s.PostURL())
 	}
 
 	// Stored and loaded back unchanged.

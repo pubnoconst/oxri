@@ -20,7 +20,6 @@ import (
 	"github.com/oxri/oxri-go/views/editor"
 	"github.com/oxri/oxri-go/views/errorpage"
 	"github.com/oxri/oxri-go/views/journals"
-	"github.com/oxri/oxri-go/views/loading"
 )
 
 func renderInternalError(w http.ResponseWriter, r *http.Request, status int, cause error) {
@@ -29,13 +28,6 @@ func renderInternalError(w http.ResponseWriter, r *http.Request, status int, cau
 		log.Printf("[HTTP %d] Ref: %s | Method: %s | URL: %s | Cause: %v", status, ref, r.Method, r.URL.Path, cause)
 	}
 	errorpage.RenderWithReference(w, status, "", ref)
-}
-
-func handleLoadingPage() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = loading.Page(loading.DefaultPhrase).Render(w)
-	}
 }
 
 // handleJournalsCatalog renders the /journals page frame immediately (0ms, independent of DB).

@@ -19,16 +19,6 @@ func IsAllowedMediaURLRune(r rune) bool {
 	return domain.IsAllowedMediaURLRune(r)
 }
 
-// ValidateMediaURLChars delegates to domain.ValidateMediaURLChars.
-func ValidateMediaURLChars(s string) (rune, bool) {
-	return domain.ValidateMediaURLChars(s)
-}
-
-// IsPrivateOrLocalHost delegates to domain.IsPrivateOrLocalHost.
-func IsPrivateOrLocalHost(hostname string) bool {
-	return domain.IsPrivateOrLocalHost(hostname)
-}
-
 // IsAllowedTagRune delegates to domain.IsAllowedJournalTagRune.
 func IsAllowedTagRune(r rune) bool {
 	return domain.IsAllowedJournalTagRune(r)

@@ -18,7 +18,6 @@ import (
 
 const (
 	MaxMediaURLLength    = domain.MaxJournalMediaURLLength
-	MaxTagCount          = domain.MaxJournalTagCount
 	MaxTagLength         = domain.MaxJournalTagLength
 	CurrentSchemaVersion = 7
 	readCacheTTL         = 2 * time.Minute

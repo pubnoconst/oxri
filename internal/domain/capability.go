@@ -45,11 +45,6 @@ func SetupCapMinter() CapMinter {
 	return m
 }
 
-// IssuedAt returns when this capability token was minted.
-func (c AdminCap) IssuedAt() time.Time {
-	return c.issuedAt
-}
-
 // IsZero reports whether the capability token is uninitialized.
 func (c AdminCap) IsZero() bool {
 	return c.issuedAt.IsZero()

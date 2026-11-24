@@ -15,7 +15,7 @@ func TestValidateInput(t *testing.T) {
 		Tags:     []string{"log", "History", "Notes123"},
 		Body:     "# RES·IMPERII\n\nEnglish 123, Latin Rōma æterna, and Greek Λόγος — no emojis.",
 	}
-	if _, err := ValidateInput(valid); err != nil {
+	if _, err := ParseValidatedEntry(valid); err != nil {
 		t.Fatalf("expected valid ASCII tags and Latin/Greek prose to pass, got: %v", err)
 	}
 
@@ -46,7 +46,7 @@ func TestValidateInput(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			in := valid
 			tc.mod(&in)
-			if _, err := ValidateInput(in); err == nil {
+			if _, err := ParseValidatedEntry(in); err == nil {
 				t.Errorf("expected error for %s, got nil", tc.name)
 			}
 		})

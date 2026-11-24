@@ -1,18 +1,6 @@
 package domain
 
-import (
-	"errors"
-	"fmt"
-	"strings"
-	"unicode"
-	"unicode/utf8"
-)
-
-var (
-	ErrProseTooLong      = errors.New("domain: prose exceeds maximum allowed length")
-	ErrProseNullBytes    = errors.New("domain: prose contains forbidden null bytes")
-	ErrProseDisallowedCh = errors.New("domain: prose contains disallowed character (only Latin, Greek, numbers, and standard punctuation permitted; no emojis)")
-)
+import "unicode"
 
 const (
 	DefaultMaxProseLength = 100_000 // 100KB characters max
@@ -52,52 +40,4 @@ func IsAllowedProseRune(r rune) bool {
 		return true
 	}
 	return false
-}
-
-// Prose is an opaque type representing safe, sanitized text content.
-type Prose struct {
-	content string
-}
-
-// ParseProse validates text against length constraints and strict Latin/Greek/ASCII character whitelisting.
-func ParseProse(raw string, maxLen int) (Prose, error) {
-	if maxLen <= 0 {
-		maxLen = DefaultMaxProseLength
-	}
-
-	if strings.ContainsRune(raw, '\x00') {
-		return Prose{}, ErrProseNullBytes
-	}
-
-	for _, r := range raw {
-		if !IsAllowedProseRune(r) {
-			return Prose{}, fmt.Errorf("%w: U+%04X", ErrProseDisallowedCh, r)
-		}
-	}
-
-	charCount := utf8.RuneCountInString(raw)
-	if charCount > maxLen {
-		return Prose{}, fmt.Errorf("%w: length is %d, maximum allowed is %d", ErrProseTooLong, charCount, maxLen)
-	}
-
-	// Clean trailing spaces and normalize carriage returns
-	normalized := strings.ReplaceAll(raw, "\r\n", "\n")
-	normalized = strings.TrimRight(normalized, " \t\n")
-
-	return Prose{content: normalized}, nil
-}
-
-// String returns the underlying text.
-func (p Prose) String() string {
-	return p.content
-}
-
-// Len returns the rune length of the prose.
-func (p Prose) Len() int {
-	return utf8.RuneCountInString(p.content)
-}
-
-// IsZero reports whether the Prose is empty or uninitialized.
-func (p Prose) IsZero() bool {
-	return p.content == ""
 }

@@ -219,5 +219,6 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
-  window.ResImperiiDots = { create, matrix, start };
+  // Other scripts only ever build a loader with create().
+  window.ResImperiiDots = { create };
 })();

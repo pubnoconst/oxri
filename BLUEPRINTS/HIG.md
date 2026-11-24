@@ -156,7 +156,7 @@ Waiting is shown with exactly one thing: a 3×3 matrix of 4 px dots, in `--page-
 | **Comet** | it is your turn | waiting for a passkey or security key | "Waiting for your Passkey…" |
 
 - **Seeded** means each instance differs: a page of cards loading together never flashes in unison. Pass a stable seed when one exists (the tweet ID); otherwise a random seed is used.
-- **In Go,** use `loading.Dots(label, loading.Twinkle)`, or `loading.Puzzle` / `loading.Comet`. The type admits no other motion.
+- **In Go,** use `loading.Dots(label, loading.Twinkle)` or `loading.Puzzle`. The type admits no other motion. The comet is only ever started in the browser, by `passkey.js` while a passkey prompt is open, so it has no Go handle; add one only when a server-rendered page needs it.
 - **In JS,** use `ResImperiiDots.create(label, "twinkle", seed)`.
 - **Where the loader sits:**
   - **Inline**, where the result will appear: the tweet slot's centred "Loading preview" line.

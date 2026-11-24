@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `b1f9fb8` (PR #60 — one media radius)
-- **Active Branch**: `no-bold` (PR #61): no bold anywhere, clippings smaller and softer, HIG §2 (RATIONALE 062).
+- **Base Commit on `main`**: `f46e3ad` (PR #61 — no bold)
+- **Active Branch**: `dead-code` (PR #62): dead and legacy code removed, verified by deadcode, staticcheck, tsc and PurgeCSS; JS contract test (RATIONALE 063).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
@@ -21,6 +21,8 @@ The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG
 4. Split `routes` into feature packages (`web/journals`, `web/auth`, `web/books`) plus `httpx` single-purpose middleware.
 5. Split `db.Store` (42 methods) into narrow repositories (`Journals`, `Books`, `Passkeys`, `AuthState`).
 6. JS: `// @ts-check` + JSDoc + `tsc --noEmit` in CI (no build step), then native ES modules, one job per file. (Highest value for the frontend: most bugs this project has had lived in untyped JS.)
+   - Starting point (RATIONALE 063): `tsc --allowJs --checkJs --noEmit --noUnusedLocals --noUnusedParameters` finds no dead code but 85 type errors, all narrowing (`getElementById` gives `HTMLElement`, so `.value`, `.submit`) or undeclared globals (`twttr`, `markdownit`, `DOMPurify`, `ResImperii*`). JSDoc casts and a small `globals.d.ts` would clear them. The cross-file globals are already checked by `TestScriptGlobalsMatchTheirCallers`.
+   - Also worth adding to CI: `staticcheck ./...` (clean as of PR #62) and `deadcode -test ./...` (clean).
 7. CSS split by component.
 
 ## Next on Mind

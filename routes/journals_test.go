@@ -30,9 +30,9 @@ func createTestTOTPAuth(t *testing.T) (*auth.Service, *http.Cookie) {
 	if err != nil {
 		t.Fatalf("GenerateTOTPCode failed: %v", err)
 	}
-	sessID, err := authSvc.AuthenticateTOTP(code)
+	sessID, err := authSvc.LoginTOTP("local", "", code)
 	if err != nil {
-		t.Fatalf("AuthenticateTOTP failed: %v", err)
+		t.Fatalf("LoginTOTP failed: %v", err)
 	}
 	return authSvc, &http.Cookie{
 		Name:  auth.SessionCookieName,
@@ -69,13 +69,6 @@ func TestJournalsEditorVacateAndLoadingFlow(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected 200 on %s, got %d", cssPath, rec.Code)
 		}
-	}
-
-	reqLoad := httptest.NewRequest(http.MethodGet, "/loading", nil)
-	recLoad := httptest.NewRecorder()
-	router.ServeHTTP(recLoad, reqLoad)
-	if recLoad.Code != http.StatusOK || !strings.Contains(recLoad.Body.String(), "Confirming, please wait.") {
-		t.Fatalf("expected /loading to render Confirming, please wait.")
 	}
 
 	// 2. Authenticated admin session ready from createTestTOTPAuth

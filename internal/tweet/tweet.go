@@ -15,7 +15,7 @@ import (
 	"unicode/utf8"
 )
 
-// ID is a tweet's numeric id. Only ParseURL and Decode make one, so a value is
+// ID is a tweet's numeric id. Only ParseURL makes one, so a value is
 // always 1–20 ASCII digits and safe in a URL path or a database key.
 type ID struct{ s string }
 
@@ -33,9 +33,6 @@ func newID(s string) (ID, bool) {
 	}
 	return ID{s}, true
 }
-
-// FromString checks a stored id.
-func FromString(s string) (ID, bool) { return newID(s) }
 
 var statusPath = regexp.MustCompile(`^/([A-Za-z0-9_]{1,15}|i(?:/web)?)/status(?:es)?/([0-9]{1,20})(?:/|$)`)
 
@@ -97,16 +94,6 @@ type Snapshot struct {
 // PostURL is the tweet on X.
 func (s Snapshot) PostURL() string {
 	return "https://x.com/" + url.PathEscape(s.Handle) + "/status/" + s.ID
-}
-
-// HasVideo reports whether any attachment plays (video or GIF).
-func (s Snapshot) HasVideo() bool {
-	for _, m := range s.Media {
-		if m.Kind == Video {
-			return true
-		}
-	}
-	return false
 }
 
 // Limits on what is kept from X's response.

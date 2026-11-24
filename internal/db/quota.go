@@ -52,18 +52,6 @@ func (j Journal) EstimatedBytes() int64 {
 		int64(len(j.Body))
 }
 
-// EstimateInputBytes returns the exact UTF-8 byte footprint of a JournalInput.
-func EstimateInputBytes(in JournalInput) int64 {
-	total := RowOverheadBytes + int64(len(strings.TrimSpace(in.MediaURL))) + int64(len(in.Body))
-	for i, tag := range in.Tags {
-		if i >= MaxTagCount {
-			break
-		}
-		total += int64(len(FormatTagTitleCase(tag)))
-	}
-	return total
-}
-
 // SetMaxStorageBytes overrides the maximum storage limit (useful in unit tests).
 func (s *Store) SetMaxStorageBytes(limit int64) {
 	s.idMu.Lock()

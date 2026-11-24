@@ -318,8 +318,8 @@ func TestPersistentTOTPReplayAcrossRestart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateTOTPCode: %v", err)
 	}
-	if _, err := svc1.AuthenticateTOTPForIP("198.51.100.10", code); err != nil {
-		t.Fatalf("AuthenticateTOTPForIP(1): %v", err)
+	if _, err := svc1.LoginTOTP("198.51.100.10", "", code); err != nil {
+		t.Fatalf("LoginTOTP(1): %v", err)
 	}
 	_ = svc1.Close()
 
@@ -334,7 +334,7 @@ func TestPersistentTOTPReplayAcrossRestart(t *testing.T) {
 	}
 	defer func() { _ = svc2.Close() }()
 
-	if _, err := svc2.AuthenticateTOTPForIP("198.51.100.10", code); !errors.Is(err, auth.ErrTOTPReplayed) {
+	if _, err := svc2.LoginTOTP("198.51.100.10", "", code); !errors.Is(err, auth.ErrTOTPReplayed) {
 		t.Fatalf("expected ErrTOTPReplayed across restart with db.Store, got %v", err)
 	}
 }
