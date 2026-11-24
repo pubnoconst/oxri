@@ -333,6 +333,7 @@ button.auth-action-link {
 .journal-card.is-collage .journal-media-slot video,
 .journal-card.is-collage .journal-media-slot audio,
 .journal-card.is-collage .journal-media-slot a,
+.journal-card.is-collage .journal-media-slot button,
 .journal-card.is-collage .journal-card-actions,
 .journal-card.is-collage .confirm-slot {
   position: relative;
@@ -423,8 +424,8 @@ button.auth-action-link {
   display: none;
 }
 
-.journal-card.is-collage .journal-media-slot img,
-.journal-card.is-collage .journal-media-slot video {
+.journal-card.is-collage .journal-media-slot > img,
+.journal-card.is-collage .journal-media-slot > video {
   width: 100%;
   max-height: 13.5rem;
   object-fit: cover;

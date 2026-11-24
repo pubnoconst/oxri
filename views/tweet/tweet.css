@@ -1,0 +1,221 @@
+/* Post clipping (views/tweet): a slip of paper laid on the card's linen.
+   The source and date run along the top in small capitals, like the head of a
+   newspaper cutting; the author signs at the bottom under a dashed rule. Only
+   posts from other sites are clippings: a direct link to an image, video or
+   audio file stays plain framed media (site.css .journal-preview-media). */
+.tweet-box {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.9rem 1rem 0.8rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  background: var(--page);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.04),
+    0 6px 14px -10px rgba(40, 35, 25, 0.35);
+  font-family: var(--font-serif);
+}
+
+.tweet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.tweet-text {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.tweet-text p,
+.tweet-quoted-text p {
+  margin: 0 0 0.55rem;
+}
+
+.tweet-text p:last-child,
+.tweet-quoted-text p:last-child {
+  margin-bottom: 0;
+}
+
+/* The quoted post: smaller, set back once more. */
+.tweet-quoted {
+  margin-top: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.tweet-quoted-by {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 0.3rem;
+  font-size: 0.82rem;
+}
+
+/* Signed at the bottom: avatar, author, and the way to the original. */
+.tweet-byline {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--border-card);
+  font-size: 0.84rem;
+  line-height: 1.3;
+}
+
+.tweet-avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: 0 0 1.5rem;
+  border-radius: 50%;
+  background: var(--border-subtle);
+  object-fit: cover;
+}
+
+.tweet-author {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.35rem;
+  min-width: 0;
+}
+
+.tweet-name {
+  font-weight: 500;
+}
+
+.tweet-handle {
+  opacity: 0.6;
+}
+
+.tweet-source {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  color: inherit;
+  opacity: 0.6;
+  text-underline-offset: 0.2em;
+}
+
+.tweet-source::after {
+  content: " ↗";
+}
+
+.tweet-source:hover,
+.tweet-source:focus-visible {
+  opacity: 1;
+}
+
+/* Attachments: one keeps its shape (inline aspect-ratio, height capped);
+   two to four share a grid of even cells. */
+.tweet-media {
+  display: grid;
+  gap: 2px;
+  margin-top: 0.7rem;
+  overflow: hidden;
+  border-radius: 2px;
+  max-height: 26rem;
+}
+
+.tweet-media-2,
+.tweet-media-4 {
+  grid-template-columns: 1fr 1fr;
+  aspect-ratio: 16 / 9;
+}
+
+.tweet-media-3 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  aspect-ratio: 16 / 9;
+}
+
+.tweet-media-3 > :first-child {
+  grid-row: span 2;
+}
+
+.tweet-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+  background: var(--border-subtle);
+}
+
+/* Video or GIF: the poster with a quiet round play mark; a tap loads X's
+   player in its place (journal-media.js). */
+.tweet-play {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.tweet-play-mark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: rgba(15, 17, 19, 0.62);
+  transform: translate(-50%, -50%);
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.tweet-play-mark::after {
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  border-top: 0.55rem solid transparent;
+  border-bottom: 0.55rem solid transparent;
+  border-left: 0.9rem solid #f5f4f0;
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.tweet-play:hover .tweet-play-mark,
+.tweet-play:focus-visible .tweet-play-mark {
+  background: rgba(15, 17, 19, 0.8);
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.tweet-play:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* In the catalog's compact cards, a long post is cut to a few lines; the
+   entry page shows it whole. */
+.journal-card.is-collage .tweet-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 7;
+  overflow: hidden;
+}
+
+.journal-card.is-collage .tweet-media {
+  max-height: 13.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tweet-play-mark {
+    transition: none;
+  }
+}

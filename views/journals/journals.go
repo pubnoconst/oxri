@@ -17,9 +17,11 @@ import (
 
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/internal/paging"
+	"github.com/oxri/oxri-go/internal/tweet"
 	"github.com/oxri/oxri-go/views/layout"
 	"github.com/oxri/oxri-go/views/linen"
 	"github.com/oxri/oxri-go/views/loading"
+	tweetview "github.com/oxri/oxri-go/views/tweet"
 	"github.com/yuin/goldmark"
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
@@ -32,7 +34,9 @@ var StyleCSS string
 const StylePath = "/views/journals/journals.css"
 
 // Style is the content-hashed handle for StyleCSS (URL and route handler).
-var Style = assets.Component(StylePath, StyleCSS)
+// The tweet box's stylesheet (views/tweet) is folded in: journal cards are
+// where tweets appear.
+var Style = assets.Component(StylePath, StyleCSS+"\n"+tweetview.StyleCSS)
 
 const MaxExcerptRunes = 280
 
@@ -51,6 +55,9 @@ type RenderedEntry struct {
 	Tags           []string
 	EstimatedBytes int64
 	FormattedSize  string
+	// Tweet is the site's own drawing of the linked post on X, when its
+	// snapshot exists (routes attach it); nil leaves the slot to X's embed.
+	Tweet *tweet.Snapshot
 }
 
 // CatalogPageSize is how many entries one catalog page shows. Most entries
@@ -448,6 +455,19 @@ func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 	)
 }
 
+// mediaSlot holds the entry's media. A tweet with a snapshot is drawn here by
+// the server (views/tweet) and marked mounted, so journal-media.js leaves it;
+// anything else is filled in the browser from data-media-url.
+func mediaSlot(item RenderedEntry) g.Node {
+	if item.Tweet != nil {
+		return h.Div(h.Class("journal-media-slot journal-preview-media"),
+			g.Attr("data-media-url", item.Entry.MediaURL), g.Attr("data-media-mounted", item.Entry.MediaURL),
+			tweetview.Box(*item.Tweet),
+		)
+	}
+	return h.Div(h.Class("journal-media-slot journal-preview-media"), g.Attr("data-media-url", item.Entry.MediaURL))
+}
+
 // EntryCard renders either a compact collage card or a full permalink card.
 func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 	cls := "journal-card"
@@ -544,7 +564,7 @@ func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 				bookmarkBadge,
 			),
 		),
-		h.Div(h.Class("journal-media-slot journal-preview-media"), g.Attr("data-media-url", item.Entry.MediaURL)),
+		mediaSlot(item),
 		tagsBlock,
 		contentBlock,
 		adminFooter,

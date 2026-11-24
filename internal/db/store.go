@@ -20,7 +20,7 @@ const (
 	MaxMediaURLLength    = domain.MaxJournalMediaURLLength
 	MaxTagCount          = domain.MaxJournalTagCount
 	MaxTagLength         = domain.MaxJournalTagLength
-	CurrentSchemaVersion = 6
+	CurrentSchemaVersion = 7
 	readCacheTTL         = 2 * time.Minute
 )
 
@@ -50,6 +50,8 @@ type Store struct {
 	bookCacheMu sync.RWMutex
 	cachedBooks map[string]Book
 	bookCacheAt map[string]time.Time
+
+	tweets tweetCache
 }
 
 // Open connects to a remote Turso/libSQL URL (libsql:// or https://), verifies
