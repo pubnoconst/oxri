@@ -32,7 +32,9 @@ func mediaField(data FormData) g.Node {
 				h.ID("journal-media-link"),
 				h.Name("media_url"),
 				h.Type("url"),
-				h.MaxLength("128"),
+				// Not 128: a longer paste must arrive whole so the editor can
+				// say it is too long, rather than being cut into a broken link.
+				h.MaxLength("2048"),
 				h.Placeholder("https://..."),
 				h.AutoComplete("url"),
 				g.Attr("aria-label", "Media link"),

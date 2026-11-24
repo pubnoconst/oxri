@@ -170,9 +170,9 @@
 
     if (len > MAX_MEDIA_LEN) {
       mediaPreview.classList.add("is-empty");
-      mediaPreview.textContent = "Media link exceeds 128 characters.";
+      mediaPreview.textContent = "Link too long to preview.";
       isMediaValid = false;
-      if (mediaError) mediaError.textContent = `Exceeds maximum length of ${MAX_MEDIA_LEN} characters (${len}).`;
+      if (mediaError) mediaError.textContent = `This link is ${len} characters; the limit is ${MAX_MEDIA_LEN}. Links copied from Facebook or Instagram images are signed and expire; link the post, or host the image elsewhere.`;
       syncSubmitButton();
       return;
     }

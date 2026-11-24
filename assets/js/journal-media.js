@@ -429,7 +429,7 @@
       video.src = url.href;
       video.controls = true;
       video.preload = "metadata";
-      return video;
+      return fallBackOnError(video, url, "Video");
     }
 
     if (/\.(mp3|wav|m4a|aac|flac)(?:$)/i.test(path)) {
@@ -437,7 +437,7 @@
       audio.src = url.href;
       audio.controls = true;
       audio.preload = "metadata";
-      return audio;
+      return fallBackOnError(audio, url, "Audio");
     }
 
     if (/\.(avif|gif|jpe?g|png|webp|svg)(?:$)/i.test(path)) {
@@ -446,7 +446,7 @@
       image.alt = "Journal media";
       image.loading = "lazy";
       bindMediaFadeIn(image);
-      return image;
+      return fallBackOnError(image, url, "Image");
     }
 
     return null;
@@ -495,20 +495,43 @@
     renderTweet(container, username || "post", tweetId);
   });
 
-  /** @param {URL} url */
-  function createLinkFallback(url) {
+  /**
+   * A quiet card for a link with no inline media, or media that failed to
+   * load. It names the site rather than printing the whole address, which for
+   * signed CDN links runs to hundreds of characters.
+   * @param {URL} url
+   * @param {string} [badgeText]
+   */
+  function createLinkFallback(url, badgeText = "External Link") {
     const card = document.createElement("div");
     card.className = "tweet-fallback-card";
     const badge = document.createElement("span");
     badge.className = "tweet-fallback-badge";
-    badge.textContent = "External Link";
+    badge.textContent = badgeText;
     const link = document.createElement("a");
     link.href = url.href;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.textContent = url.href;
+    link.textContent = `Open on ${url.hostname.replace(/^www\./, "")}`;
+    link.title = url.href;
     card.append(badge, link);
     return card;
+  }
+
+  /**
+   * Swaps media that fails to load (an expired or refused link) for the link
+   * card, instead of leaving a broken-image icon in a framed box.
+   * @template {HTMLElement} T
+   * @param {T} el
+   * @param {URL} url
+   * @param {string} what
+   * @returns {T}
+   */
+  function fallBackOnError(el, url, what) {
+    el.addEventListener("error", () => {
+      if (el.isConnected) el.replaceWith(createLinkFallback(url, `${what} did not load`));
+    }, { once: true });
+    return el;
   }
 
   function mountCatalogSlots() {
