@@ -161,7 +161,7 @@ mage clean
 - **Production Deployment**: Distroless Docker container (`Dockerfile`, `render.yaml`) deployed on Render from the `prod` branch, fronted by Render's ingress proxy (`APP_ENV=prod`, `TRUST_PROXY=true`). The image holds a single binary; assets are embedded.
 - **Single instance by design**: sessions, sign-in counters and rate limiters live in memory (see Principia #1). Run exactly one instance; a restart signs everyone out.
 - **Continuous Integration**: `.github/workflows/ci.yml` fails on unformatted code (`gofmt -l`), runs `go vet` and `CGO_ENABLED=0 go test -v ./...`, and verifies the static `GOOS=linux GOARCH=amd64` binary build on every push and PR to `main`. Merges wait for it to pass.
-- **Release flow**: feature branch → local build and UI test → PR → CI → merge to `main` → fast-forward `prod` (and `v2`) to `main`.
+- **Release flow**: feature branch → local build and UI test → PR → CI → merge to `main` → fast-forward `prod` to `main` (Render deploys `prod`).
 - **Lineage**:
-  - **`main`** (and **`v2`**, **`prod`**): Active pure-Go + Gomponents + Vanilla JS + Modern CSS architecture.
+  - **`main`** (and **`prod`**, what Render deploys): Active pure-Go + Gomponents + Vanilla JS + Modern CSS architecture.
   - **`v1`**, **`fsharp-legacy`**, **`rust-experiment`**: Archived prior iterations.
