@@ -24,6 +24,7 @@ import (
 	"github.com/oxri/oxri-go/views/landing"
 	"github.com/oxri/oxri-go/views/loading"
 	"github.com/oxri/oxri-go/views/login"
+	"github.com/oxri/oxri-go/views/offline"
 	"github.com/oxri/oxri-go/views/settings"
 )
 
@@ -68,6 +69,9 @@ func NewRouter(cfg Config) http.Handler {
 
 	// Web app manifest (installable on phones and desktops).
 	r.Get("/manifest.webmanifest", handleManifest)
+	// Service worker: an offline page, nothing else (routes/sw.js).
+	r.Get(ServiceWorkerPath, handleServiceWorker)
+	r.Get(offline.Path, handleOffline)
 
 	// 5. Public Page, Books & Health Routes
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
