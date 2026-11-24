@@ -48,6 +48,7 @@ The palette is a warm neutral page and ink, plus three accents used only for sta
 - **Page:** `--fabric-page`, the linen weave over `--page`.
 - **Card:** `--fabric-card` with `--shadow-card`. A card is lifted by shadow, not by a border or tint.
 - **Linen never repeats visibly.** Each cloth is two noise tiles of coprime sizes (307 px and 419 px), drawn in Go by `views/linen`; never hand-edit the data URIs. Repeated cards (journal entries) start the weave at their own seeded point (`linen.Offset`), so no two show the same piece of cloth.
+- **Posts from other sites are clippings** (`views/tweet`): a paper slip laid on the card, the site and date in small capitals along the top, the author signed under a dashed rule with "View on … ↗". Sites are named in text, never with their logos. A direct link to an image, video or audio file is not a clipping: it stays plain framed media.
 - **Radii:** cards `--radius-card` (0.5rem), controls `--radius-control` (0.35rem), chips and pills `--radius-pill`.
 - **Space:**
   - page padding: `--space-page-y` / `--space-page-x` (fluid);
