@@ -33,6 +33,7 @@ type Filler struct {
 
 const (
 	fetchTimeout     = 8 * time.Second
+	saveWait         = 4 * time.Second // the most a save waits for X (Now)
 	fetchPause       = 600 * time.Millisecond
 	failureBackoff   = 15 * time.Minute
 	unavailableAfter = 7 * 24 * time.Hour // ask X again about a missing post
@@ -98,9 +99,42 @@ func (f *Filler) run() {
 	}
 }
 
+// Now fetches the snapshot of the post rawURL links to, if it is a post on
+// X with none stored, and waits for it (up to saveWait). A save calls it, so
+// the page it leads to draws the new entry's post in the site's own box
+// rather than X's embed. On failure or timeout nothing changes: the page
+// falls back to the embed and the background fetch tries again later.
+func (f *Filler) Now(ctx context.Context, rawURL string) {
+	if f == nil {
+		return
+	}
+	id, ok := ParseURL(rawURL)
+	if !ok {
+		return
+	}
+	_, stored := Resolve(ctx, f.store, []ID{id})
+	key := id.String()
+	if t, ok := stored[key]; ok && (t.Status == db.TweetOK || time.Since(t.FetchedAt) < unavailableAfter) {
+		return
+	}
+	f.mu.Lock()
+	wait := time.Now().Before(f.retryAt[key])
+	f.mu.Unlock()
+	if wait {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, saveWait)
+	defer cancel()
+	f.fillCtx(ctx, id)
+}
+
 func (f *Filler) fill(id ID) {
 	ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
 	defer cancel()
+	f.fillCtx(ctx, id)
+}
+
+func (f *Filler) fillCtx(ctx context.Context, id ID) {
 	snap, err := Fetch(ctx, f.client, id)
 	switch {
 	case errors.Is(err, ErrUnavailable):
