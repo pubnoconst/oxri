@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"github.com/oxri/oxri-go/assets"
+	"net/url"
 
 	"github.com/oxri/oxri-go/views/layout"
 	g "maragu.dev/gomponents"
@@ -58,21 +59,25 @@ func SettingsPage(data SettingsData) g.Node {
 	var passkeyList g.Node
 	if len(data.Passkeys) > 0 {
 		items := make([]g.Node, 0, len(data.Passkeys))
-		for _, pk := range data.Passkeys {
+		for i, pk := range data.Passkeys {
 			metaText := "Added " + pk.CreatedAt
 			if pk.LastUsedAt != "" {
 				metaText += " · Last used " + pk.LastUsedAt
 			}
-			var removeControl g.Node
+			var removeControl, confirmSlot g.Node
 			if data.PasskeySupported && !data.FreshAuth {
 				removeControl = h.Button(h.Type("button"), h.Class("btn btn-destructive btn-sm"), g.Attr("disabled", ""), g.Attr("aria-disabled", "true"), g.Text("Remove"))
 			} else {
-				removeControl = h.Form(
-					h.Method("POST"),
-					h.Action("/settings/passkeys/"+pk.ID+"/delete"),
-					g.Attr("data-confirm", "Remove this passkey?"),
-					h.Button(h.Type("submit"), h.Class("btn btn-destructive btn-sm"), g.Text("Remove")),
+				// Asks first (views/confirm): HTMX fetches the prompt into the
+				// slot below the row; without JavaScript the link is a page.
+				href := "/settings/passkeys/" + url.PathEscape(pk.ID) + "/delete"
+				slot := fmt.Sprintf("confirm-passkey-%d", i)
+				removeControl = h.A(h.Class("btn btn-destructive btn-sm"), h.Href(href),
+					g.Attr("hx-get", href), g.Attr("hx-target", "#"+slot), g.Attr("hx-swap", "innerHTML"),
+					g.Attr("aria-controls", slot),
+					g.Text("Remove"),
 				)
+				confirmSlot = h.Div(h.ID(slot), h.Class("confirm-slot"))
 			}
 			items = append(items, h.Li(h.Class("passkey-row"),
 				h.Div(h.Class("passkey-row-info"),
@@ -80,6 +85,7 @@ func SettingsPage(data SettingsData) g.Node {
 					h.Span(h.Class("passkey-row-meta"), g.Text(metaText)),
 				),
 				removeControl,
+				confirmSlot,
 			))
 		}
 		passkeyList = h.Ul(h.Class("passkey-list"), g.Group(items))

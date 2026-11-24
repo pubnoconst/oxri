@@ -98,7 +98,8 @@ func TestPasskeyRoutesAndStorePersistence(t *testing.T) {
 	}
 
 	// 4. Deleting the passkey removes it from Turso
-	reqDel := httptest.NewRequest(http.MethodPost, "http://localhost:8080/settings/passkeys/cred-test-1/delete", nil)
+	reqDel := httptest.NewRequest(http.MethodPost, "http://localhost:8080/settings/passkeys/cred-test-1/delete", strings.NewReader("confirmed=1"))
+	reqDel.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	reqDel.Host = "localhost:8080"
 	reqDel.AddCookie(sessionCookie)
 	recDel := httptest.NewRecorder()

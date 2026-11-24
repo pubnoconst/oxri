@@ -34,6 +34,8 @@
 
     const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
     if (!link || link.hasAttribute("download")) return;
+    // HTMX links (e.g. a delete that fetches its confirmation) stay on the page.
+    if (link.hasAttribute("hx-get")) return;
     if (link.target && link.target.toLowerCase() !== "_self") return;
     if (link.relList.contains("external")) return;
 
@@ -63,20 +65,28 @@
     }, delayMs);
   });
 
-  // Handle declarative confirmation prompts without inline onsubmit attributes (strict CSP).
-  document.addEventListener("submit", (event) => {
-    const form = event.target instanceof HTMLFormElement ? event.target : null;
-    if (!form) return;
-    const msg = form.getAttribute("data-confirm");
-    if (msg && !window.confirm(msg)) {
-      event.preventDefault();
-    }
+  // Confirmation prompts (views/confirm) arrive by HTMX into a .confirm-slot.
+  // "Keep" or Escape closes the prompt here, with no round trip, and gives
+  // focus back to the control that asked.
+  function closePrompt(inside) {
+    const slot = inside.closest(".confirm-slot");
+    if (!slot) return;
+    slot.replaceChildren();
+    const trigger = document.querySelector(`[aria-controls="${slot.id}"]`);
+    if (trigger) trigger.focus();
+  }
+  document.addEventListener("click", (event) => {
+    const keep = event.target instanceof Element ? event.target.closest("[data-confirm-keep]") : null;
+    if (keep) closePrompt(keep);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !(event.target instanceof Element)) return;
+    if (event.target.closest(".confirm-inline")) closePrompt(event.target);
   });
 
   // A submit that will navigate is a navigation in flight too: dim the page,
   // and show the dots if the response is slow.
-  // Registered after the data-confirm handler, so a cancelled confirm is seen
-  // as defaultPrevented. Forms with the "Confirming" overlay have their own UI.
+  // Forms with the "Confirming" overlay have their own UI.
   document.addEventListener("submit", (event) => {
     const form = event.target instanceof HTMLFormElement ? event.target : null;
     if (!form || event.defaultPrevented) return;
