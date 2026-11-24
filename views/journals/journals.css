@@ -776,3 +776,25 @@ button.auth-action-link {
   .vacate-progress-fill,
   .vacate-entry-row { transition: none; }
 }
+
+/* Catalog pages: Newer / Page n of m / Older, under the feed. Quiet, like the
+   batch bar; the disabled end keeps its place so the status never shifts. */
+.journals-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.25rem;
+  margin: 2rem 0 1rem;
+}
+
+.journals-page-status {
+  font-size: 0.95rem;
+  opacity: 0.72;
+  font-variant-numeric: tabular-nums;
+}
+
+.journals-page-link.is-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}

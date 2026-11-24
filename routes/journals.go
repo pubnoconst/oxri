@@ -6,12 +6,14 @@ import (
 	"github.com/oxri/oxri-go/internal/domain"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/db"
+	"github.com/oxri/oxri-go/internal/paging"
 	"github.com/oxri/oxri-go/serverfns"
 	"github.com/oxri/oxri-go/views/editor"
 	"github.com/oxri/oxri-go/views/errorpage"
@@ -70,6 +72,7 @@ func handleJournalsCatalogContent(store *db.Store, authSvc *auth.Service) http.H
 
 		var entries []db.Journal
 		var allTags []string
+		var page paging.Page
 		if store != nil {
 			var err error
 			entries, err = store.ListFiltered(r.Context(), db.ListFilter{
@@ -83,6 +86,9 @@ func handleJournalsCatalogContent(store *db.Store, authSvc *auth.Service) http.H
 			}
 			allTags, _ = store.DistinctTags(r.Context(), isAuth)
 		}
+		// Only this page's entries are rendered (Markdown included): the DOM and
+		// the number of tweet iframes stay bounded however large the archive grows.
+		entries, page = paging.Slice(entries, paging.Parse(r.URL.Query().Get("page")), journals.CatalogPageSize)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = journals.CatalogContentFragment(isAuth, journals.CatalogView{
@@ -90,6 +96,7 @@ func handleJournalsCatalogContent(store *db.Store, authSvc *auth.Service) http.H
 			AllTags:      allTags,
 			Query:        q,
 			SelectedTags: selectedTags,
+			Page:         page,
 		}).Render(w)
 	}
 }
@@ -369,7 +376,7 @@ func handleJournalDelete(store *db.Store, authSvc *auth.Service) http.HandlerFun
 			renderInternalError(w, r, http.StatusInternalServerError, err)
 			return
 		}
-		http.Redirect(w, r, "/journals", http.StatusSeeOther)
+		http.Redirect(w, r, catalogReturnTarget(r), http.StatusSeeOther)
 	})
 }
 
@@ -450,7 +457,7 @@ func handleJournalBatch(store *db.Store, authSvc *auth.Service) http.HandlerFunc
 			renderInternalError(w, r, http.StatusInternalServerError, err)
 			return
 		}
-		http.Redirect(w, r, "/journals", http.StatusSeeOther)
+		http.Redirect(w, r, catalogReturnTarget(r), http.StatusSeeOther)
 	})
 }
 
@@ -500,5 +507,22 @@ func entryReturnTarget(r *http.Request, id int64) string {
 	if strings.Contains(ref, entryPath) {
 		return entryPath
 	}
-	return "/journals"
+	return catalogReturnTarget(r)
+}
+
+// catalogReturnTarget sends the author back to the catalog page (with its
+// search, tags and page) that an action was taken from. Only a same-host
+// Referer whose path is exactly /journals is trusted, and only its path and
+// query are used, so this can never redirect off-site. Otherwise: /journals.
+// A page that no longer exists (e.g. after deleting its entries) clamps to
+// the last page when rendered.
+func catalogReturnTarget(r *http.Request) string {
+	ref, err := url.Parse(r.Header.Get("Referer"))
+	if err != nil || ref.Host != r.Host || ref.Path != "/journals" {
+		return "/journals"
+	}
+	if ref.RawQuery == "" {
+		return "/journals"
+	}
+	return "/journals?" + url.Values(ref.Query()).Encode()
 }
