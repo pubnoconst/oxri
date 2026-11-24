@@ -79,6 +79,7 @@ func main() {
 	handler := routes.NewRouter(routes.Config{
 		AuthService: authSvc,
 		Store:       store,
+		Tweets:      routes.NewTweetFiller(store, &http.Client{Timeout: 10 * time.Second}),
 	})
 
 	server := &http.Server{

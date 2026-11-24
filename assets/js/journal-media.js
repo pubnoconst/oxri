@@ -377,7 +377,11 @@
 
         const container = document.createElement("div");
         container.className = "tweet-embed-container";
-        renderTweet(container, username, tweetId);
+        // Most tweets are drawn by the server (views/tweet) and never reach
+        // here. One without a snapshot yet uses X's embed, built only when its
+        // card comes near the screen: a page of them no longer loads every
+        // iframe up front on a budget phone.
+        whenNear(container, () => renderTweet(container, username, tweetId));
         return container;
       }
     }
@@ -409,6 +413,44 @@
 
     return null;
   }
+
+  // whenNear runs build once el is within about a screen of the viewport.
+  const nearObserver = "IntersectionObserver" in window
+    ? new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          nearObserver.unobserve(entry.target);
+          const build = pendingBuilds.get(entry.target);
+          pendingBuilds.delete(entry.target);
+          if (build) build();
+        });
+      }, { rootMargin: "600px 0px" })
+    : null;
+  const pendingBuilds = new WeakMap();
+  function whenNear(el, build) {
+    if (!nearObserver) {
+      build();
+      return;
+    }
+    pendingBuilds.set(el, build);
+    nearObserver.observe(el);
+  }
+
+  // The tweet box's play mark (views/tweet): swap the box for X's own player.
+  // This is the only time X's script loads for a post with a snapshot.
+  document.addEventListener("click", (event) => {
+    const play = event.target instanceof Element ? event.target.closest("[data-tweet-play]") : null;
+    if (!play) return;
+    const box = play.closest(".tweet-box");
+    const tweetId = box && box.getAttribute("data-tweet-id");
+    const username = box && box.getAttribute("data-tweet-user");
+    if (!tweetId || !/^\d+$/.test(tweetId)) return;
+    event.preventDefault();
+    const container = document.createElement("div");
+    container.className = "tweet-embed-container";
+    box.replaceWith(container);
+    renderTweet(container, username || "post", tweetId);
+  });
 
   function createLinkFallback(url) {
     const card = document.createElement("div");
@@ -449,12 +491,9 @@
     mountCatalogSlots,
   };
 
-  // On the async catalog shell, start downloading Twitter's widgets.js while
-  // Turso is still being queried instead of after the cards arrive, so the
-  // tweet's own ~1-2s render pipeline overlaps the DB round-trip.
-  if (document.querySelector("#journals-catalog-stage[hx-get]")) {
-    ensureTwitterWidgetsScript();
-  }
+  // X's widgets.js is no longer preloaded: tweets with a snapshot are drawn
+  // by the server, and the script loads only for an embed that is needed
+  // (a post without a snapshot yet, or a tapped video).
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", mountCatalogSlots);

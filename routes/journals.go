@@ -14,6 +14,7 @@ import (
 	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/internal/paging"
+	"github.com/oxri/oxri-go/internal/tweet"
 	"github.com/oxri/oxri-go/serverfns"
 	"github.com/oxri/oxri-go/views/editor"
 	"github.com/oxri/oxri-go/views/errorpage"
@@ -55,7 +56,7 @@ func handleJournalsCatalog(authSvc *auth.Service) http.HandlerFunc {
 
 // handleJournalsCatalogContent queries the remote Turso DB and renders the catalog fragment
 // swapped into #journals-catalog-stage by HTMX.
-func handleJournalsCatalogContent(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+func handleJournalsCatalogContent(store *db.Store, authSvc *auth.Service, tweets *tweet.Filler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, authErr := serverfns.RequireAuth(authSvc, r)
 		isAuth := (authErr == nil)
@@ -90,9 +91,12 @@ func handleJournalsCatalogContent(store *db.Store, authSvc *auth.Service) http.H
 		// the number of tweet iframes stay bounded however large the archive grows.
 		entries, page = paging.Slice(entries, paging.Parse(r.URL.Query().Get("page")), journals.CatalogPageSize)
 
+		rendered := journals.RenderEntries(entries)
+		attachTweets(r.Context(), store, tweets, rendered)
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = journals.CatalogContentFragment(isAuth, journals.CatalogView{
-			Entries:      journals.RenderEntries(entries),
+			Entries:      rendered,
 			AllTags:      allTags,
 			Query:        q,
 			SelectedTags: selectedTags,
@@ -121,7 +125,7 @@ func handleJournalNew(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 	}
 }
 
-func handleJournalEntry(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
+func handleJournalEntry(store *db.Store, authSvc *auth.Service, tweets *tweet.Filler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, ok := parseEntryID(r)
 		if !ok {
@@ -146,7 +150,9 @@ func handleJournalEntry(store *db.Store, authSvc *auth.Service) http.HandlerFunc
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = journals.EntryPage(isAuth, journals.RenderSingle(*entry)).Render(w)
+		rendered := []journals.RenderedEntry{journals.RenderSingle(*entry)}
+		attachTweets(r.Context(), store, tweets, rendered)
+		_ = journals.EntryPage(isAuth, rendered[0]).Render(w)
 	}
 }
 

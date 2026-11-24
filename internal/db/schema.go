@@ -173,6 +173,11 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 		return fmt.Errorf("failed to create auth_state table: %w", err)
 	}
 
+	// Migration v7: Create tweet_snapshots, the cache behind the site's own tweet box
+	if _, err := tx.ExecContext(ctx, tweetSnapshotsTableDDL); err != nil {
+		return fmt.Errorf("failed to create tweet_snapshots table: %w", err)
+	}
+
 	if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO schema_migrations (version) VALUES (?);`, CurrentSchemaVersion); err != nil {
 		return fmt.Errorf("failed to record schema version %d: %w", CurrentSchemaVersion, err)
 	}

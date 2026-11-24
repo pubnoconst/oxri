@@ -345,7 +345,9 @@ a {
   background: transparent;
 }
 
-.journal-preview-media img {
+/* A linked image: always a direct child (journal-media.js). Images inside a
+   tweet box (views/tweet) have their own rules. */
+.journal-preview-media > img {
   display: block;
   max-width: 100%;
   max-height: 26rem;
