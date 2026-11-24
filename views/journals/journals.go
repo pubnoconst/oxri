@@ -18,6 +18,7 @@ import (
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/internal/paging"
 	"github.com/oxri/oxri-go/views/layout"
+	"github.com/oxri/oxri-go/views/loading"
 	"github.com/yuin/goldmark"
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
@@ -397,7 +398,7 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 					g.Attr("hx-get", contentURL),
 					g.Attr("hx-trigger", "load"),
 					g.Attr("hx-swap", "innerHTML swap:120ms"),
-					h.P(h.Class("journals-empty journals-loading-placeholder"), g.Attr("aria-live", "polite"), g.Text("Loading entries…")),
+					h.P(h.Class("journals-empty journals-loading-placeholder"), g.Attr("aria-live", "polite"), loading.Dots("Loading entries…")),
 				),
 			),
 		),

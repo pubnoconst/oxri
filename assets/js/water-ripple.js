@@ -22,6 +22,13 @@
   const prefersReducedMotion = () =>
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // Phones (touch is the primary input) get a different loading UX: the 3x3
+  // dot matrix (site.css .dot-matrix), never water. Refraction is GPU work a
+  // budget phone (reference: Galaxy A02s) can't spare while tweets load.
+  // The same query switches the CSS, so script and styles always agree.
+  const PHONE_QUERY = "(pointer: coarse)";
+  const isPhoneUI = () => !!(window.matchMedia && window.matchMedia(PHONE_QUERY).matches);
+
   let cachedMapURL = null;
   function getMapURL() {
     if (cachedMapURL) return cachedMapURL;
@@ -400,7 +407,7 @@
 
   function attach(stage, overlay, opts = {}) {
     const noop = { detach() {}, fadeAndDetach() {} };
-    if (!stage || !overlay || prefersReducedMotion() || quality.level === 0) return noop;
+    if (!stage || !overlay || isPhoneUI() || prefersReducedMotion() || quality.level === 0) return noop;
 
     // Loading ripples use 3 staggered rings; the touch ripple uses 1 drop plus
     // 4 mirror-image echo sources (opts.maxWaves = 5).
@@ -457,7 +464,7 @@
     return inst;
   }
 
-  window.ResImperiiWater = { attach, quality, cloth: getCloth };
+  window.ResImperiiWater = { attach, quality, cloth: getCloth, isPhoneUI };
 
   function autoInitPagewide() {
     const overlay = document.querySelector(".card-water-ripple.is-pagewide");

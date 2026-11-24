@@ -423,6 +423,14 @@ button.auth-action-link {
 }
 
 /* A tweet still loading reserves no space at all, not even the slot's gap. */
+/* Phones: one quiet "Loading preview" line where the tweet will open (no box,
+   no shadow); journal-media.js showLineLoader. */
+.tweet-embed-container.is-loading-line {
+  justify-content: flex-start;
+  min-height: 1.6rem;
+  align-items: center;
+}
+
 .journal-media-slot:has(> .tweet-embed-container.is-pending) {
   margin-bottom: 0;
 }
