@@ -143,6 +143,8 @@ Waiting is shown with exactly one thing: a 3×3 matrix of 4 px dots, in `--page-
   - No apologies, no blame, no codes.
   - **Server error pages** show a plain sentence and a reference ID, never internals.
 - **Destructive confirmations name the consequence:** "Delete this journal entry permanently?"
+  - They are asked in place (`views/confirm`, fetched with HTMX into a slot beside the control), never with the browser's `confirm()`. "Keep" takes focus, so a stray Enter never confirms; Keep or Escape closes the prompt.
+  - The server refuses a destructive POST that doesn't carry `confirmed=1` from the prompt's own button.
 - **Units and numbers:**
   - characters, counted as Unicode characters (Greek and accented letters count as one);
   - bytes, formatted B / KB / MB / GB;

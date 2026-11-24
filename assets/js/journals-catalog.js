@@ -33,33 +33,23 @@
         checkboxes.forEach((cb) => {
           cb.checked = selectAll.checked;
         });
+        if (batchPrompt) batchPrompt.replaceChildren();
         syncSelectionState();
       });
     }
 
+    // A batch prompt (views/confirm, fetched by HTMX) names how many entries
+    // it acts on, so a change of selection closes it: it would be stale.
+    const batchPrompt = document.getElementById("batch-confirm");
+    function closeBatchPrompt() {
+      if (batchPrompt) batchPrompt.replaceChildren();
+    }
+
     checkboxes.forEach((cb) => {
-      cb.addEventListener("change", syncSelectionState);
-    });
-
-    batchForm.addEventListener("submit", (e) => {
-      const submitter = e.submitter;
-      if (!submitter) return;
-      const action = submitter.value;
-      const selectedCount = checkboxes.filter((cb) => cb.checked).length;
-
-      if (action === "delete_selected") {
-        if (!confirm(`Delete ${selectedCount} selected entry/entries permanently?`)) {
-          e.preventDefault();
-        }
-      } else if (action === "delete_all") {
-        if (!confirm("Delete ALL journal entries permanently? This cannot be undone.")) {
-          e.preventDefault();
-        }
-      } else if (action === "unpublish_all") {
-        if (!confirm("Unpublish ALL journal entries so they are hidden from the public catalog?")) {
-          e.preventDefault();
-        }
-      }
+      cb.addEventListener("change", () => {
+        closeBatchPrompt();
+        syncSelectionState();
+      });
     });
 
     syncSelectionState();

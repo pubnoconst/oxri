@@ -6,6 +6,7 @@ import (
 	"github.com/oxri/oxri-go/internal/domain"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 	"unicode"
@@ -14,6 +15,7 @@ import (
 	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/serverfns"
+	"github.com/oxri/oxri-go/views/confirm"
 )
 
 func sanitizePasskeyLabel(raw string) string {
@@ -162,9 +164,13 @@ func handlePasskeyDelete(store *db.Store, authSvc *auth.Service) http.HandlerFun
 			http.Redirect(w, r, "/settings", http.StatusSeeOther)
 			return
 		}
+		id := strings.TrimSpace(chi.URLParam(r, "id"))
+		if !confirm.Confirmed(r) {
+			http.Redirect(w, r, "/settings/passkeys/"+url.PathEscape(id)+"/delete", http.StatusSeeOther)
+			return
+		}
 		rpID, _, supported := auth.ResolveWebAuthnOrigin(r, isHTTPSRequest(r))
 		if supported {
-			id := strings.TrimSpace(chi.URLParam(r, "id"))
 			if id != "" {
 				_ = store.DeletePasskey(r.Context(), cap, id, rpID)
 			}
