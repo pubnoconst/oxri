@@ -51,6 +51,7 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 				h.Script(h.Src(assets.HTMXJS.URL())),
 				h.Script(h.Src(assets.ThemeToggleJS.URL())),
 				h.Script(h.Src(assets.NavigationFeedbackJS.URL())),
+				h.Script(h.Src(assets.OfflineJS.URL())),
 			),
 		),
 	)

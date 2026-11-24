@@ -64,6 +64,7 @@ var (
 	VacateSpaceJS        = file("js/vacate-space.js")
 	PasskeyJS            = file("js/passkey.js")
 	BookEditorJS         = file("js/book-editor.js")
+	OfflineJS            = file("js/offline.js")
 )
 
 // declared records every embedded-file handle (see TestEveryFileHasAHandle).
