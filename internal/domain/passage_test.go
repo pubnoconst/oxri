@@ -66,3 +66,23 @@ func TestWithPassageCountsBytes(t *testing.T) {
 		t.Errorf("passage adds %d bytes, want %d", got, len(e.PassageJSON()))
 	}
 }
+
+func TestPassageSharesTheJournalLimit(t *testing.T) {
+	p := testPassage()
+	quoted := len([]rune(p.Text))
+	entry := func(bodyLen int) ValidatedJournalEntry {
+		e, err := ParseJournalEntry("https://bible.helloao.org/api/eng_kjv/GEN/12.json", nil, strings.Repeat("λ", bodyLen), false, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return e
+	}
+	// Exactly at the limit together (counted in characters: λ is two bytes).
+	if _, err := entry(MaxJournalBodyLength - quoted).WithPassage(p); err != nil {
+		t.Errorf("at the limit: %v", err)
+	}
+	// One over.
+	if _, err := entry(MaxJournalBodyLength - quoted + 1).WithPassage(p); !errors.Is(err, ErrInvalidJournalInput) {
+		t.Errorf("one over the limit: err = %v", err)
+	}
+}
