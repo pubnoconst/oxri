@@ -432,7 +432,13 @@
   display: none;
 }
 
-.journal-card.is-collage .journal-media-slot > img,
+/* A linked image is shown whole, never cropped: on a wide card (a lone search
+   result) a cover crop cut it to a thin strip. It keeps its own shape under
+   the height cap and is centred by the slot (site.css .journal-preview-media). */
+.journal-card.is-collage .journal-media-slot > img {
+  max-height: 13.5rem;
+}
+
 .journal-card.is-collage .journal-media-slot > video {
   width: 100%;
   max-height: 13.5rem;

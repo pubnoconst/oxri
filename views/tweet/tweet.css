@@ -118,11 +118,13 @@
 }
 
 /* Attachments: one keeps its shape (inline aspect-ratio, height capped);
-   two to four share a grid of even cells. */
+   two to four share a grid of even cells. When the height cap bites (a wide
+   card, such as a lone search result), the aspect ratio narrows the block:
+   it is centred, not left at the box's edge. */
 .tweet-media {
   display: grid;
   gap: 2px;
-  margin-top: 0.7rem;
+  margin: 0.7rem auto 0;
   overflow: hidden;
   /* Nested inside the clipping: one step smaller. */
   border-radius: var(--radius-control);
