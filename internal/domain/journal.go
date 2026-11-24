@@ -14,6 +14,10 @@ const (
 	MaxJournalMediaURLLength = 128
 	MaxJournalTagCount       = 3
 	MaxJournalTagLength      = 8
+	// MaxJournalBodyLength caps a journal entry's body, in characters (Unicode code
+	// points, so accented Latin and Greek count as one each). Books keep the
+	// shared long-form DefaultMaxProseLength.
+	MaxJournalBodyLength = 2000
 )
 
 var (
@@ -147,8 +151,8 @@ func ParseJournalEntry(rawMediaURL string, rawTags []string, rawBody string, boo
 	if strings.TrimSpace(rawBody) == "" {
 		return ValidatedJournalEntry{}, fmt.Errorf("%w: journal content cannot be empty", ErrInvalidJournalInput)
 	}
-	if utf8.RuneCountInString(rawBody) > DefaultMaxProseLength {
-		return ValidatedJournalEntry{}, fmt.Errorf("%w: journal content exceeds maximum allowed length (%d characters)", ErrInvalidJournalInput, DefaultMaxProseLength)
+	if n := utf8.RuneCountInString(rawBody); n > MaxJournalBodyLength {
+		return ValidatedJournalEntry{}, fmt.Errorf("%w: journal content is %d characters; the maximum is %d", ErrInvalidJournalInput, n, MaxJournalBodyLength)
 	}
 	if badRune, ok := ValidateProseChars(rawBody); !ok {
 		return ValidatedJournalEntry{}, fmt.Errorf("%w: journal content contains disallowed character U+%04X (only English, Latin, Greek, digits, and standard punctuation permitted; no emojis)", ErrInvalidJournalInput, badRune)

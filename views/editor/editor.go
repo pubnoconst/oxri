@@ -2,9 +2,13 @@
 package editor
 
 import (
+	"strconv"
+	"unicode/utf8"
+
 	_ "embed"
 	"fmt"
 	"github.com/oxri/oxri-go/assets"
+	"github.com/oxri/oxri-go/internal/domain"
 	"strings"
 
 	"github.com/oxri/oxri-go/views/layout"
@@ -216,14 +220,21 @@ func FormPage(isAuth bool, data FormData) g.Node {
 							h.P(h.ID("tags-error"), h.Class("field-error"), g.Attr("aria-live", "polite")),
 						),
 						h.Div(h.Class("editor-field editor-content-field"),
-							h.Label(h.For("journal-content"), g.Text("Entry content")),
+							h.Div(h.Class("field-label-row"),
+								h.Label(h.For("journal-content"), g.Text("Entry content")),
+								h.Span(h.ID("body-char-count"), h.Class("field-counter"),
+									g.Textf("%d / %d", utf8.RuneCountInString(data.Body), domain.MaxJournalBodyLength)),
+							),
 							h.Textarea(
 								h.ID("journal-content"),
 								h.Name("body"),
 								h.Rows("16"),
 								h.Required(),
+								// The single source of the limit: journal-editor.js reads it from here.
+								h.MaxLength(strconv.Itoa(domain.MaxJournalBodyLength)),
 								g.Text(data.Body),
 							),
+							h.P(h.Class("field-hint"), g.Textf("Up to %s characters.", formatThousands(domain.MaxJournalBodyLength))),
 							h.P(h.ID("body-error"), h.Class("field-error"), g.Attr("aria-live", "polite")),
 						),
 						optionsBlock,
@@ -253,4 +264,13 @@ func FormPage(isAuth bool, data FormData) g.Node {
 		h.Script(h.Src(assets.JournalEditorJS.URL())),
 		h.Script(h.Src(assets.LoadingTransitionJS.URL())),
 	)
+}
+
+// formatThousands renders 2000 as "2,000" for human-facing hints.
+func formatThousands(n int) string {
+	s := strconv.Itoa(n)
+	for i := len(s) - 3; i > 0; i -= 3 {
+		s = s[:i] + "," + s[i:]
+	}
+	return s
 }
