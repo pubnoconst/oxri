@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `c1f3adc` (PR #39 — FLIP tweet reveal)
-- **Active Branch**: `v2-tweet-no-placeholder` (PR #40): nothing rendered while a tweet loads (the #39 box-shadow had turned the empty slot into a dark placeholder card); the content is pushed down only on arrival (RATIONALE 041). Awaiting the owner's go-ahead.
+- **Base Commit on `main`**: `407898d` (PR #40 — no placeholder while a tweet loads; the slot unrolls with the push)
+- **Active Branch**: `v2-entry-cap` (PR #41): journal entry body capped at 2,000 characters, with a live editor counter (RATIONALE 042).
 - **Branches**: `main`, `prod`, `v2` (live); `v1`, `fsharp-legacy`, `rust-experiment` (archived lineage, kept on purpose).
 - **Active Experiment / Undo Instructions**: None. To reset a device's water quality level: in the browser console, `localStorage.removeItem("res-imperii.water-quality")`.
 
@@ -22,8 +22,7 @@
 
 ## Next on Mind
 
-1. After PR #40 ships, check the tweet reveal (no placeholder, push on arrival) and the press ripple on the Pixel 10. If the press ripple is still choppy: limit the filter to the wave's bounding box, and add a ring-only (transform/opacity) tier that phones start on.
-2. Watch the press ripple on a real phone. (No Safari device is available; the governor's cautious Safari start, level 1, stays unverified.)
-3. Continue the plan from step 3.
-4. **Edge tweets:** confirm the cause in Edge DevTools (look for "Tracking Prevention blocked …twitter.com").
-5. Run `mage backup` and author Books II and III via `/book-ii/edit` and `/book-iii/edit`.
+1. If the press ripple feels choppy on the Pixel 10: limit the filter to the wave's bounding box, and add a ring-only (transform/opacity) tier that phones start on. (No Safari device is available; the governor's cautious Safari start, level 1, stays unverified.)
+2. Continue the plan from step 3.
+3. **Edge tweets (deferred by the owner, "we will address Edge later"):** tweets take a long time to load in Edge. Start in Edge DevTools on `/journals`: look for "Tracking Prevention blocked …twitter.com" and check the network timing of `platform.twitter.com` / `syndication.twitter.com`. The 12 s link-card fallback still bounds the worst case.
+4. Run `mage backup` and author Books II and III via `/book-ii/edit` and `/book-iii/edit`.
