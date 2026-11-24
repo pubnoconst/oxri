@@ -28,7 +28,7 @@ var files embed.FS
 // Asset is a static file with a content-hashed URL. Its fields are unexported:
 // handles are declared only in this package (files) or minted by Component.
 type Asset struct {
-	path        string // URL path, e.g. /assets/js/water-ripple.js
+	path        string // URL path, e.g. /assets/js/journal-media.js
 	hash        string
 	contentType string
 	body        []byte // only for Component assets (served by Handler)
@@ -50,8 +50,6 @@ var (
 	PurifyJS             = file("js/purify.min.js")
 	ThemeToggleJS        = file("js/theme-toggle.js")
 	NavigationFeedbackJS = file("js/navigation-feedback.js")
-	WaterRippleJS        = file("js/water-ripple.js")
-	TouchRippleJS        = file("js/touch-ripple.js")
 	JournalMediaJS       = file("js/journal-media.js")
 	JournalEditorJS      = file("js/journal-editor.js")
 	JournalsCatalogJS    = file("js/journals-catalog.js")

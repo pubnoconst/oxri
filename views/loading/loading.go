@@ -3,9 +3,8 @@ package loading
 
 import (
 	_ "embed"
-	"fmt"
+
 	"github.com/oxri/oxri-go/assets"
-	"math"
 
 	"github.com/oxri/oxri-go/views/layout"
 	g "maragu.dev/gomponents"
@@ -24,83 +23,14 @@ var Style = assets.Component(StylePath, StyleCSS)
 // DefaultPhrase is the non-technical confirmation message displayed during loading transitions.
 const DefaultPhrase = "Confirming, please wait."
 
-// CharToken represents a single rendered character in the rippling phrase.
-// Distance is how many characters it sits from the phrase's centre; the CSS
-// ripple delays each character by it, so the wave visibly spreads outward
-// from the middle like the water rings behind it.
-type CharToken struct {
-	Index    int
-	Distance float64
-	Text     string
-	IsSpace  bool
-}
-
-// SplitPhrase splits a phrase into individual character tokens preserving word spaces.
-func SplitPhrase(phrase string) []CharToken {
-	if phrase == "" {
-		phrase = DefaultPhrase
-	}
-	runes := []rune(phrase)
-	centre := float64(len(runes)-1) / 2
-	out := make([]CharToken, 0, len(runes))
-	for i, r := range runes {
-		d := math.Abs(float64(i) - centre)
-		if r == ' ' {
-			out = append(out, CharToken{Index: i, Distance: d, Text: "\u00A0", IsSpace: true})
-		} else {
-			out = append(out, CharToken{Index: i, Distance: d, Text: string(r), IsSpace: false})
-		}
-	}
-	return out
-}
-
-func renderPhraseChars(phrase string) []g.Node {
-	tokens := SplitPhrase(phrase)
-	nodes := make([]g.Node, 0, len(tokens))
-	for _, ch := range tokens {
-		cls := "loading-char"
-		if ch.IsSpace {
-			cls += " is-space"
-		}
-		nodes = append(nodes, h.Span(
-			h.Class(cls),
-			h.Style(fmt.Sprintf("--d: %.1f;", ch.Distance)),
-			g.Attr("aria-hidden", "true"),
-			g.Text(ch.Text),
-		))
-	}
-	return nodes
-}
-
-// phraseNode renders the confirmation phrase. The whole linen surface around
-// it (page or overlay) is what water-ripple.js refracts; see
-// assets/js/loading-transition.js.
+// phraseNode renders the confirmation phrase. It stands still; the dot matrix
+// beside it is the motion.
 func phraseNode(phrase string) g.Node {
-	return h.P(
-		h.Class("loading-phrase"),
-		g.Attr("aria-label", phrase),
-		g.Group(renderPhraseChars(phrase)),
-	)
+	return h.P(h.Class("loading-phrase"), g.Text(phrase))
 }
 
-// rippleRings renders the same sunlit water-drop rings used by the journals
-// catalog, centred on the phrase, so every "please wait" state in
-// the app speaks one visual language: water.
-func rippleRings() g.Node {
-	return h.Div(
-		h.Class("card-water-ripple loading-water-ripple"),
-		g.Attr("style", "--ripple-x:50%;--ripple-y:50%;--ripple-diameter:150vmax;"),
-		g.Attr("aria-hidden", "true"),
-		h.Span(h.Class("card-water-wave wave-1")),
-		h.Span(h.Class("card-water-wave wave-2")),
-		h.Span(h.Class("card-water-wave wave-3")),
-	)
-}
-
-// Dots renders the phone loader: a 3x3 dot matrix and a label (site.css
-// .dot-loading). The matrix shows on phones only (pointer: coarse); elsewhere
-// just the label shows, so it can stand in for plain loading text. The JS twin
-// is dotLoading() in journal-media.js.
+// Dots renders the site's loader: a 3x3 dot matrix and a label (site.css
+// .dot-loading). The JS twin is dotLoading() in journal-media.js.
 func Dots(label string) g.Node {
 	return h.Span(h.Class("dot-loading"),
 		dotMatrix(),
@@ -109,7 +39,7 @@ func Dots(label string) g.Node {
 }
 
 // dotMatrix is the 3x3 matrix alone (nine dots; the sweep is in site.css).
-// The Confirming phrase on phones uses it directly, beside the phrase.
+// The Confirming phrase uses it directly, beside the phrase.
 func dotMatrix() g.Node {
 	dots := make([]g.Node, 9)
 	for i := range dots {
@@ -141,12 +71,11 @@ func Stage(phrase string) g.Node {
 		g.Attr("aria-live", "polite"),
 		g.Attr("aria-busy", "true"),
 		h.Div(h.Class("loading-phrase-row"), dotMatrix(), phraseNode(phrase)),
-		rippleRings(),
 	)
 }
 
 // Overlay renders the full-screen confirmation overlay for form submissions and auto-resubmits.
-// Pages embedding it must also load assets.LoadingTransitionJS (layout.Doc loads the water engine).
+// Pages embedding it must also load assets.LoadingTransitionJS.
 func Overlay(phrase string, initiallyVisible bool) g.Node {
 	if phrase == "" {
 		phrase = DefaultPhrase
@@ -164,7 +93,7 @@ func Overlay(phrase string, initiallyVisible bool) g.Node {
 	if !initiallyVisible {
 		attrs = append(attrs, g.Attr("hidden", ""))
 	}
-	attrs = append(attrs, h.Div(h.Class("loading-phrase-row"), dotMatrix(), phraseNode(phrase)), rippleRings())
+	attrs = append(attrs, h.Div(h.Class("loading-phrase-row"), dotMatrix(), phraseNode(phrase)))
 
 	return g.Group([]g.Node{
 		h.Link(h.Rel("stylesheet"), h.Href(Style.URL())),

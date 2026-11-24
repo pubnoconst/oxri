@@ -7,9 +7,9 @@
   let pendingTimer;
   let resetTimer;
 
-  // Phones have no tap ripple (water-ripple.js isPhoneUI); a slow navigation
-  // shows the shared dot matrix instead (site.css .nav-dot-loading, visible
-  // only while .navigation-pending and only on phones).
+  // A slow navigation shows the site's dot matrix at the bottom of the screen
+  // (site.css .nav-dot-loading, visible only while .navigation-pending); the
+  // page itself dims at once (.navigation-leaving).
   let navDots = null;
   function ensureNavDots() {
     if (navDots && navDots.isConnected) return;
@@ -78,8 +78,8 @@
     }
   });
 
-  // A submit that will navigate is a navigation in flight too: mark it so the
-  // touch ripple (touch-ripple.js) keeps pulsing if the response is slow.
+  // A submit that will navigate is a navigation in flight too: dim the page,
+  // and show the dots if the response is slow.
   // Registered after the data-confirm handler, so a cancelled confirm is seen
   // as defaultPrevented. Forms with the "Confirming" overlay have their own UI.
   document.addEventListener("submit", (event) => {
