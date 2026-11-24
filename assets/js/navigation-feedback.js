@@ -4,7 +4,9 @@
   const leavingClass = "navigation-leaving";
   const delayMs = 180;
   const resetAfterMs = 35000;
+  /** @type {number | undefined} */
   let pendingTimer;
+  /** @type {number | undefined} */
   let resetTimer;
 
   // A slow navigation shows the site's dot matrix at the bottom of the screen
@@ -12,7 +14,9 @@
   // page itself dims at once (.navigation-leaving). Following a link is a
   // download (twinkle, "Loading"); a POST is the site working on what you did
   // (puzzle, "Working"): signing in, saving a book.
+  /** @type {HTMLElement | null} */
   let navDots = null;
+  /** @param {boolean} working */
   function showNavDots(working) {
     if (navDots) navDots.remove();
     navDots = document.createElement("div");
@@ -33,6 +37,7 @@
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
     const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+    if (!(link instanceof HTMLAnchorElement)) return;
     if (!link || link.hasAttribute("download")) return;
     // HTMX links (e.g. a delete that fetches its confirmation) stay on the page.
     if (link.hasAttribute("hx-get")) return;
@@ -68,12 +73,13 @@
   // Confirmation prompts (views/confirm) arrive by HTMX into a .confirm-slot.
   // "Keep" or Escape closes the prompt here, with no round trip, and gives
   // focus back to the control that asked.
+  /** @param {Element} inside */
   function closePrompt(inside) {
     const slot = inside.closest(".confirm-slot");
     if (!slot) return;
     slot.replaceChildren();
     const trigger = document.querySelector(`[aria-controls="${slot.id}"]`);
-    if (trigger) trigger.focus();
+    if (trigger instanceof HTMLElement) trigger.focus();
   }
   document.addEventListener("click", (event) => {
     const keep = event.target instanceof Element ? event.target.closest("[data-confirm-keep]") : null;

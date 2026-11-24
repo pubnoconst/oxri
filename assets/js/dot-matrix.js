@@ -25,6 +25,9 @@
 (() => {
   "use strict";
 
+  /** A seeded source of numbers in [0, 1). @typedef {() => number} Rand */
+  /** A motion animates the nine dots of one matrix. @typedef {(dots: HTMLElement[], rand: Rand) => void} MotionFn */
+
   // One cell = 4 px dot + 3 px gap (site.css .dot-matrix). Slides move whole cells.
   const STEP_PX = 7;
   const REST = 0.14;
@@ -34,6 +37,7 @@
     !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   // ---- seeded randomness (FNV-1a hash -> mulberry32) -----------------------
+  /** @param {string} str */
   function hash(str) {
     let h = 0x811c9dc5;
     for (let i = 0; i < str.length; i++) {
@@ -43,6 +47,10 @@
     return h >>> 0;
   }
 
+  /**
+   * @param {string | number} seed
+   * @returns {Rand}
+   */
   function rng(seed) {
     let a = typeof seed === "string" ? hash(seed) : seed >>> 0;
     return () => {
@@ -57,6 +65,7 @@
   const randomSeed = () => Math.floor(Math.random() * 4294967296);
 
   // ---- motions ---------------------------------------------------------------
+  /** @param {number} k */
   const neighbours = (k) => {
     const r = Math.floor(k / 3), c = k % 3, out = [];
     if (r > 0) out.push(k - 3);
@@ -70,6 +79,7 @@
   // moves (never straight back), then retraces it, so every dot ends where it
   // began and the loop is seamless. Each move slides one dot into the gap;
   // the moving dot brightens.
+  /** @type {MotionFn} */
   function puzzle(dots, rand) {
     const start = Math.floor(rand() * 9);
     const walk = [start];
@@ -91,7 +101,7 @@
       const gap = path[m], from = path[m + 1];
       const el = at.indexOf(from);
       const home = el, t0 = m / moves, t1 = (m + 0.55) / moves;
-      const pos = (cell) => ({ x: (cell % 3) - (home % 3), y: Math.floor(cell / 3) - Math.floor(home / 3) });
+      const pos = (/** @type {number} */ cell) => ({ x: (cell % 3) - (home % 3), y: Math.floor(cell / 3) - Math.floor(home / 3) });
       const a = pos(from), b = pos(gap);
       frames[el].push({ offset: t0, x: a.x, y: a.y, o: 0.45 });
       frames[el].push({ offset: (t0 + t1) / 2, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, o: 0.95 });
@@ -124,6 +134,7 @@
 
   // twinkle: one glint shape for every dot, shifted by a seeded shuffle of
   // nine evenly spread phases (with a little jitter), so glints never clump.
+  /** @type {MotionFn} */
   function twinkle(dots, rand) {
     const duration = 1600 + Math.floor(rand() * 500);
     const phases = dots.map((_, i) => (i + rand() * 0.6) / 9);
@@ -146,6 +157,7 @@
   // comet: a head runs clockwise round the edge with a fading tail; the centre
   // glows faintly. Not seeded: it means "your turn", so it should look the same
   // every time.
+  /** @param {HTMLElement[]} dots */
   function comet(dots) {
     const duration = 1200;
     const tail = [
@@ -167,18 +179,24 @@
     });
   }
 
+  /** @type {Record<string, MotionFn>} */
   const MOTIONS = { puzzle, twinkle, comet };
 
   // ---- public API ------------------------------------------------------------
+  /** @param {HTMLElement} matrix */
   function start(matrix) {
     if (!matrix || matrix.dataset.started === "1") return;
     matrix.dataset.started = "1";
     if (reducedMotion()) return;
-    const motion = MOTIONS[matrix.dataset.motion] || twinkle;
+    const motion = MOTIONS[matrix.dataset.motion || "twinkle"] || twinkle;
     const seed = matrix.dataset.seed ? matrix.dataset.seed : randomSeed();
-    motion(Array.from(matrix.children), rng(seed));
+    motion(/** @type {HTMLElement[]} */ (Array.from(matrix.children)), rng(seed));
   }
 
+  /**
+   * @param {DotMotion} motion
+   * @param {string} [seed]
+   */
   function matrix(motion, seed) {
     const m = document.createElement("span");
     m.className = "dot-matrix";
@@ -191,6 +209,11 @@
   }
 
   // create builds the full loader: matrix + label (the Go twin is loading.Dots).
+  /**
+   * @param {string} label
+   * @param {DotMotion} motion
+   * @param {string} [seed]
+   */
   function create(label, motion, seed) {
     const wrap = document.createElement("span");
     wrap.className = "dot-loading";
@@ -203,16 +226,17 @@
 
   // Server-rendered matrices (views/loading) start on load, and any that
   // arrive later (HTMX swaps) start as they are added.
+  /** @param {Document | Element} root */
   function startAll(root) {
-    if (root.matches && root.matches(".dot-matrix[data-motion]")) start(root);
-    if (root.querySelectorAll) root.querySelectorAll(".dot-matrix[data-motion]").forEach(start);
+    if (root instanceof HTMLElement && root.matches(".dot-matrix[data-motion]")) start(root);
+    root.querySelectorAll(".dot-matrix[data-motion]").forEach((m) => m instanceof HTMLElement && start(m));
   }
 
   function boot() {
     startAll(document);
     if (typeof MutationObserver === "undefined") return;
     new MutationObserver((records) => {
-      for (const r of records) r.addedNodes.forEach((n) => n.nodeType === 1 && startAll(n));
+      for (const r of records) r.addedNodes.forEach((n) => n instanceof Element && startAll(n));
     }).observe(document.body, { childList: true, subtree: true });
   }
 

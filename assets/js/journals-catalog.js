@@ -4,11 +4,11 @@
  */
 (() => {
   function initCatalogControls() {
-    const selectAll = document.getElementById("select-all-entries");
+    const selectAll = /** @type {HTMLInputElement | null} */ (document.getElementById("select-all-entries"));
     const countLabel = document.getElementById("selected-count");
     const batchForm = document.getElementById("batch-form");
-    const checkboxes = Array.from(document.querySelectorAll(".entry-select-cb"));
-    const selectionButtons = Array.from(document.querySelectorAll("[data-requires-selection='true']"));
+    const checkboxes = /** @type {HTMLInputElement[]} */ (Array.from(document.querySelectorAll(".entry-select-cb")));
+    const selectionButtons = /** @type {HTMLButtonElement[]} */ (Array.from(document.querySelectorAll("[data-requires-selection='true']")));
 
     if (!batchForm || batchForm.dataset.bound === "true" || checkboxes.length === 0) return;
     batchForm.dataset.bound = "true";

@@ -34,6 +34,16 @@ jobs:
           CGO_ENABLED: "0"
         run: go test -v ./...
 
+      - name: Setup Node (JavaScript type-check only)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Type-check JavaScript (tsc --noEmit, strict JSDoc)
+        run: |
+          npm ci --no-audit --no-fund
+          npx --no-install tsc -p .
+
       - name: Verify static Linux binary build (CGO_ENABLED=0)
         env:
           CGO_ENABLED: "0"

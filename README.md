@@ -132,7 +132,11 @@ All commands enforce `CGO_ENABLED=0`:
 # Run all unit and integration tests
 mage test
 
-# Run tests and compile the static binary into bin/
+# Type-check the site's JavaScript (strict, from JSDoc; nothing is compiled).
+# Needs Node once: `npm ci` installs the pinned TypeScript.
+mage typecheck
+
+# Run tests, the JavaScript type-check, and compile the static binary into bin/
 mage check
 
 # Compile the static binary into bin/

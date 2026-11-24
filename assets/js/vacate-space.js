@@ -11,14 +11,15 @@
     requiredBytes = 0;
   }
 
-  var progressBar = document.getElementById("vacate-progress-bar");
+  var progressBar = /** @type {HTMLProgressElement | null} */ (document.getElementById("vacate-progress-bar"));
   var progressFill = document.getElementById("vacate-progress-fill");
   var progressTrack = section.querySelector(".vacate-progress-track");
   var progressReadout = document.getElementById("vacate-progress-readout");
-  var deleteSelectedBtn = document.getElementById("vacate-selected-btn");
-  var resubmitForm = document.getElementById("resubmit-journal-form");
+  var deleteSelectedBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById("vacate-selected-btn"));
+  var resubmitForm = /** @type {HTMLFormElement | null} */ (document.getElementById("resubmit-journal-form"));
   var checkboxes = Array.prototype.slice.call(document.querySelectorAll(".vacate-entry-cb"));
 
+  /** @param {number} b */
   function formatBytes(b) {
     if (b < 0) b = 0;
     var kb = 1024;

@@ -13,7 +13,9 @@
   }
 
   document.addEventListener("htmx:sendError", (event) => {
-    const target = event.detail && event.detail.target;
+    // HTMX's CustomEvent: detail.target is the element whose request failed.
+    const detail = /** @type {CustomEvent<{ target?: Element }>} */ (event).detail;
+    const target = detail && detail.target;
     if (!target) return;
     const loader = target.querySelector(".page-dot-loading");
     if (!loader) return;

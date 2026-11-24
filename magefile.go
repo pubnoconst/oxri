@@ -52,9 +52,20 @@ func Test() error {
 	return sh.RunWithV(envWithCgoDisabled(), "go", "test", "-v", "./...")
 }
 
-// Check validates formatting, tests, and static builds.
+// Typecheck type-checks the site's JavaScript (JSDoc types, strict) with
+// TypeScript. Nothing is compiled; see tsconfig.json. Needs Node: run
+// `npm ci` once to install the pinned TypeScript.
+func Typecheck() error {
+	fmt.Println("==> Type-checking assets/js (tsc --noEmit)...")
+	return sh.RunV("npx", "--no-install", "tsc", "-p", ".")
+}
+
+// Check validates formatting, tests, the JavaScript types, and static builds.
 func Check() error {
 	if err := Test(); err != nil {
+		return err
+	}
+	if err := Typecheck(); err != nil {
 		return err
 	}
 	return Build()
