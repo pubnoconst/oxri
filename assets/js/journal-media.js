@@ -33,12 +33,13 @@
     container.style.height = "";
     container.replaceChildren();
 
-    // Quiet empty space inside the media slot where the water drop originates
-    const spacer = document.createElement("div");
-    spacer.className = "media-ripple-spacer";
-    spacer.setAttribute("role", "status");
-    spacer.setAttribute("aria-label", "Loading media");
-    container.append(spacer);
+    // Nothing is rendered or reserved while the tweet loads: the slot is
+    // collapsed (is-pending: no height, no gap) and only the card's own content
+    // shows, under the card ripple. When the tweet arrives, flipPush opens the
+    // slot and pushes the content down to make room.
+    container.classList.add("is-pending");
+    container.setAttribute("role", "status");
+    container.setAttribute("aria-label", "Loading media");
 
     const overlay = document.createElement("div");
     overlay.className = "card-water-ripple";
@@ -64,14 +65,16 @@
     let cardObserver = null;
     let cleaned = false;
 
+    // The drop lands where the tweet will open: centred on the collapsed slot,
+    // at its top edge.
     const alignOrigin = () => {
-      if (!hostCard || !spacer.isConnected || !hostCard.isConnected) return;
+      if (!hostCard || !container.isConnected || !hostCard.isConnected) return;
       const hostRect = hostCard.getBoundingClientRect();
-      const spacerRect = spacer.getBoundingClientRect();
+      const slotRect = container.getBoundingClientRect();
       if (hostRect.width <= 0 || hostRect.height <= 0) return;
 
-      const x = (spacerRect.left - hostRect.left) + (spacerRect.width / 2);
-      const y = (spacerRect.top - hostRect.top) + (spacerRect.height / 2);
+      const x = (slotRect.left - hostRect.left) + (slotRect.width / 2);
+      const y = Math.min(Math.max(slotRect.top - hostRect.top, 0), hostRect.height);
       const maxDist = Math.max(
         Math.hypot(x, y),
         Math.hypot(hostRect.width - x, y),
@@ -107,23 +110,27 @@
       fadeOut() {
         overlay.classList.add("is-fading-out");
       },
-      removeSpacer() {
-        if (spacer.parentNode === container) spacer.remove();
-      },
       cleanup() {
         if (cleaned) return;
         cleaned = true;
         if (cardObserver) cardObserver.disconnect();
         if (waterHandle) waterHandle.detach();
-        if (spacer.parentNode === container) spacer.remove();
         if (overlay.parentNode) overlay.remove();
       },
     };
   }
 
+  // clearPending ends the collapsed loading state of a tweet slot.
+  function clearPending(container) {
+    container.classList.remove("is-pending");
+    container.removeAttribute("role");
+    container.removeAttribute("aria-label");
+  }
+
   function showTweetFallback(container, username, tweetId, rippleHandle) {
     if (rippleHandle) rippleHandle.cleanup();
-    container.classList.remove("is-expanding");
+    clearPending(container);
+    container.classList.remove("is-revealed");
     container.style.height = "";
     container.replaceChildren();
     const card = document.createElement("div");
@@ -186,7 +193,10 @@
     const peers = host && host.parentElement ? Array.from(host.parentElement.children) : [];
     const inner = [];
     for (let n = slot.nextElementSibling; n; n = n.nextElementSibling) inner.push(n);
-    const els = peers.concat(inner).filter((el) => el instanceof HTMLElement);
+    // The slot itself is measured too: when it opens, it unrolls in step with
+    // the content it pushes, so the tweet's visible bottom edge always meets
+    // the moving content (no overlap, no empty box).
+    const els = peers.concat(inner, [container]).filter((el) => el instanceof HTMLElement);
 
     // First: where things are now, including any in-flight FLIP offset.
     const first = new Map(els.map((el) => [el, el.getBoundingClientRect()]));
@@ -204,12 +214,14 @@
     els.forEach((el) => {
       const a = first.get(el);
       const b = el.getBoundingClientRect();
-      const dy = a.top - b.top;
-      const grew = peers.includes(el) ? b.height - a.height : 0;
+      const isSlot = el === container;
+      const dy = isSlot ? 0 : a.top - b.top; // the slot's own top does not move
+      const grew = isSlot || peers.includes(el) ? b.height - a.height : 0;
       if (Math.abs(dy) < 0.5 && grew < 0.5) return;
-      // Clip only the bottom edge while a card unrolls; keep its side shadows.
-      const from = { transform: `translateY(${dy.toFixed(1)}px)` };
-      const to = { transform: "translateY(0)" };
+      // Clip only the bottom edge while a card or the slot unrolls; keep side
+      // and top shadows.
+      const from = isSlot ? {} : { transform: `translateY(${dy.toFixed(1)}px)` };
+      const to = isSlot ? {} : { transform: "translateY(0)" };
       if (grew >= 0.5) {
         from.clipPath = `inset(-60px -60px ${grew.toFixed(1)}px -60px)`;
         to.clipPath = "inset(-60px -60px 0px -60px)";
@@ -258,7 +270,6 @@
         rippleHandle.fadeOut();
         setTimeout(() => rippleHandle.cleanup(), 420);
       }
-      requestAnimationFrame(() => stage.classList.add("is-ready"));
     };
 
     const onHeight = () => {
@@ -276,10 +287,10 @@
       // One layout change at the slot; flipPush animates the consequences.
       flipPush(container, () => {
         if (firstTime) {
-          // Swap the ripple spacer for the tweet; from here the slot height is
+          // Open the collapsed slot for the tweet; from here the slot height is
           // driven explicitly (overflow clipped) and follows Twitter's resizes.
-          container.classList.add("is-expanding");
-          if (rippleHandle) rippleHandle.removeSpacer();
+          clearPending(container);
+          container.classList.add("is-revealed");
         }
         container.style.height = `${h}px`;
       });
@@ -299,9 +310,10 @@
           // Nothing measurable (no ResizeObserver, or an odd embed):
           // fall back to plain layout rather than keep the reader waiting.
           stop();
-          if (rippleHandle) rippleHandle.removeSpacer();
-          container.style.height = "";
-          container.classList.remove("is-expanding");
+          flipPush(container, () => {
+            clearPending(container);
+            container.style.height = "";
+          });
           reveal();
         }
       },

@@ -394,24 +394,22 @@ a {
   background: transparent;
   padding: 0;
   border-radius: 14px;
-  /* box-shadow, not filter: drop-shadow(): a filter over the cross-origin tweet
-     iframe is recomputed whenever the tweet repaints. The rounded box matches
-     the tweet's 14px corners, so the shadow is identical. No height transition:
-     the push is a FLIP in journal-media.js (one layout, GPU-animated). */
-  box-shadow: 0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent);
+  /* No height transition: the push is a FLIP in journal-media.js (one layout,
+     GPU-animated). */
 }
 
-/* Quiet empty space where the water drop originates while the tweet renders off-screen */
-.media-ripple-spacer {
-  width: 100%;
-  height: 7.5rem;
-  pointer-events: none;
-}
-
-/* Once the tweet is revealed the slot height is driven by JS, always matching the
-   tweet (it follows every resize), so clipping overflow never cuts anything. */
-.journal-preview-media .tweet-embed-container.is-expanding {
+/* While the tweet loads nothing is rendered or reserved: the slot is collapsed
+   and only the card's content shows, under the card ripple. */
+.journal-preview-media .tweet-embed-container.is-pending {
+  height: 0;
   overflow: hidden;
+}
+
+/* Revealed: the slot height is driven by JS and always matches the tweet (it
+   follows every resize). Overflow stays visible so the tweet's own shadow is
+   not cut; the opening animation clips with clip-path instead. */
+.journal-preview-media .tweet-embed-container.is-revealed {
+  overflow: visible;
 }
 
 /* Full-card & pagewide pure-CSS water drop ripple: synced with SVG radial refraction in water-ripple.js */
@@ -539,16 +537,9 @@ a {
   padding: 0.25rem 0;
   display: flex;
   justify-content: center;
-  opacity: 0;
-  transform: translateY(6px) scale(0.988);
-  transition: opacity 380ms cubic-bezier(0.22, 1, 0.36, 1), transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.tweet-embed-stage.is-ready {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  /* Let the body start moving before the tweet eases in behind it. */
-  transition-delay: 140ms;
+  /* No fade: the slot unrolls in step with the content it pushes down
+     (flipPush in journal-media.js), and that unroll is the reveal. A delayed
+     fade once left an empty, shadowed box on screen before the tweet. */
 }
 
 .tweet-embed-stage.is-staging {
@@ -570,6 +561,13 @@ a {
   border-radius: 14px !important;
   box-shadow: none !important;
   overflow: hidden;
+}
+
+/* The shadow belongs to the tweet itself (the iframe element; box-shadow, not a
+   filter over its pixels), so it has the tweet's exact width and corners and
+   appears only with the tweet. */
+.journal-preview-media .tweet-embed-container iframe {
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent) !important;
 }
 
 .tweet-fallback-card {

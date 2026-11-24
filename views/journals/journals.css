@@ -422,6 +422,11 @@ button.auth-action-link {
   margin: 0 0 0.85rem;
 }
 
+/* A tweet still loading reserves no space at all, not even the slot's gap. */
+.journal-media-slot:has(> .tweet-embed-container.is-pending) {
+  margin-bottom: 0;
+}
+
 .journal-media-slot:empty {
   display: none;
 }
