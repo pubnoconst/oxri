@@ -60,6 +60,11 @@ The palette is a warm neutral page and ink, plus three accents used only for sta
   - *History:* surfaces were once woven linen (SVG noise), introduced so the water ripple would read as real without an artificial shadow. The ripple was retired (RATIONALE 047), so the linen went too (RATIONALE 059).
 - **Posts from other sites are clippings** (`views/tweet`): a paper slip laid on the card, the site and date in small capitals along the top, the author signed under a dashed rule with "View on … ↗". Sites are named in text, never with their logos. A direct link to an image, video or audio file is not a clipping: it stays plain framed media.
 - **Radii:** cards `--radius-card` (0.5rem), controls `--radius-control` (0.35rem), chips and pills `--radius-pill`.
+  - **Everything laid on a card** (depth 2: a post clipping, a raw image, video or iframe, a link card) uses `--radius-card`, the same as the card, so a clipping and a raw media item beside it read as the same kind of object.
+  - **Anything nested inside those** (the images and the quoted post inside a clipping) steps down one, to `--radius-control`.
+  - **Surfaces take radii only from the tokens** (or `50%` for a circle). `TestRadiiComeFromTokens` fails on any other literal, apart from two named exceptions:
+    - X's own embed (`.tweet-embed-container`, 14 px), which matches the frame X draws inside its iframe;
+    - the checkbox's drawn parts (its box and the indeterminate dash), which are a glyph, not a surface.
 - **Space:**
   - page padding: `--space-page-y` / `--space-page-x` (fluid);
   - card padding: `--space-card-pad` (1.65rem), or `--space-card-pad-sm` (1.15rem) on small cards;
