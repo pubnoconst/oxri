@@ -394,24 +394,25 @@ a {
   background: transparent;
   padding: 0;
   border-radius: 14px;
-  /* box-shadow, not filter: drop-shadow(): a filter over the cross-origin tweet
-     iframe is recomputed whenever the tweet repaints. The rounded box matches
-     the tweet's 14px corners, so the shadow is identical. No height transition:
-     the push is a FLIP in journal-media.js (one layout, GPU-animated). */
-  box-shadow: 0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent);
+  /* No height transition: the push is a FLIP in journal-media.js (one layout,
+     GPU-animated). */
 }
 
-/* Quiet empty space where the water drop originates while the tweet renders off-screen */
-.media-ripple-spacer {
-  width: 100%;
-  height: 7.5rem;
-  pointer-events: none;
-}
-
-/* Once the tweet is revealed the slot height is driven by JS, always matching the
-   tweet (it follows every resize), so clipping overflow never cuts anything. */
-.journal-preview-media .tweet-embed-container.is-expanding {
+/* While the tweet loads nothing is rendered or reserved: the slot is collapsed
+   and only the card's content shows, under the card ripple. */
+.journal-preview-media .tweet-embed-container.is-pending {
+  height: 0;
   overflow: hidden;
+}
+
+/* Revealed: the slot height is driven by JS, always matching the tweet (it
+   follows every resize), so clipping overflow never cuts anything. The shadow
+   belongs to the tweet only, never to an empty slot. box-shadow, not
+   filter: drop-shadow(): a filter over the cross-origin tweet iframe is
+   recomputed whenever the tweet repaints; the box has the tweet's 14px corners. */
+.journal-preview-media .tweet-embed-container.is-revealed {
+  overflow: hidden;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--page-ink) 8%, transparent);
 }
 
 /* Full-card & pagewide pure-CSS water drop ripple: synced with SVG radial refraction in water-ripple.js */
