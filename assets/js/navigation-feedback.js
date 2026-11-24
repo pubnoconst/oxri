@@ -9,21 +9,16 @@
 
   // A slow navigation shows the site's dot matrix at the bottom of the screen
   // (site.css .nav-dot-loading, visible only while .navigation-pending); the
-  // page itself dims at once (.navigation-leaving).
+  // page itself dims at once (.navigation-leaving). Following a link is a
+  // download (twinkle, "Loading"); a POST is the site working on what you did
+  // (puzzle, "Working"): signing in, saving a book.
   let navDots = null;
-  function ensureNavDots() {
-    if (navDots && navDots.isConnected) return;
+  function showNavDots(working) {
+    if (navDots) navDots.remove();
     navDots = document.createElement("div");
-    navDots.className = "nav-dot-loading dot-loading";
+    navDots.className = "nav-dot-loading";
     navDots.setAttribute("role", "status");
-    const matrix = document.createElement("span");
-    matrix.className = "dot-matrix";
-    matrix.setAttribute("aria-hidden", "true");
-    for (let i = 0; i < 9; i++) matrix.append(document.createElement("i"));
-    const label = document.createElement("span");
-    label.className = "dot-loading-label";
-    label.textContent = "Loading";
-    navDots.append(matrix, label);
+    navDots.append(window.ResImperiiDots.create(working ? "Working" : "Loading", working ? "puzzle" : "twinkle"));
     document.body.append(navDots);
   }
 
@@ -62,7 +57,7 @@
     document.documentElement.classList.add(leavingClass);
     pendingTimer = window.setTimeout(() => {
       if (event.defaultPrevented) return;
-      ensureNavDots();
+      showNavDots(false);
       document.documentElement.classList.add(pendingClass);
       resetTimer = window.setTimeout(clearNavigationState, resetAfterMs);
     }, delayMs);
@@ -89,8 +84,9 @@
     if (form.target && form.target.toLowerCase() !== "_self") return;
     clearNavigationState();
     document.documentElement.classList.add(leavingClass);
+    const working = (form.getAttribute("method") || "get").toLowerCase() === "post";
     pendingTimer = window.setTimeout(() => {
-      ensureNavDots();
+      showNavDots(working);
       document.documentElement.classList.add(pendingClass);
     }, delayMs);
     resetTimer = window.setTimeout(clearNavigationState, resetAfterMs);

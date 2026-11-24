@@ -515,13 +515,10 @@ a {
 /* ---- Loading: a 3x3 dot matrix ---------------------------------------------
    The site's one loading cue (it replaced the water ripple, archived on the
    water-ripple branch). Drawn with CSS, not glyphs, so it looks the same on
-   every device, and animated with opacity only, which the compositor keeps
-   running while the main thread is busy (tweets loading, HTMX swaps).
-   Markup: views/loading.Dots and dotLoading() in journal-media.js.
-
-   Motion: a sequential turn signal. Column by column, left to right, the dots
-   ease on and hold; then the whole matrix fades out together, rests, and the
-   sweep starts again. */
+   every device. The motion (seeded puzzle, seeded twinkle, comet) is drawn by
+   assets/js/dot-matrix.js with opacity and transform only, which the
+   compositor keeps running while the main thread is busy.
+   Markup: views/loading.Dots and ResImperiiDots.create. */
 .dot-loading {
   display: inline-flex;
   align-items: center;
@@ -542,35 +539,6 @@ a {
   border-radius: 50%;
   background: currentColor;
   opacity: 0.14;
-  animation-duration: 1.5s;
-  animation-iteration-count: infinite;
-}
-
-/* One keyframe set per column: each eases on in turn (ease-out, like a lamp
-   warming up), all hold, then all fade out together (ease-in). */
-.dot-matrix > i:nth-child(3n + 1) { animation-name: dot-signal-col-1; }
-.dot-matrix > i:nth-child(3n + 2) { animation-name: dot-signal-col-2; }
-.dot-matrix > i:nth-child(3n) { animation-name: dot-signal-col-3; }
-
-@keyframes dot-signal-col-1 {
-  0% { opacity: 0.14; animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1); }
-  14% { opacity: 0.88; }
-  58% { opacity: 0.88; animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0); }
-  78%, 100% { opacity: 0.14; }
-}
-
-@keyframes dot-signal-col-2 {
-  0%, 12% { opacity: 0.14; animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1); }
-  26% { opacity: 0.88; }
-  58% { opacity: 0.88; animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0); }
-  78%, 100% { opacity: 0.14; }
-}
-
-@keyframes dot-signal-col-3 {
-  0%, 24% { opacity: 0.14; animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1); }
-  38% { opacity: 0.88; }
-  58% { opacity: 0.88; animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0); }
-  78%, 100% { opacity: 0.14; }
 }
 
 .dot-loading-label {
@@ -602,8 +570,7 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   .dot-matrix > i {
-    animation: none;
-    opacity: 0.6;
+    opacity: 0.6 !important;
   }
 }
 

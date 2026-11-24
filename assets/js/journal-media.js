@@ -29,31 +29,17 @@
   // The tweet itself is never shown half-laid-out, and nothing waits on a
   // fixed "settle" timer.
 
-  // dotLoading builds the site's loader: a 3x3 dot matrix and a label
-  // (site.css .dot-loading; the Go twin is views/loading.Dots).
-  function dotLoading(label) {
-    const wrap = document.createElement("span");
-    wrap.className = "dot-loading";
-    const matrix = document.createElement("span");
-    matrix.className = "dot-matrix";
-    matrix.setAttribute("aria-hidden", "true");
-    for (let i = 0; i < 9; i++) matrix.append(document.createElement("i"));
-    const text = document.createElement("span");
-    text.className = "dot-loading-label";
-    text.textContent = label;
-    wrap.append(matrix, text);
-    return wrap;
-  }
-
-  // showLineLoader puts the waiting line in the tweet slot. clearPending
-  // removes it inside the FLIP's layout step, so the slot unrolls from the
-  // line into the tweet.
-  function showLineLoader(container) {
+  // showLineLoader puts the waiting line in the tweet slot: a twinkle (a
+  // download) seeded per slot, so cards loading together glint differently.
+  // clearPending removes it inside the FLIP's layout step, so the slot unrolls
+  // from the line into the tweet.
+  let slotCount = 0;
+  function showLineLoader(container, seed) {
     container.style.height = "";
     container.replaceChildren();
     container.classList.add("is-loading-line");
     container.setAttribute("role", "status");
-    container.append(dotLoading("Loading preview"));
+    container.append(window.ResImperiiDots.create("Loading preview", "twinkle", seed + ":" + slotCount++));
   }
 
   // clearPending ends the loading state of a tweet slot.
@@ -123,6 +109,18 @@
 
   // flipPush applies change() (a single layout change at the media slot) and
   // animates everything it moved or grew from where it visually was.
+  // visualRect: an element's on-screen top and visible height, accounting for
+  // a FLIP animation of ours that is still clipping its bottom edge.
+  function visualRect(el) {
+    const r = el.getBoundingClientRect();
+    let clipBottom = 0;
+    if (flipAnimations.has(el)) {
+      const m = /inset\(\s*[-\d.]+px\s+[-\d.]+px\s+([-\d.]+)px/.exec(window.getComputedStyle(el).clipPath || "");
+      if (m) clipBottom = Math.max(0, parseFloat(m[1]) || 0);
+    }
+    return { top: r.top, height: r.height - clipBottom };
+  }
+
   function flipPush(container, change) {
     const slot = container.closest(".journal-media-slot") || container;
     const host = container.closest(".journal-card") || slot.parentElement;
@@ -134,8 +132,13 @@
     // the moving content (no overlap, no empty box).
     const els = peers.concat(inner, [container]).filter((el) => el instanceof HTMLElement);
 
-    // First: where things are now, including any in-flight FLIP offset.
-    const first = new Map(els.map((el) => [el, el.getBoundingClientRect()]));
+    // First: where things are *visually* now, including any in-flight FLIP.
+    // getBoundingClientRect includes a running translate but not a running
+    // clip, so a card that is still unrolling would measure at its full height
+    // and the next tweet's push would cancel its unroll and snap its edge down.
+    // With twelve tweets arriving within a second that happened to nearly
+    // every card. Subtract the in-flight bottom clip to get the visible height.
+    const first = new Map(els.map((el) => [el, visualRect(el)]));
 
     change();
 
@@ -257,7 +260,7 @@
     const theme = getActiveTheme();
 
     // Card text is visible; the slot shows "Loading preview" while we wait.
-    showLineLoader(container);
+    showLineLoader(container, tweetId);
 
     const doCreate = (twttr) => {
       const stage = document.createElement("div");

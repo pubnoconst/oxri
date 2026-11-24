@@ -51,6 +51,7 @@ var (
 	ThemeToggleJS        = file("js/theme-toggle.js")
 	NavigationFeedbackJS = file("js/navigation-feedback.js")
 	JournalMediaJS       = file("js/journal-media.js")
+	DotMatrixJS          = file("js/dot-matrix.js")
 	JournalEditorJS      = file("js/journal-editor.js")
 	JournalsCatalogJS    = file("js/journals-catalog.js")
 	LoadingTransitionJS  = file("js/loading-transition.js")

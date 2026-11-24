@@ -29,23 +29,37 @@ func phraseNode(phrase string) g.Node {
 	return h.P(h.Class("loading-phrase"), g.Text(phrase))
 }
 
-// Dots renders the site's loader: a 3x3 dot matrix and a label (site.css
-// .dot-loading). The JS twin is dotLoading() in journal-media.js.
-func Dots(label string) g.Node {
+// Motion is what a dot matrix means; assets/js/dot-matrix.js draws it. The
+// only values are the three below (the field is unexported), so a view can't
+// ask for a motion that doesn't exist.
+type Motion struct{ name string }
+
+var (
+	// Puzzle: the site is working on something you did (sign-in, saving).
+	Puzzle = Motion{"puzzle"}
+	// Twinkle: something is downloading (tweets, the catalog, a page).
+	Twinkle = Motion{"twinkle"}
+	// Comet: waiting on you (passkey prompts).
+	Comet = Motion{"comet"}
+)
+
+// Dots renders the site's loader: a 3x3 dot matrix in the given motion and a
+// label (site.css .dot-loading). The JS twin is ResImperiiDots.create.
+func Dots(label string, m Motion) g.Node {
 	return h.Span(h.Class("dot-loading"),
-		dotMatrix(),
+		dotMatrix(m),
 		h.Span(h.Class("dot-loading-label"), g.Text(label)),
 	)
 }
 
-// dotMatrix is the 3x3 matrix alone (nine dots; the sweep is in site.css).
-// The Confirming phrase uses it directly, beside the phrase.
-func dotMatrix() g.Node {
+// dotMatrix is the 3x3 matrix alone (nine dots). dot-matrix.js starts it with
+// a fresh seed; the Confirming phrase uses it directly, beside the phrase.
+func dotMatrix(m Motion) g.Node {
 	dots := make([]g.Node, 9)
 	for i := range dots {
 		dots[i] = h.I()
 	}
-	return h.Span(h.Class("dot-matrix"), g.Attr("aria-hidden", "true"), g.Group(dots))
+	return h.Span(h.Class("dot-matrix"), g.Attr("data-motion", m.name), g.Attr("aria-hidden", "true"), g.Group(dots))
 }
 
 // Page renders the standalone awaiting confirmation view inside the base layout shell.
@@ -70,7 +84,7 @@ func Stage(phrase string) g.Node {
 		h.Class("loading-page"),
 		g.Attr("aria-live", "polite"),
 		g.Attr("aria-busy", "true"),
-		h.Div(h.Class("loading-phrase-row"), dotMatrix(), phraseNode(phrase)),
+		h.Div(h.Class("loading-phrase-row"), dotMatrix(Puzzle), phraseNode(phrase)),
 	)
 }
 
@@ -93,7 +107,7 @@ func Overlay(phrase string, initiallyVisible bool) g.Node {
 	if !initiallyVisible {
 		attrs = append(attrs, g.Attr("hidden", ""))
 	}
-	attrs = append(attrs, h.Div(h.Class("loading-phrase-row"), dotMatrix(), phraseNode(phrase)))
+	attrs = append(attrs, h.Div(h.Class("loading-phrase-row"), dotMatrix(Puzzle), phraseNode(phrase)))
 
 	return g.Group([]g.Node{
 		h.Link(h.Rel("stylesheet"), h.Href(Style.URL())),

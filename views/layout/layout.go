@@ -22,6 +22,11 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 
 		// Global Site CSS
 		h.Link(h.Rel("stylesheet"), h.Href(assets.SiteCSS.URL())),
+
+		// The dot-matrix loader (ResImperiiDots), in the head so every page script
+		// at the end of <body> can rely on it. It only defines functions; starting
+		// server-rendered matrices waits for DOMContentLoaded.
+		h.Script(h.Src(assets.DotMatrixJS.URL())),
 	}
 
 	if componentCSS != "" {

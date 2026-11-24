@@ -21,9 +21,15 @@
     return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   }
 
-  function showStatus(el, msg, isError) {
+  // showStatus sets the passkey status line. waiting=true means the browser is
+  // asking the person for their passkey: the comet (dot-matrix.js) shows that
+  // it is their turn.
+  function showStatus(el, msg, isError, waiting) {
     if (!el) return;
     el.textContent = msg;
+    if (waiting && msg && window.ResImperiiDots) {
+      el.replaceChildren(window.ResImperiiDots.create(msg, "comet"));
+    }
     el.hidden = !msg;
     el.classList.toggle("is-error", Boolean(isError));
   }
@@ -38,7 +44,7 @@
     const label = (labelInput ? labelInput.value : "").trim() || "Passkey";
 
     btn.disabled = true;
-    showStatus(statusEl, "Waiting for your device or passkey manager…", false);
+    showStatus(statusEl, "Waiting for your device or passkey manager…", false, true);
 
     try {
       const beginResp = await fetch("/settings/passkeys/begin", {
@@ -107,7 +113,7 @@
 
     const nextURL = btn.getAttribute("data-next") || "/";
     btn.disabled = true;
-    showStatus(statusEl, "Waiting for your Passkey…", false);
+    showStatus(statusEl, "Waiting for your Passkey…", false, true);
 
     try {
       const beginResp = await fetch("/auth/passkey/begin", {
