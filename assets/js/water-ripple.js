@@ -268,6 +268,12 @@
   const SLOW_P75_MS = 24; // slower than ~42 fps: step down at once
   const FAST_P75_MS = 18; // ~55 fps or better: counts towards stepping up
   const PROMOTE_AFTER = 3; // consecutive smooth runs before stepping up
+  // Turning the water off entirely takes more proof than other steps, and is
+  // not forever: at level 0 nothing is measured (no ripple runs), so a stored
+  // 0 could never recover. After OFF_RETRY_MS the device gets another try at 1.
+  const OFF_AFTER_SLOW_RUNS = 2; // consecutive slow runs at level 1 before off
+  const OFF_AT_KEY = "res-imperii.water-off-at";
+  const OFF_RETRY_MS = 3 * 24 * 60 * 60 * 1000;
 
   function isAppleWebKit() {
     const ua = navigator.userAgent || "";
@@ -278,7 +284,11 @@
     try {
       const stored = Number(window.localStorage.getItem(QUALITY_KEY));
       if (Number.isInteger(stored) && stored >= 0 && stored <= 3 && window.localStorage.getItem(QUALITY_KEY) !== null) {
-        return stored;
+        if (stored > 0) return stored;
+        // Off: stay off only while the decision is recent. An undated 0 was
+        // stored before this rule and is retried at once.
+        const offAt = Number(window.localStorage.getItem(OFF_AT_KEY));
+        return offAt > 0 && Date.now() - offAt < OFF_RETRY_MS ? 0 : 1;
       }
     } catch (_) {
       // storage unavailable (private mode): fall through to a fresh guess
@@ -299,6 +309,7 @@
   const quality = {
     level: startingLevel(),
     smoothRuns: 0,
+    slowRuns: 0,
 
     get() {
       return this.level;
@@ -307,9 +318,12 @@
     set(level) {
       this.level = Math.max(0, Math.min(3, level));
       this.smoothRuns = 0;
+      this.slowRuns = 0;
       document.documentElement.classList.toggle("water-off", this.level === 0);
       try {
         window.localStorage.setItem(QUALITY_KEY, String(this.level));
+        if (this.level === 0) window.localStorage.setItem(OFF_AT_KEY, String(Date.now()));
+        else window.localStorage.removeItem(OFF_AT_KEY);
       } catch (_) {
         // not persisted; still applies for this page
       }
@@ -321,9 +335,12 @@
       // ~1 s per frame (RATIONALE 039). Hidden tabs are excluded in measure().
       if (!(p75 > 0)) return;
       if (p75 > SLOW_P75_MS) {
-        if (this.level > 0) this.set(this.level - 1);
+        this.smoothRuns = 0;
+        if (this.level > 1) this.set(this.level - 1);
+        else if (this.level === 1 && ++this.slowRuns >= OFF_AFTER_SLOW_RUNS) this.set(0);
         return;
       }
+      this.slowRuns = 0;
       if (p75 < FAST_P75_MS) {
         this.smoothRuns += 1;
         if (this.smoothRuns >= PROMOTE_AFTER && this.level < 3) this.set(this.level + 1);
@@ -340,7 +357,12 @@
       let last = 0;
       let raf = 0;
       const hiddenAtStart = document.hidden;
+      // A run that overlaps other water (a card or page loading ripple, which
+      // arrives with tweet and HTMX work) can't tell what made frames slow:
+      // it is discarded rather than blamed on the measured ripple.
+      let overlapped = false;
       const tick = (t) => {
+        if (activeInstances.size > 1) overlapped = true;
         if (last) frames.push(t - last);
         last = t;
         raf = window.requestAnimationFrame(tick);
@@ -351,7 +373,7 @@
         if (ended) return;
         ended = true;
         window.cancelAnimationFrame(raf);
-        if (!report || hiddenAtStart || document.hidden || frames.length < 8) return;
+        if (!report || overlapped || hiddenAtStart || document.hidden || frames.length < 8) return;
         const sorted = frames.slice(2).sort((a, b) => a - b); // skip start-up frames
         this.observe(sorted[Math.floor(sorted.length * 0.75)]);
       };

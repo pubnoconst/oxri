@@ -1,10 +1,9 @@
 # Next
 
-- **Base Commit on `main`**: `407898d` (PR #40 — no placeholder while a tweet loads; the slot unrolls with the push)
-- **Active Branch**: `v2-entry-cap` (PR #41): journal entry body capped at 2,000 characters, with a live editor counter (RATIONALE 042).
-- **Stacked on it**: `v2-book-vacate` (PR #42): books count toward the 4.5 GB storage budget; an over-quota book save goes through Make Room, which frees journal space only (books are never evicted) and then saves the book (RATIONALE 043).
+- **Base Commit on `main`**: `d5de534` (PR #42 — books count toward storage; Make Room for book saves. PR #41, the 2,000-character entry cap, shipped with it)
+- **Active Branch**: `v2-water-recover` (PR #43): the phone had switched the water off for good (governor stuck at level 0). Off now expires after 3 days and needs two slow runs; runs overlapping loading ripples are discarded; loading ripples paint a soft crest while off (RATIONALE 044).
 - **Branches**: `main`, `prod`, `v2` (live); `v1`, `fsharp-legacy`, `rust-experiment` (archived lineage, kept on purpose).
-- **Active Experiment / Undo Instructions**: None. To reset a device's water quality level: in the browser console, `localStorage.removeItem("res-imperii.water-quality")`.
+- **Active Experiment / Undo Instructions**: None. To reset a device's water quality level: in the browser console, `localStorage.removeItem("res-imperii.water-quality")` (and `"res-imperii.water-off-at"`). On a phone: Chrome → Site settings → the site → Clear data.
 
 ## Principles
 
@@ -23,7 +22,8 @@
 
 ## Next on Mind
 
-1. If the press ripple feels choppy on the Pixel 10: limit the filter to the wave's bounding box, and add a ring-only (transform/opacity) tier that phones start on. (No Safari device is available; the governor's cautious Safari start, level 1, stays unverified.)
+1. After PR #43 ships, check the Pixel 10: taps should ripple again (level 1). If they are choppy there, the phone will step down to off again after two slow taps, and loading ripples will show the painted crest. The lasting fix for a phone that can't refract the viewport smoothly: limit the filter to the wave's bounding box, or a ring-only (transform/opacity) tier. (No Safari device is available; the governor's cautious Safari start, level 1, stays unverified.)
+   - If the loading ripple still feels too brief on phone-sized cards, scale its duration and reach to the card's size.
 2. Continue the plan from step 3.
 3. **Edge tweets (deferred by the owner, "we will address Edge later"):** tweets take a long time to load in Edge. Start in Edge DevTools on `/journals`: look for "Tracking Prevention blocked …twitter.com" and check the network timing of `platform.twitter.com` / `syndication.twitter.com`. The 12 s link-card fallback still bounds the worst case.
 4. Run `mage backup` and author Books II and III via `/book-ii/edit` and `/book-iii/edit`.
