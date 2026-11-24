@@ -1,6 +1,10 @@
-// Package tweet draws a post on X as the site's own quiet tweet box: a
-// quotation on the card's linen, set in the site's type, with no script from
-// X. The data is a snapshot taken once (internal/tweet).
+// Package tweet draws a post on X as a clipping: a slip of paper laid on the
+// card's linen, the source and date along the top like a newspaper cutting,
+// the words in the site's type, signed by the author at the bottom. No script
+// from X. The data is a snapshot taken once (internal/tweet).
+//
+// The clipping is for posts from other sites; a direct link to an image,
+// video or audio file stays plain framed media (journal-media.js).
 //
 // A video or GIF shows its poster with a play mark; tapping it swaps the box
 // for X's own embed (journal-media.js), which is the only time X's script
@@ -27,18 +31,24 @@ var StyleCSS string
 func Box(s tweet.Snapshot) g.Node {
 	post := s.PostURL()
 	return h.Figure(h.Class("tweet-box"), g.Attr("data-tweet-id", s.ID), g.Attr("data-tweet-user", s.Handle),
-		h.FigCaption(h.Class("tweet-byline"),
-			g.If(s.AvatarURL != "", h.Img(h.Class("tweet-avatar"), h.Src(s.AvatarURL), h.Alt(""),
-				h.Width("48"), h.Height("48"), g.Attr("loading", "lazy"), g.Attr("decoding", "async"), g.Attr("referrerpolicy", "no-referrer"))),
-			h.Span(h.Class("tweet-name"), g.Text(s.Name)),
-			h.Span(h.Class("tweet-handle"), g.Text("@"+s.Handle)),
-			h.Span(h.Class("tweet-dot"), g.Attr("aria-hidden", "true"), g.Text("·")),
+		// The source and date, like the head of a newspaper cutting.
+		h.Div(h.Class("tweet-head"),
+			h.Span(h.Class("tweet-site"), g.Text("X")),
 			h.Time(h.DateTime(s.Created.Format("2006-01-02")), g.Text(s.Created.Format("Jan 2, 2006"))),
 		),
 		g.If(s.Text != "", h.BlockQuote(h.Class("tweet-text"), g.Attr("cite", post), paragraphs(s.Text))),
 		quoted(s.Quoted),
 		media(s),
-		h.A(h.Class("tweet-source"), h.Href(post), h.Target("_blank"), h.Rel("noopener noreferrer"), g.Text("View on X")),
+		// Signed at the bottom: the author, and the way to the original.
+		h.FigCaption(h.Class("tweet-byline"),
+			g.If(s.AvatarURL != "", h.Img(h.Class("tweet-avatar"), h.Src(s.AvatarURL), h.Alt(""),
+				h.Width("48"), h.Height("48"), g.Attr("loading", "lazy"), g.Attr("decoding", "async"), g.Attr("referrerpolicy", "no-referrer"))),
+			h.Span(h.Class("tweet-author"),
+				h.Span(h.Class("tweet-name"), g.Text(s.Name)),
+				h.Span(h.Class("tweet-handle"), g.Text("@"+s.Handle)),
+			),
+			h.A(h.Class("tweet-source"), h.Href(post), h.Target("_blank"), h.Rel("noopener noreferrer"), g.Text("View on X")),
+		),
 	)
 }
 
