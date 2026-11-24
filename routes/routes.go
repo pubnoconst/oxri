@@ -66,6 +66,9 @@ func NewRouter(cfg Config) http.Handler {
 		errorpage.Render(w, http.StatusNotFound, "")
 	}))
 
+	// Web app manifest (installable on phones and desktops).
+	r.Get("/manifest.webmanifest", handleManifest)
+
 	// 5. Public Page, Books & Health Routes
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")

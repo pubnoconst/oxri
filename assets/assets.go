@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-//go:embed css js favicon.png
+//go:embed css js icons favicon.png
 var files embed.FS
 
 // Asset is a static file with a content-hashed URL. Its fields are unexported:
@@ -43,7 +43,13 @@ func (a Asset) Path() string { return a.path }
 // Embedded files. Each is verified to exist at init.
 var (
 	Favicon = file("favicon.png")
-	SiteCSS = file("css/site.css")
+
+	// App icons (cmd/icongen draws them; `mage icons`).
+	Icon192         = file("icons/icon-192.png")
+	Icon512         = file("icons/icon-512.png")
+	IconMaskable512 = file("icons/icon-maskable-512.png")
+	AppleTouchIcon  = file("icons/apple-touch-icon.png")
+	SiteCSS         = file("css/site.css")
 
 	HTMXJS               = file("js/htmx.min.js")
 	MarkdownItJS         = file("js/markdown-it.min.js")
