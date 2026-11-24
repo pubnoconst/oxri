@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `1c76392` (PR #63 — JS type-checked in CI)
-- **Active Branch**: `catalog-media-centre` (PR #64): catalog preview media centred on wide cards, linked images shown whole (RATIONALE 065, `c586562`).
+- **Base Commit on `main`**: `7aa58c5` (PR #64 — catalog media centred)
+- **Active Branch**: `scripture-media` (PR #65): an entry's media can be a Bible passage, picked by book/from/to/translation, fetched from the Free Use Bible API and verified by the server on save (RATIONALE 066, `430af3e`).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
@@ -25,6 +25,7 @@ The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG
 
 ## Next on Mind
 
+0. **Scripture media (PR #65)**: on the S9+, tap and scroll the Book list, then save a passage and check the card. Set aside by the owner: highlighting phrases (must not put markup in the database). Possible later: ranges across chapters, other scriptures in the Scripture dropdown.
 1. On the S9+ (and desktop), after PR #46 ships: seeded twinkles on tweet slots, the puzzle on Confirming and sign-in, the comet on passkey prompts, and cards unrolling smoothly (no snap) as tweets arrive.
    - Done in PR #56: tweets are server-drawn clippings (no X script); the remaining embeds (no snapshot yet, or a tapped video) are built only near the screen. Still open: check what the catalog does if `/journals/content` stalls (it now says "offline"/"couldn't reach the server" on a send error, PR #51).
    - After PR #56 ships: open `/journals` on prod twice. The first view fills snapshots in the background (Render log: `[TWEET]` lines only on failure); the second should show clippings for every tweet. Possible next: clippings for other sites (Reddit, Threads, Pinterest), each needing its own snapshot fetcher.

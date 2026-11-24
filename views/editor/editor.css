@@ -196,6 +196,7 @@
 }
 
 .editor-field input,
+.editor-field select,
 .editor-compose-card textarea {
   width: 100%;
   box-sizing: border-box;
@@ -207,12 +208,14 @@
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.editor-field input {
+.editor-field input,
+.editor-field select {
   min-height: 2.6rem;
   padding: 0.5rem 0.75rem;
 }
 
 .editor-field input:focus,
+.editor-field select:focus,
 .editor-compose-card textarea:focus {
   border-color: var(--border-focus);
   outline: none;
@@ -366,6 +369,124 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .editor-field select,
   .editor-field input,
   .editor-compose-card textarea { transition: none; }
+}
+
+/* Media: a link, or a passage of scripture (views/editor mediaField). The
+   groups follow the dropdowns; [hidden] wins over their display. */
+.media-group {
+  margin-top: 0.6rem;
+}
+
+.media-group[hidden],
+.scripture-fields[hidden] {
+  display: none;
+}
+
+.media-group > .field-label-row {
+  margin-top: 0.2rem;
+}
+
+/* Book and Translation take a row each; From and To share one. */
+.scripture-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.65rem 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.scripture-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.scripture-book,
+.scripture-translation,
+.scripture-hint {
+  grid-column: 1 / -1;
+}
+
+.scripture-cell label {
+  font-size: 0.95rem;
+}
+
+.scripture-hint {
+  margin-top: 0;
+}
+
+/* A required field's star: part of the label, quiet like the label. */
+.field-required {
+  opacity: 0.6;
+}
+
+/* Dropdowns draw their own chevron, in the ink colour of either theme, set
+   in from the right edge as far as the text is from the left (the native
+   arrow sits against the border). */
+.editor-field .editor-select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.3rem) 55%,
+    calc(100% - 0.95rem) 55%;
+  background-size: 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+/* Book: a search box over the books; the matches list in place below it,
+   a few rows tall, scrolling for more (scripture-picker.js). */
+.book-search {
+  display: flex;
+  flex-direction: column;
+}
+
+.book-list {
+  max-height: 12rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0.3rem 0 0;
+  padding: 0.25rem;
+  list-style: none;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--depth-2-surface);
+  box-shadow: var(--depth-2-shadow);
+}
+
+.book-list[hidden],
+.book-list li[hidden] {
+  display: none;
+}
+
+.book-list li {
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-control);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.book-list li:hover,
+.book-list li.is-active {
+  background: color-mix(in srgb, var(--page-ink) 8%, transparent);
+}
+
+/* The chosen book is marked by a shape, not by weight or colour alone. */
+.book-list li[aria-selected="true"]::after {
+  content: "✓";
+  float: right;
+  opacity: 0.7;
+}
+
+/* A book takes focus only from a click or tap (tabindex -1); the arrow keys
+   move the highlight instead, so no focus ring is drawn on it. */
+.book-list li:focus {
+  outline: none;
 }

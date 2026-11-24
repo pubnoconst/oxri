@@ -59,6 +59,7 @@ var (
 	JournalMediaJS       = file("js/journal-media.js")
 	DotMatrixJS          = file("js/dot-matrix.js")
 	JournalEditorJS      = file("js/journal-editor.js")
+	ScripturePickerJS    = file("js/scripture-picker.js")
 	JournalsCatalogJS    = file("js/journals-catalog.js")
 	LoadingTransitionJS  = file("js/loading-transition.js")
 	VacateSpaceJS        = file("js/vacate-space.js")

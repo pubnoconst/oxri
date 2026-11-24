@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS %s (
   body TEXT NOT NULL,
   bookmarked INTEGER NOT NULL DEFAULT 0 CHECK(bookmarked IN (0,1)),
   published INTEGER NOT NULL DEFAULT 1 CHECK(published IN (0,1)),
+  passage TEXT CHECK(passage IS NULL OR length(passage) <= 12288),
   CHECK(
     (tag1 IS NULL OR tag2 IS NULL OR tag1 != tag2) AND
     (tag1 IS NULL OR tag3 IS NULL OR tag1 != tag3) AND
@@ -178,6 +179,15 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 		return fmt.Errorf("failed to create tweet_snapshots table: %w", err)
 	}
 
+	// Migration v8: the Bible passage an entry quotes (reference and plain text)
+	if has, err := hasColumnTx(ctx, tx, "journals", "passage"); err != nil {
+		return err
+	} else if !has {
+		if _, err := tx.ExecContext(ctx, `ALTER TABLE journals ADD COLUMN passage TEXT CHECK(passage IS NULL OR length(passage) <= 12288);`); err != nil {
+			return fmt.Errorf("failed to add journals.passage: %w", err)
+		}
+	}
+
 	if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO schema_migrations (version) VALUES (?);`, CurrentSchemaVersion); err != nil {
 		return fmt.Errorf("failed to record schema version %d: %w", CurrentSchemaVersion, err)
 	}
@@ -237,4 +247,23 @@ FROM journals;`
 		return err
 	}
 	return nil
+}
+
+// hasColumnTx reports whether table has a column named col.
+func hasColumnTx(ctx context.Context, tx *sql.Tx, table, col string) (bool, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT name FROM pragma_table_info(?);`, table)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return false, err
+		}
+		if name == col {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
 }

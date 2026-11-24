@@ -43,9 +43,18 @@ interface DOMPurifyAPI {
   sanitize(dirty: string, config?: Record<string, unknown>): string;
 }
 
+interface ResImperiiScriptureAPI {
+  /** Whether the entry's media is scripture rather than a link (scripture-picker.js). */
+  active(): boolean;
+  /** Shows the chosen passage in `container`; true once it is ready to save. */
+  update(container: HTMLElement): boolean;
+}
+
 interface Window {
   ResImperiiDots: ResImperiiDotsAPI;
   ResImperiiMedia: ResImperiiMediaAPI;
+  /** Present on the journal editor only. */
+  ResImperiiScripture?: ResImperiiScriptureAPI;
   ResImperiiLoading: ResImperiiLoadingAPI;
   twttr?: TwitterWidgets;
   markdownit(options?: Record<string, boolean>): MarkdownIt;

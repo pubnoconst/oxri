@@ -37,7 +37,7 @@ func (s *Store) ExportSnapshot(ctx context.Context) (*Snapshot, error) {
 
 	// 1. Export journals
 	jRows, err := s.db.QueryContext(ctx,
-		`SELECT id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published FROM journals ORDER BY id ASC;`,
+		`SELECT `+journalColumns+` FROM journals ORDER BY id ASC;`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("export journals: %w", err)
@@ -134,8 +134,8 @@ func (s *Store) RestoreSnapshot(ctx context.Context, snap *Snapshot) error {
 	}()
 
 	const upsertJournalSQL = `
-INSERT INTO journals (id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO journals (id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published, passage)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   created_at = excluded.created_at,
   media_url = excluded.media_url,
@@ -144,18 +144,20 @@ ON CONFLICT(id) DO UPDATE SET
   tag3 = excluded.tag3,
   body = excluded.body,
   bookmarked = excluded.bookmarked,
-  published = excluded.published;`
+  published = excluded.published,
+  passage = excluded.passage;`
 
 	for _, j := range snap.Journals {
 		if j.ID <= 0 {
 			return fmt.Errorf("invalid journal id %d in snapshot", j.ID)
 		}
 		entry, err := ParseValidatedEntry(JournalInput{
-			MediaURL:   j.MediaURL,
-			Tags:       j.Tags(),
-			Body:       j.Body,
-			Bookmarked: j.Bookmarked,
-			Published:  j.Published,
+			MediaURL:    j.MediaURL,
+			Tags:        j.Tags(),
+			Body:        j.Body,
+			Bookmarked:  j.Bookmarked,
+			Published:   j.Published,
+			PassageJSON: j.PassageJSON,
 		})
 		if err != nil {
 			return fmt.Errorf("invalid journal %d in snapshot: %w", j.ID, err)
@@ -174,6 +176,7 @@ ON CONFLICT(id) DO UPDATE SET
 			entry.Body(),
 			boolToInt(entry.Bookmarked()),
 			boolToInt(entry.Published()),
+			nullablePassage(entry.PassageJSON()),
 		); err != nil {
 			return fmt.Errorf("restore journal %d: %w", j.ID, err)
 		}

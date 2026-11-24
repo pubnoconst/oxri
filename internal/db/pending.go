@@ -25,6 +25,7 @@ type PendingJournal struct {
 	MediaURL   string
 	TagsRaw    string
 	Body       string
+	Scripture  ScriptureInput // the scripture fields, re-sent and checked again
 	Published  bool
 	Bookmarked bool
 	EntryBytes int64

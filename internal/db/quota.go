@@ -49,7 +49,8 @@ func (j Journal) EstimatedBytes() int64 {
 		int64(len(j.Tag1)) +
 		int64(len(j.Tag2)) +
 		int64(len(j.Tag3)) +
-		int64(len(j.Body))
+		int64(len(j.Body)) +
+		int64(len(j.PassageJSON))
 }
 
 // SetMaxStorageBytes overrides the maximum storage limit (useful in unit tests).
@@ -88,7 +89,8 @@ SELECT COALESCE(SUM(
   length(CAST(COALESCE(tag1, '') AS BLOB)) +
   length(CAST(COALESCE(tag2, '') AS BLOB)) +
   length(CAST(COALESCE(tag3, '') AS BLOB)) +
-  length(CAST(body AS BLOB))
+  length(CAST(body AS BLOB)) +
+  length(CAST(COALESCE(passage, '') AS BLOB))
 ), 0) FROM journals`, RowOverheadBytes)
 
 	bookStorageBytesSQL = fmt.Sprintf(`
@@ -204,8 +206,8 @@ func (s *Store) PreviewAutoVacate(ctx context.Context, requiredBytes int64) (Aut
 }
 
 func previewAutoVacateTx(ctx context.Context, q queryExecer, requiredBytes int64) (AutoVacatePlan, error) {
-	const sqlQuery = `
-SELECT id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published
+	sqlQuery := `
+SELECT ` + journalColumns + `
 FROM journals
 WHERE published = 0 OR bookmarked = 0
 ORDER BY

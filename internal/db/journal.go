@@ -21,6 +21,23 @@ type Journal struct {
 	Body       string
 	Bookmarked bool
 	Published  bool
+	// PassageJSON is the Bible passage the entry quotes, checked against its provider
+	// (domain.EncodePassage), or "" when it quotes none.
+	PassageJSON string `json:"passage,omitempty"`
+}
+
+// Passage decodes the quoted passage; ok is false when there is none (or it
+// no longer validates, which leaves the media link to journal-media.js).
+func (j Journal) Passage() (domain.Passage, bool) {
+	if j.PassageJSON == "" {
+		return domain.Passage{}, false
+	}
+	p, err := domain.DecodePassage(j.PassageJSON)
+	return p, err == nil
+}
+
+func nullablePassage(s string) sql.NullString {
+	return sql.NullString{String: s, Valid: s != ""}
 }
 
 // Tags returns a slice of all non-empty tags on the entry.
@@ -85,9 +102,9 @@ func (s *Store) CreateValidated(ctx context.Context, cap domain.AdminCap, entry 
 	t3 := nullableTag(entry.TagAt(2))
 
 	const q = `
-INSERT INTO journals (id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
-	if _, err := tx.ExecContext(ctx, q, id, createdAtMs, entry.MediaURL(), t1, t2, t3, entry.Body(), boolToInt(entry.Bookmarked()), boolToInt(entry.Published())); err != nil {
+INSERT INTO journals (id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published, passage)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+	if _, err := tx.ExecContext(ctx, q, id, createdAtMs, entry.MediaURL(), t1, t2, t3, entry.Body(), boolToInt(entry.Bookmarked()), boolToInt(entry.Published()), nullablePassage(entry.PassageJSON())); err != nil {
 		return nil, err
 	}
 
@@ -98,15 +115,16 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	s.clearPendingJournal()
 
 	return &Journal{
-		ID:         id,
-		CreatedAt:  time.UnixMilli(createdAtMs),
-		MediaURL:   entry.MediaURL(),
-		Tag1:       t1.String,
-		Tag2:       t2.String,
-		Tag3:       t3.String,
-		Body:       entry.Body(),
-		Bookmarked: entry.Bookmarked(),
-		Published:  entry.Published(),
+		ID:          id,
+		CreatedAt:   time.UnixMilli(createdAtMs),
+		MediaURL:    entry.MediaURL(),
+		Tag1:        t1.String,
+		Tag2:        t2.String,
+		Tag3:        t3.String,
+		Body:        entry.Body(),
+		Bookmarked:  entry.Bookmarked(),
+		Published:   entry.Published(),
+		PassageJSON: entry.PassageJSON(),
 	}, nil
 }
 
@@ -137,9 +155,9 @@ func (s *Store) UpdateValidated(ctx context.Context, cap domain.AdminCap, id int
 
 	const q = `
 UPDATE journals
-SET media_url = ?, tag1 = ?, tag2 = ?, tag3 = ?, body = ?, bookmarked = ?, published = ?
+SET media_url = ?, tag1 = ?, tag2 = ?, tag3 = ?, body = ?, bookmarked = ?, published = ?, passage = ?
 WHERE id = ?;`
-	res, err := tx.ExecContext(ctx, q, entry.MediaURL(), t1, t2, t3, entry.Body(), boolToInt(entry.Bookmarked()), boolToInt(entry.Published()), id)
+	res, err := tx.ExecContext(ctx, q, entry.MediaURL(), t1, t2, t3, entry.Body(), boolToInt(entry.Bookmarked()), boolToInt(entry.Published()), nullablePassage(entry.PassageJSON()), id)
 	if err != nil {
 		return err
 	}

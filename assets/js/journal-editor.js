@@ -143,7 +143,14 @@
   }
 
   function updateMedia() {
-    mediaPreview.replaceChildren();
+    // The media can be a passage of scripture instead of a link (scripture-picker.js).
+    if (window.ResImperiiScripture && window.ResImperiiScripture.active()) {
+      if (mediaError) mediaError.textContent = "";
+      isMediaValid = window.ResImperiiScripture.update(mediaPreview);
+      syncSubmitButton();
+      return;
+    }
+    delete mediaPreview.dataset.passageKey;
     const raw = mediaInput.value.trim();
     const len = Array.from(raw).length;
 
@@ -193,6 +200,7 @@
     isMediaValid = true;
     if (mediaError) mediaError.textContent = "";
 
+    mediaPreview.replaceChildren();
     const media = createMedia(url);
     if (media) {
       mediaPreview.classList.remove("is-empty");
@@ -382,6 +390,7 @@
 
   contentInput.addEventListener("input", updateContent);
   mediaInput.addEventListener("input", updateMedia);
+  document.addEventListener("scripture:change", updateMedia);
   tagsInput.addEventListener("input", updateTags);
 
   if (form) {

@@ -8,11 +8,14 @@ import (
 	_ "embed"
 	"fmt"
 	"github.com/oxri/oxri-go/assets"
+	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/internal/domain"
 	"strings"
 
 	"github.com/oxri/oxri-go/views/layout"
 	"github.com/oxri/oxri-go/views/loading"
+	passageview "github.com/oxri/oxri-go/views/passage"
+	tweetview "github.com/oxri/oxri-go/views/tweet"
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 )
@@ -24,7 +27,9 @@ var StyleCSS string
 const StylePath = "/views/editor/editor.css"
 
 // Style is the content-hashed handle for StyleCSS (URL and route handler).
-var Style = assets.Component(StylePath, StyleCSS)
+// The clipping stylesheets are folded in: the preview draws a Bible passage
+// as the same clipping the journal pages show (views/passage).
+var Style = assets.Component(StylePath, StyleCSS+"\n"+tweetview.StyleCSS+"\n"+passageview.StyleCSS)
 
 // DefaultBody provides starter Markdown when composing a new journal entry.
 const DefaultBody = `# A journal entry
@@ -49,6 +54,9 @@ type FormData struct {
 	Published    bool
 	ErrorMsg     string
 	ExistingTags []string
+	// Scripture is the media when it is a Bible passage instead of a link
+	// (mediaField); the server checks its text against the provider on save.
+	Scripture db.ScriptureInput
 }
 
 func (d FormData) ActionURL() string {
@@ -175,24 +183,7 @@ func FormPage(isAuth bool, data FormData) g.Node {
 							h.H2(g.Text("Compose")),
 							h.Span(g.Text("01")),
 						),
-						h.Div(h.Class("editor-field"),
-							h.Div(h.Class("field-label-row"),
-								h.Label(h.For("journal-media-link"), g.Text("Media link")),
-								h.Span(h.ID("media-char-count"), h.Class("field-counter"), g.Text("0 / 128")),
-							),
-							h.Input(
-								h.ID("journal-media-link"),
-								h.Name("media_url"),
-								h.Type("url"),
-								h.MaxLength("128"),
-								h.Required(),
-								h.Placeholder("https://..."),
-								h.AutoComplete("url"),
-								h.Value(data.MediaURL),
-							),
-							h.P(h.Class("field-hint"), g.Text("Required (1–128 chars). Video, audio, image, or X / Twitter post link.")),
-							h.P(h.ID("media-error"), h.Class("field-error"), g.Attr("aria-live", "polite")),
-						),
+						mediaField(data),
 						h.Div(h.Class("editor-field"),
 							h.Div(h.Class("field-label-row"),
 								h.Label(h.For("journal-tags"), g.Text("Tags")),
@@ -253,6 +244,7 @@ func FormPage(isAuth bool, data FormData) g.Node {
 		h.Script(h.Src(assets.MarkdownItJS.URL())),
 		h.Script(h.Src(assets.PurifyJS.URL())),
 		h.Script(h.Src(assets.JournalMediaJS.URL())),
+		h.Script(h.Src(assets.ScripturePickerJS.URL())),
 		h.Script(h.Src(assets.JournalEditorJS.URL())),
 		h.Script(h.Src(assets.LoadingTransitionJS.URL())),
 	)

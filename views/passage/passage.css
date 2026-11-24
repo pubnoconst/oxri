@@ -1,0 +1,23 @@
+/* Bible passage clipping (views/passage): the tweet box's slip of paper
+   (views/tweet, .tweet-box and friends), with a few rules of its own. */
+
+.passage-text p {
+  margin: 0;
+}
+
+/* Signed at the bottom with the reference, like the author of a post. */
+.passage-reference {
+  color: var(--page-ink);
+}
+
+/* The editor's preview while the verses load, or when there is none
+   (scripture-picker.js). */
+.passage-status {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 0.75rem 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+  text-align: center;
+}

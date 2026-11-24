@@ -27,7 +27,7 @@ func (s *Store) allEntriesCached(ctx context.Context) ([]Journal, error) {
 	}
 	s.cacheMu.RUnlock()
 
-	const q = `SELECT id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published FROM journals ORDER BY created_at DESC, id DESC;`
+	const q = `SELECT ` + journalColumns + ` FROM journals ORDER BY created_at DESC, id DESC;`
 	rows, err := s.db.QueryContext(ctx, q)
 	if err != nil {
 		return nil, err
@@ -197,7 +197,7 @@ func (s *Store) Get(ctx context.Context, id int64, includeUnpublished bool) (*Jo
 }
 
 func getTx(ctx context.Context, q queryExecer, id int64, includeUnpublished bool) (*Journal, error) {
-	sqlQuery := `SELECT id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published FROM journals WHERE id = ?`
+	sqlQuery := `SELECT ` + journalColumns + ` FROM journals WHERE id = ?`
 	if !includeUnpublished {
 		sqlQuery += ` AND published = 1`
 	}
@@ -214,6 +214,9 @@ func getTx(ctx context.Context, q queryExecer, id int64, includeUnpublished bool
 	return &j, nil
 }
 
+// journalColumns is the column list scanJournal reads, in its order.
+const journalColumns = `id, created_at, media_url, tag1, tag2, tag3, body, bookmarked, published, passage`
+
 type scanner interface {
 	Scan(dest ...any) error
 }
@@ -221,10 +224,10 @@ type scanner interface {
 func scanJournal(s scanner) (Journal, error) {
 	var j Journal
 	var createdAtMs int64
-	var t1, t2, t3 sql.NullString
+	var t1, t2, t3, passage sql.NullString
 	var bookmarked, published int
 
-	if err := s.Scan(&j.ID, &createdAtMs, &j.MediaURL, &t1, &t2, &t3, &j.Body, &bookmarked, &published); err != nil {
+	if err := s.Scan(&j.ID, &createdAtMs, &j.MediaURL, &t1, &t2, &t3, &j.Body, &bookmarked, &published, &passage); err != nil {
 		return j, err
 	}
 	j.CreatedAt = time.UnixMilli(createdAtMs)
@@ -233,5 +236,6 @@ func scanJournal(s scanner) (Journal, error) {
 	j.Tag3 = t3.String
 	j.Bookmarked = bookmarked == 1
 	j.Published = published == 1
+	j.PassageJSON = passage.String
 	return j, nil
 }
