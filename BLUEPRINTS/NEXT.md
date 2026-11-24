@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `04ede56` (PR #58 — named depths)
-- **Active Branch**: `interaction-states` (PR #59): one hover/focus behaviour per kind of link and button, HIG §5 (RATIONALE 060).
+- **Base Commit on `main`**: `e990b5f` (PR #59 — links and buttons)
+- **Active Branch**: `media-radius` (PR #60): clippings and raw media share one radius, HIG §4 (RATIONALE 061).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
