@@ -1,4 +1,4 @@
-/* Post clipping (views/tweet): a slip of paper laid on the card's linen.
+/* Post clipping (views/tweet): a slip of paper laid on the card (depth 2).
    The source and date run along the top in small capitals, like the head of a
    newspaper cutting; the author signs at the bottom under a dashed rule. Only
    posts from other sites are clippings: a direct link to an image, video or
@@ -10,10 +10,8 @@
   padding: 0.9rem 1rem 0.8rem;
   border: 1px solid var(--border-subtle);
   border-radius: 3px;
-  background: var(--page);
-  box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.04),
-    0 6px 14px -10px rgba(40, 35, 25, 0.35);
+  background: var(--depth-2-surface);
+  box-shadow: var(--depth-2-shadow);
   font-family: var(--font-serif);
 }
 

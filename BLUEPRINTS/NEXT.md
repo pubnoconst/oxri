@@ -10,7 +10,7 @@
 
 The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG.md`](HIG.md).
 
-- **Design:** Subtlety is the key. Linen is felt, not seen. Cards are their own cloth, told apart by weave and shadow, never by tint. Waiting is one quiet 3×3 dot matrix: CSS-drawn, opacity-only, the same on every device.
+- **Design:** Subtlety is the key. Depth, not decoration: every surface sits at one depth (HIG §4: `--depth-{sunk,0,1,2}-surface` and `-shadow`), never told apart by texture or tint. Waiting is one quiet 3×3 dot matrix: CSS-drawn, opacity-only, the same on every device.
 - **Code:** Many small modules, each with one reason to change. Diligence can betray you; the type system won't. Use packages where the compiler should enforce a boundary, and files for cohesion within one.
 
 ## Modularity / type-safety plan (one PR each, no visible change, tests green)

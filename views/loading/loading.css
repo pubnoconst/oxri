@@ -17,7 +17,7 @@
   place-items: center;
   padding: var(--space-page-y) var(--space-page-x);
   box-sizing: border-box;
-  background: var(--fabric-page);
+  background: var(--depth-0-surface);
   opacity: 0;
   pointer-events: none;
   transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -39,7 +39,7 @@
 
 .loading-page {
   position: relative;
-  background: var(--fabric-page);
+  background: var(--depth-0-surface);
 }
 
 .loading-phrase {

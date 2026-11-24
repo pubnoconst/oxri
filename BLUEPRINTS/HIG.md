@@ -9,7 +9,7 @@ The reference reader's device is a **budget Android phone (Samsung Galaxy A02s)*
 ## 1. Principles
 
 1. **Subtlety is the key.** Nothing shouts. Emphasis comes from weight, position and space, never from bright colour or size jumps.
-2. **The page is cloth.** Linen is felt, not seen. Cards are their own cloth, told apart from the page by weave and shadow, never by a tinted fill.
+2. **Depth, not decoration.** Every surface sits at one depth, and its height is shown by a surface colour with the shadow that goes with it, never by texture or a translucent tint (§4).
 3. **Waiting is a dot matrix.** One quiet 3×3 grid, in three motions that each mean something (§6). Nothing else animates to fill time.
 4. **Plain words.** Say what is happening in the reader's terms ("Confirming, please wait.", "Make Room"), never in the system's ("POST failed", "quota exceeded").
 5. **Cheap to draw.** Animate only `opacity` and `transform`. No SVG filters over content and no animated layout properties (`height`, `top`, `width`). Bound every list (pagination).
@@ -45,9 +45,19 @@ The palette is a warm neutral page and ink, plus three accents used only for sta
 
 ## 4. Surfaces, space and shape
 
-- **Page:** `--fabric-page`, the linen weave over `--page`.
-- **Card:** `--fabric-card` with `--shadow-card`. A card is lifted by shadow, not by a border or tint.
-- **Linen never repeats visibly.** Each cloth is two noise tiles of coprime sizes (307 px and 419 px), drawn in Go by `views/linen`; never hand-edit the data URIs. Repeated cards (journal entries) start the weave at their own seeded point (`linen.Offset`), so no two show the same piece of cloth.
+- **Depth.** Every surface sits at one depth. Each depth is a pair of tokens, a surface colour and the shadow that goes with it, defined for both themes in `site.css`. Use the pair together, and never invent an in-between depth.
+
+  | Depth | Surface | Shadow | For |
+  |---|---|---|---|
+  | sunk | `--depth-sunk-surface` | none | wells cut into a surface: inputs, code, quoted posts |
+  | 0 | `--depth-0-surface` | none | the page |
+  | 1 | `--depth-1-surface` | `--depth-1-shadow` | cards and panels, lifted off the page; buttons |
+  | 2 | `--depth-2-surface` | `--depth-2-shadow` | things laid on a card: post clippings, embedded media |
+
+  - **Light comes from above.** In light, each step up is a little nearer white. In dark, each step up is a little lighter (4.5% toward white at depth 1, 8% at depth 2), because dark interfaces show height that way.
+  - **The shadow carries the height.** Depth 1's is long and soft (the card floats); depth 2's is short and close (laid on the card).
+  - **Borders are for edges, not depth.** A hairline `--border-*` may outline a surface, but height comes only from the pair.
+  - *History:* surfaces were once woven linen (SVG noise), introduced so the water ripple would read as real without an artificial shadow. The ripple was retired (RATIONALE 047), so the linen went too (RATIONALE 059).
 - **Posts from other sites are clippings** (`views/tweet`): a paper slip laid on the card, the site and date in small capitals along the top, the author signed under a dashed rule with "View on … ↗". Sites are named in text, never with their logos. A direct link to an image, video or audio file is not a clipping: it stays plain framed media.
 - **Radii:** cards `--radius-card` (0.5rem), controls `--radius-control` (0.35rem), chips and pills `--radius-pill`.
 - **Space:**
