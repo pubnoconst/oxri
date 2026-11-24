@@ -211,7 +211,7 @@ func FormPage(isAuth bool, data FormData) g.Node {
 								h.Name("tags"),
 								h.Type("text"),
 								h.AutoComplete("off"),
-								h.Placeholder("Log, Dev, Note"),
+								h.Placeholder("Tag names, separated by commas"),
 								h.Value(data.Tags),
 								g.Attr("data-existing-tags", data.ExistingTagsCSV()),
 							),
