@@ -85,7 +85,7 @@
   flex-shrink: 0;
 }
 
-/* "Live" cue in the site's water language: a faint ring spreads from the dot
+/* "Live" cue: a faint ring spreads from the dot
    and fades, slowly. Subtle by design; still under reduced motion. */
 .status-dot::after {
   content: "";
@@ -94,11 +94,11 @@
   border-radius: 50%;
   border: 1px solid var(--accent-active);
   opacity: 0;
-  animation: status-dot-ripple 3s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+  animation: status-dot-pulse 3s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
   pointer-events: none;
 }
 
-@keyframes status-dot-ripple {
+@keyframes status-dot-pulse {
   0% {
     transform: scale(1);
     opacity: 0.45;

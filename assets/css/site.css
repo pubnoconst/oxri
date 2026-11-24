@@ -69,9 +69,7 @@ p, h1, h2, h3, h4, h5, h6 {
   /* Linen: woven-cloth surfaces drawn by inline SVG noise (no image files).
      The page is one cloth; every card is its own piece of cloth, lifted off
      it by shadow and told apart by its weave (dark: a coarser card cloth on
-     the same base), never by a translucent-looking tint. The water ripple
-     refracts the weave, so it needs no painted sheen: --ripple-sun is
-     transparent and only a faint --ripple-trough remains. */
+     the same base), never by a translucent-looking tint. */
   --linen-page-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='w' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9 0.055' numOctaves='3' seed='5' stitchTiles='stitch' result='h'/%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.055 0.9' numOctaves='3' seed='11' stitchTiles='stitch' result='v'/%3E%3CfeComposite in='h' in2='v' operator='arithmetic' k2='0.5' k3='0.5' result='n'/%3E%3CfeColorMatrix in='n' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.1 0 0 0 -0.0500' result='d'/%3E%3CfeColorMatrix in='n' type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -0.22 0 0 0 0.1100' result='l'/%3E%3CfeMerge%3E%3CfeMergeNode in='d'/%3E%3CfeMergeNode in='l'/%3E%3C/feMerge%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23w)'/%3E%3C/svg%3E");
   --linen-card-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='w' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9 0.055' numOctaves='3' seed='3' stitchTiles='stitch' result='h'/%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.055 0.9' numOctaves='3' seed='17' stitchTiles='stitch' result='v'/%3E%3CfeComposite in='h' in2='v' operator='arithmetic' k2='0.5' k3='0.5' result='n'/%3E%3CfeColorMatrix in='n' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.1 0 0 0 -0.0500' result='d'/%3E%3CfeColorMatrix in='n' type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -0.22 0 0 0 0.1100' result='l'/%3E%3CfeMerge%3E%3CfeMergeNode in='d'/%3E%3CfeMergeNode in='l'/%3E%3C/feMerge%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23w)'/%3E%3C/svg%3E");
   --linen-page-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cfilter id='w' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9 0.055' numOctaves='3' seed='7' stitchTiles='stitch' result='h'/%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.055 0.9' numOctaves='3' seed='13' stitchTiles='stitch' result='v'/%3E%3CfeComposite in='h' in2='v' operator='arithmetic' k2='0.5' k3='0.5' result='n'/%3E%3CfeColorMatrix in='n' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.075 0 0 0 -0.0375' result='d'/%3E%3CfeColorMatrix in='n' type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -0.1 0 0 0 0.0500' result='l'/%3E%3CfeMerge%3E%3CfeMergeNode in='d'/%3E%3CfeMergeNode in='l'/%3E%3C/feMerge%3E%3C/filter%3E%3Crect width='280' height='280' filter='url(%23w)'/%3E%3C/svg%3E");
@@ -84,10 +82,6 @@ p, h1, h2, h3, h4, h5, h6 {
     0 1px 1px rgba(60, 55, 45, 0.05),
     0 8px 22px -10px rgba(60, 55, 45, 0.16),
     0 22px 44px -26px rgba(60, 55, 45, 0.18);
-  --ripple-sun: transparent;
-  --ripple-trough: rgba(52, 51, 47, 0.035);
-  --ripple-sun-painted: rgba(255, 255, 255, 0.5);
-  --ripple-trough-painted: rgba(52, 51, 47, 0.085);
   --fabric-page: var(--linen-page), var(--page);
   --fabric-card: var(--linen-card), var(--surface-card);
 
@@ -126,10 +120,6 @@ p, h1, h2, h3, h4, h5, h6 {
       0 1px 1px rgba(0, 0, 0, 0.35),
       0 10px 24px -8px rgba(0, 0, 0, 0.55),
       0 24px 48px -24px rgba(0, 0, 0, 0.6);
-    --ripple-sun: transparent;
-    --ripple-trough: rgba(0, 0, 0, 0.1);
-    --ripple-sun-painted: rgba(255, 255, 255, 0.06);
-    --ripple-trough-painted: rgba(0, 0, 0, 0.26);
   }
 }
 
@@ -150,10 +140,6 @@ p, h1, h2, h3, h4, h5, h6 {
     0 1px 1px rgba(60, 55, 45, 0.05),
     0 8px 22px -10px rgba(60, 55, 45, 0.16),
     0 22px 44px -26px rgba(60, 55, 45, 0.18);
-  --ripple-sun: transparent;
-  --ripple-trough: rgba(52, 51, 47, 0.035);
-  --ripple-sun-painted: rgba(255, 255, 255, 0.5);
-  --ripple-trough-painted: rgba(52, 51, 47, 0.085);
 }
 
 :root[data-theme="dark"] {
@@ -172,10 +158,6 @@ p, h1, h2, h3, h4, h5, h6 {
     0 1px 1px rgba(0, 0, 0, 0.35),
     0 10px 24px -8px rgba(0, 0, 0, 0.55),
     0 24px 48px -24px rgba(0, 0, 0, 0.6);
-  --ripple-sun: transparent;
-  --ripple-trough: rgba(0, 0, 0, 0.1);
-  --ripple-sun-painted: rgba(255, 255, 255, 0.06);
-  --ripple-trough-painted: rgba(0, 0, 0, 0.26);
 }
 
 /* Consistent selection boxes (plain white in light mode, regardless of OS dark-mode setting) */
@@ -406,148 +388,11 @@ a {
      GPU-animated). */
 }
 
-/* While the tweet loads nothing is rendered or reserved: the slot is collapsed
-   and only the card's content shows, under the card ripple. */
-.journal-preview-media .tweet-embed-container.is-pending {
-  height: 0;
-  overflow: hidden;
-}
-
 /* Revealed: the slot height is driven by JS and always matches the tweet (it
    follows every resize). Overflow stays visible so the tweet's own shadow is
    not cut; the opening animation clips with clip-path instead. */
 .journal-preview-media .tweet-embed-container.is-revealed {
   overflow: visible;
-}
-
-/* Full-card & pagewide pure-CSS water drop ripple: synced with SVG radial refraction in water-ripple.js */
-.water-refract-svg {
-  position: absolute;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
-.water-stage {
-  position: relative;
-  min-height: 100svh;
-}
-
-/* The water lives under the cloth: a fixed, viewport-sized layer of page linen
-   behind all content (created by water-ripple.js getCloth). Page-scale ripples
-   refract only this layer, so cards, text and tweet iframes are never inside an
-   SVG filter (RATIONALE 039). It paints the same cloth as body, so at rest it is
-   invisible. */
-.water-cloth {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: var(--fabric-page);
-  pointer-events: none;
-}
-
-.card-water-ripple {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 3;
-  transition: opacity 360ms ease-out;
-}
-
-.card-water-ripple.is-pagewide {
-  position: fixed;
-  inset: 0;
-  border-radius: 0;
-  z-index: 50;
-}
-
-.card-water-ripple.is-fading-out {
-  opacity: 0;
-}
-
-
-.card-water-wave {
-  position: absolute;
-  left: var(--ripple-x, 50%);
-  top: var(--ripple-y, 32%);
-  width: var(--ripple-diameter, 46rem);
-  height: var(--ripple-diameter, 46rem);
-  border-radius: 50%;
-  transform: translate(-50%, -50%) scale(0.02);
-  opacity: 0;
-  will-change: transform, opacity;
-  /* Annular wave mask: isolates the sunlit specular sheen strictly to the thin moving crest */
-  -webkit-mask-image: radial-gradient(
-    circle,
-    transparent 42%,
-    rgba(0, 0, 0, 0.35) 45.2%,
-    #000 47.2%,
-    rgba(0, 0, 0, 0.55) 49.4%,
-    transparent 52.8%
-  );
-  mask-image: radial-gradient(
-    circle,
-    transparent 42%,
-    rgba(0, 0, 0, 0.35) 45.2%,
-    #000 47.2%,
-    rgba(0, 0, 0, 0.55) 49.4%,
-    transparent 52.8%
-  );
-  /* Only a faint trough: on linen the crest shows as the bent weave
-     (water-ripple.js refraction), so no painted white sheen is needed. */
-  background:
-    radial-gradient(
-      circle,
-      transparent 43.2%,
-      var(--ripple-trough) 46.4%,
-      var(--ripple-sun) 47.4%,
-      transparent 51%
-    );
-  animation: water-wave-propagate 3.2s cubic-bezier(0.12, 0.72, 0.28, 1) infinite;
-}
-
-.card-water-wave.wave-2 {
-  animation-delay: 1.06s;
-}
-
-/* Refraction off on this device (.water-off, set by the quality governor):
-   the loading ripple would be only the faint trough, i.e. invisible. Paint a
-   soft crest instead, still quiet, so the client is visibly waiting. */
-:root.water-off .card-water-ripple .card-water-wave {
-  background: radial-gradient(
-    circle,
-    transparent 43.2%,
-    var(--ripple-trough-painted) 46%,
-    var(--ripple-sun-painted) 47.6%,
-    transparent 51%
-  );
-}
-
-.card-water-wave.wave-3 {
-  animation-delay: 2.12s;
-}
-
-
-@keyframes water-wave-propagate {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.02);
-  }
-  12% {
-    opacity: 0.68;
-  }
-  58% {
-    opacity: 0.34;
-  }
-  86% {
-    opacity: 0.1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1.06);
-  }
 }
 
 .tweet-embed-stage {
@@ -667,58 +512,13 @@ a {
   animation: 220ms ease-in-out both page-fade-in;
 }
 
-/*
- * Touch ripple (assets/js/touch-ripple.js): pressing a link or button drops a
- * drop at the touch point; four mirror-image sources make it bounce off the
- * window edges. The waves are invisible: their scale and opacity only drive
- * water-ripple.js refraction of the page, so the linen bends and nothing is
- * painted. Linear scale = constant wave speed, so echoes arrive on time.
- */
-.touch-ripple {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 60;
-}
-
-.touch-ripple .card-water-wave {
-  width: var(--touch-diameter, 200vmax);
-  height: var(--touch-diameter, 200vmax);
-  background: none;
-  -webkit-mask-image: none;
-  mask-image: none;
-  /* Never painted, so never promote these (large) rings to GPU layers. */
-  will-change: auto;
-  animation: touch-wave-propagate var(--touch-ms, 1000ms) linear 1 both;
-}
-
-@keyframes touch-wave-propagate {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0);
-  }
-  5% {
-    opacity: calc(0.9 * var(--gain, 1));
-  }
-  35% {
-    opacity: calc(0.55 * var(--gain, 1));
-  }
-  70% {
-    opacity: calc(0.25 * var(--gain, 1));
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-/* ---- Phone loading UX: a 3x3 dot matrix instead of water ------------------
-   Phones (touch is the primary input) never run water (water-ripple.js
-   isPhoneUI uses the same query). The matrix is drawn with CSS, not glyphs, so
-   it looks the same on every phone, and it animates opacity only, which the
-   compositor keeps running even while the main thread is busy loading tweets.
-   Markup: views/loading.Dots and dotLoading() in journal-media.js. */
+/* ---- Loading: a 3x3 dot matrix ---------------------------------------------
+   The site's one loading cue (it replaced the water ripple, archived on the
+   water-ripple branch). Drawn with CSS, not glyphs, so it looks the same on
+   every device. The motion (seeded puzzle, seeded twinkle, comet) is drawn by
+   assets/js/dot-matrix.js with opacity and transform only, which the
+   compositor keeps running while the main thread is busy.
+   Markup: views/loading.Dots and ResImperiiDots.create. */
 .dot-loading {
   display: inline-flex;
   align-items: center;
@@ -727,7 +527,7 @@ a {
 }
 
 .dot-matrix {
-  display: none; /* phones only, see below */
+  display: inline-grid;
   grid-template-columns: repeat(3, 4px);
   grid-auto-rows: 4px;
   gap: 3px;
@@ -738,19 +538,7 @@ a {
   display: block;
   border-radius: 50%;
   background: currentColor;
-  opacity: 0.16;
-  animation: dot-matrix-sweep 1.05s ease-in-out infinite;
-}
-
-/* A diagonal sweep: each dot's delay is its diagonal (row + column). */
-.dot-matrix > i:nth-child(2), .dot-matrix > i:nth-child(4) { animation-delay: 0.12s; }
-.dot-matrix > i:nth-child(3), .dot-matrix > i:nth-child(5), .dot-matrix > i:nth-child(7) { animation-delay: 0.24s; }
-.dot-matrix > i:nth-child(6), .dot-matrix > i:nth-child(8) { animation-delay: 0.36s; }
-.dot-matrix > i:nth-child(9) { animation-delay: 0.48s; }
-
-@keyframes dot-matrix-sweep {
-  0%, 100% { opacity: 0.16; }
-  35% { opacity: 0.85; }
+  opacity: 0.14;
 }
 
 .dot-loading-label {
@@ -759,7 +547,13 @@ a {
   opacity: 0.7;
 }
 
-/* Slow navigation on phones: a small fixed loader near the bottom. */
+/* A navigation dims the page at once (a calm "received" cue); if it is slow
+   (navigation-feedback.js, 180 ms), a small fixed matrix appears at the
+   bottom. The loader itself is not dimmed. */
+:root.navigation-leaving body > :not(.nav-dot-loading) {
+  opacity: 0.6;
+}
+
 .nav-dot-loading {
   display: none;
   position: fixed;
@@ -770,42 +564,13 @@ a {
   pointer-events: none;
 }
 
-@media (pointer: coarse) {
-  .dot-matrix {
-    display: inline-grid;
-  }
-
-  /* No water on phones: hide every ring (cards, catalog, Confirming). */
-  .card-water-ripple {
-    display: none !important;
-  }
-
-  /* Calm "received" cue for a navigation, and the dots if it is slow. The
-     loader itself is not dimmed. */
-  :root.navigation-leaving body > :not(.nav-dot-loading) {
-    opacity: 0.6;
-  }
-
-  :root.navigation-pending .nav-dot-loading {
-    display: inline-flex;
-  }
+:root.navigation-pending .nav-dot-loading {
+  display: inline-flex;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dot-matrix > i {
-    opacity: 0.6;
-  }
-}
-
-/* Without a ripple (reduced motion, or the water quality governor switched
-   refraction off on this device: .water-off), keep a calm, static "received" cue. */
-:root.water-off.navigation-leaving body {
-  opacity: 0.6;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :root.navigation-leaving body {
-    opacity: 0.6;
+    opacity: 0.6 !important;
   }
 }
 

@@ -39,7 +39,6 @@
 
 .loading-page {
   position: relative;
-  /* Own copy of the page cloth so the ripple refracts the weave, not just the phrase. */
   background: var(--fabric-page);
 }
 
@@ -58,26 +57,6 @@
   user-select: none;
 }
 
-/*
- * Water language shared with the journals catalog: rings
- * spread from the phrase's centre (.loading-water-ripple, site.css) and the
- * letters ripple outward from the middle with them. No scaling: each letter
- * lifts a little and settles with a damped bob, delayed by its distance from
- * the centre (--d, set in loading.go). The period equals the ring spawn
- * interval (3.2s / 3 waves), so every ring launches a fresh text ripple.
- */
-.loading-char {
-  display: inline-block;
-  opacity: 0.74;
-  will-change: transform, opacity;
-  animation: loadingCentreRipple 1066ms cubic-bezier(0.37, 0, 0.63, 1) infinite;
-  animation-delay: calc(var(--d, 0) * 46ms);
-}
-
-.loading-char.is-space {
-  width: 0.28em;
-}
-
 @keyframes loadingPageEaseIn {
   from {
     opacity: 0;
@@ -89,45 +68,13 @@
   }
 }
 
-@keyframes loadingCentreRipple {
-  0% {
-    transform: translateY(0);
-    opacity: 0.74;
-  }
-  9% {
-    transform: translateY(-0.15em);
-    opacity: 1;
-  }
-  20% {
-    transform: translateY(0.055em);
-    opacity: 0.9;
-  }
-  30% {
-    transform: translateY(-0.02em);
-    opacity: 0.82;
-  }
-  40%, 100% {
-    transform: translateY(0);
-    opacity: 0.74;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .loading-page,
-  .loading-phrase,
-  .loading-char {
+  .loading-page {
     animation: none;
-    opacity: 1;
-    transform: none;
-  }
-
-  .loading-water-ripple {
-    display: none;
   }
 }
 
-/* The dot matrix sits beside the phrase (phones only: site.css hides it
-   elsewhere). On phones the phrase stands still; the matrix is the motion. */
+/* The dot matrix sits beside the still phrase; the matrix is the motion. */
 .loading-phrase-row {
   display: flex;
   align-items: center;
@@ -135,12 +82,4 @@
   gap: 0.85rem;
   position: relative;
   z-index: 2;
-}
-
-@media (pointer: coarse) {
-  .loading-char {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
 }

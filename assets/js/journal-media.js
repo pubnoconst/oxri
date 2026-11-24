@@ -20,154 +20,37 @@
   }
 
   // Tweet load sequence on a journal card:
-  //   1. Turso done -> card text is shown with a quiet media space where the
-  //      card-level water ripple plays (the client is visibly waiting).
+  //   1. Turso done -> card text is shown, with one quiet "Loading preview"
+  //      line (the dot matrix) where the tweet will open.
   //   2. The tweet renders off-screen (invisible stage). The moment Twitter
-  //      reports a real height, the space animates to exactly that height,
-  //      pushing the card body down fluidly. If Twitter resizes again (it
-  //      lays embeds out in two passes) the same transition simply retargets.
-  //   3. Once the push has finished, the tweet eases in and the ripple fades.
+  //      reports a real height, flipPush removes the line and opens the slot to
+  //      exactly that height in one layout, then unrolls it while pushing the
+  //      card body down. Twitter's second resize simply retargets.
   // The tweet itself is never shown half-laid-out, and nothing waits on a
   // fixed "settle" timer.
-  // dotLoading builds the shared phone loader: a 3x3 dot matrix and a label
-  // (site.css .dot-loading; the Go twin is views/loading.Dots).
-  function dotLoading(label) {
-    const wrap = document.createElement("span");
-    wrap.className = "dot-loading";
-    const matrix = document.createElement("span");
-    matrix.className = "dot-matrix";
-    matrix.setAttribute("aria-hidden", "true");
-    for (let i = 0; i < 9; i++) matrix.append(document.createElement("i"));
-    const text = document.createElement("span");
-    text.className = "dot-loading-label";
-    text.textContent = label;
-    wrap.append(matrix, text);
-    return wrap;
-  }
 
-  const isPhoneUI = () =>
-    window.ResImperiiWater ? window.ResImperiiWater.isPhoneUI() : !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-
-  // On phones the waiting cue is one quiet line where the tweet will open, no
-  // water. When the tweet arrives, clearPending removes the line inside the
-  // FLIP's layout step, so the slot unrolls from the line to the tweet.
-  function showLineLoader(container) {
-    container.classList.add("is-loading-line");
-    container.setAttribute("role", "status");
-    container.append(dotLoading("Loading preview"));
-    return {
-      fadeOut() {},
-      cleanup() {
-        const line = container.querySelector(":scope > .dot-loading");
-        if (line) line.remove();
-        container.classList.remove("is-loading-line");
-      },
-    };
-  }
-
-  function showRippleLoader(container) {
+  // showLineLoader puts the waiting line in the tweet slot: a twinkle (a
+  // download) seeded per slot, so cards loading together glint differently.
+  // clearPending removes it inside the FLIP's layout step, so the slot unrolls
+  // from the line into the tweet.
+  let slotCount = 0;
+  function showLineLoader(container, seed) {
     container.style.height = "";
     container.replaceChildren();
-    if (isPhoneUI()) return showLineLoader(container);
-
-    // Nothing is rendered or reserved while the tweet loads: the slot is
-    // collapsed (is-pending: no height, no gap) and only the card's own content
-    // shows, under the card ripple. When the tweet arrives, flipPush opens the
-    // slot and pushes the content down to make room.
-    container.classList.add("is-pending");
+    container.classList.add("is-loading-line");
     container.setAttribute("role", "status");
-    container.setAttribute("aria-label", "Loading media");
-
-    const overlay = document.createElement("div");
-    overlay.className = "card-water-ripple";
-    overlay.setAttribute("aria-hidden", "true");
-
-    const wave1 = document.createElement("span");
-    wave1.className = "card-water-wave wave-1";
-    const wave2 = document.createElement("span");
-    wave2.className = "card-water-wave wave-2";
-    const wave3 = document.createElement("span");
-    wave3.className = "card-water-wave wave-3";
-
-    overlay.append(wave1, wave2, wave3);
-
-    // The overlay and refraction filter belong on the whole enclosing
-    // .journal-card, so the wavefront disturbs the meta, tags and text too.
-    // renderTweet() runs inside createMedia(), *before* the caller appends the
-    // container to the card, so closest() would find nothing and the ripple
-    // would be trapped inside the tweet slot. Mount on a microtask instead:
-    // by then the synchronous append has happened.
-    let hostCard = null;
-    let waterHandle = null;
-    let cardObserver = null;
-    let cleaned = false;
-
-    // The drop lands where the tweet will open: centred on the collapsed slot,
-    // at its top edge.
-    const alignOrigin = () => {
-      if (!hostCard || !container.isConnected || !hostCard.isConnected) return;
-      const hostRect = hostCard.getBoundingClientRect();
-      const slotRect = container.getBoundingClientRect();
-      if (hostRect.width <= 0 || hostRect.height <= 0) return;
-
-      const x = (slotRect.left - hostRect.left) + (slotRect.width / 2);
-      const y = Math.min(Math.max(slotRect.top - hostRect.top, 0), hostRect.height);
-      const maxDist = Math.max(
-        Math.hypot(x, y),
-        Math.hypot(hostRect.width - x, y),
-        Math.hypot(x, hostRect.height - y),
-        Math.hypot(hostRect.width - x, hostRect.height - y)
-      );
-      overlay.style.setProperty("--ripple-x", `${x.toFixed(1)}px`);
-      overlay.style.setProperty("--ripple-y", `${y.toFixed(1)}px`);
-      overlay.style.setProperty("--ripple-diameter", `${Math.ceil(maxDist * 2.25)}px`);
-    };
-
-    const mount = () => {
-      if (cleaned) return;
-      hostCard = container.closest(".journal-card") || container;
-      const existingOverlay = hostCard.querySelector(":scope > .card-water-ripple");
-      if (existingOverlay) existingOverlay.remove();
-      hostCard.append(overlay);
-
-      requestAnimationFrame(alignOrigin);
-      // Keep origin and reach correct if the card reflows (fonts, neighbours, resize).
-      if (typeof ResizeObserver !== "undefined") {
-        cardObserver = new ResizeObserver(alignOrigin);
-        cardObserver.observe(hostCard);
-      }
-
-      waterHandle = window.ResImperiiWater
-        ? window.ResImperiiWater.attach(hostCard, overlay, { amplitude: 7 })
-        : null;
-    };
-    queueMicrotask(mount);
-
-    return {
-      fadeOut() {
-        overlay.classList.add("is-fading-out");
-      },
-      cleanup() {
-        if (cleaned) return;
-        cleaned = true;
-        if (cardObserver) cardObserver.disconnect();
-        if (waterHandle) waterHandle.detach();
-        if (overlay.parentNode) overlay.remove();
-      },
-    };
+    container.append(window.ResImperiiDots.create("Loading preview", "twinkle", seed + ":" + slotCount++));
   }
 
-  // clearPending ends the collapsed loading state of a tweet slot.
+  // clearPending ends the loading state of a tweet slot.
   function clearPending(container) {
     const line = container.querySelector(":scope > .dot-loading");
     if (line) line.remove();
-    container.classList.remove("is-pending", "is-loading-line");
+    container.classList.remove("is-loading-line");
     container.removeAttribute("role");
-    container.removeAttribute("aria-label");
   }
 
-  function showTweetFallback(container, username, tweetId, rippleHandle) {
-    if (rippleHandle) rippleHandle.cleanup();
+  function showTweetFallback(container, username, tweetId) {
     clearPending(container);
     container.classList.remove("is-revealed");
     container.style.height = "";
@@ -226,6 +109,18 @@
 
   // flipPush applies change() (a single layout change at the media slot) and
   // animates everything it moved or grew from where it visually was.
+  // visualRect: an element's on-screen top and visible height, accounting for
+  // a FLIP animation of ours that is still clipping its bottom edge.
+  function visualRect(el) {
+    const r = el.getBoundingClientRect();
+    let clipBottom = 0;
+    if (flipAnimations.has(el)) {
+      const m = /inset\(\s*[-\d.]+px\s+[-\d.]+px\s+([-\d.]+)px/.exec(window.getComputedStyle(el).clipPath || "");
+      if (m) clipBottom = Math.max(0, parseFloat(m[1]) || 0);
+    }
+    return { top: r.top, height: r.height - clipBottom };
+  }
+
   function flipPush(container, change) {
     const slot = container.closest(".journal-media-slot") || container;
     const host = container.closest(".journal-card") || slot.parentElement;
@@ -237,8 +132,13 @@
     // the moving content (no overlap, no empty box).
     const els = peers.concat(inner, [container]).filter((el) => el instanceof HTMLElement);
 
-    // First: where things are now, including any in-flight FLIP offset.
-    const first = new Map(els.map((el) => [el, el.getBoundingClientRect()]));
+    // First: where things are *visually* now, including any in-flight FLIP.
+    // getBoundingClientRect includes a running translate but not a running
+    // clip, so a card that is still unrolling would measure at its full height
+    // and the next tweet's push would cancel its unroll and snap its edge down.
+    // With twelve tweets arriving within a second that happened to nearly
+    // every card. Subtract the in-flight bottom clip to get the visible height.
+    const first = new Map(els.map((el) => [el, visualRect(el)]));
 
     change();
 
@@ -274,7 +174,7 @@
   }
   const TWEET_GIVE_UP_MS = 12000; // embed blocked/never rendered -> show the link card
 
-  function expandAndRevealTweet(container, rippleHandle, stage) {
+  function expandAndRevealTweet(container, stage) {
     let target = 0;
     let revealed = false;
     let stopped = false;
@@ -305,17 +205,12 @@
       if (revealed) return;
       revealed = true;
       stage.classList.remove("is-staging");
-      if (rippleHandle) {
-        rippleHandle.fadeOut();
-        setTimeout(() => rippleHandle.cleanup(), 420);
-      }
     };
 
     const onHeight = () => {
       if (stopped) return;
       if (!container.isConnected) {
         stop();
-        if (rippleHandle) rippleHandle.cleanup();
         return;
       }
       const h = measure();
@@ -364,8 +259,8 @@
     ensureTwitterWidgetsScript();
     const theme = getActiveTheme();
 
-    // Card text is visible; the media space shows the ripple while we wait.
-    const rippleHandle = showRippleLoader(container);
+    // Card text is visible; the slot shows "Loading preview" while we wait.
+    showLineLoader(container, tweetId);
 
     const doCreate = (twttr) => {
       const stage = document.createElement("div");
@@ -373,7 +268,7 @@
       container.append(stage);
 
       // Start tracking before Twitter renders so the very first height is caught.
-      const tracker = expandAndRevealTweet(container, rippleHandle, stage);
+      const tracker = expandAndRevealTweet(container, stage);
 
       let settled = false;
       const fail = () => {
@@ -384,12 +279,12 @@
         if (!stage.classList.contains("is-staging")) return;
         tracker.abort();
         stage.remove();
-        showTweetFallback(container, username, tweetId, rippleHandle);
+        showTweetFallback(container, username, tweetId);
       };
 
       // Failure net, not a wait: if a browser's tracking protection (e.g. Edge's
       // Tracking Prevention) blocks the embed iframe, createTweet() may never
-      // settle. Rather than ripple forever, fall back to the plain X link card.
+      // settle. Rather than wait forever, fall back to the plain X link card.
       const giveUp = setTimeout(fail, TWEET_GIVE_UP_MS);
 
       twttr.widgets.createTweet(tweetId, stage, {
@@ -425,7 +320,7 @@
           doCreate(window.twttr);
         } else if (attempts > 50) {
           clearInterval(interval);
-          showTweetFallback(container, username, tweetId, rippleHandle);
+          showTweetFallback(container, username, tweetId);
         }
       }, 100);
     }

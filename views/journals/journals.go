@@ -385,31 +385,18 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 		catalogScript = h.Script(h.Src(assets.JournalsCatalogJS.URL()))
 	}
 
-	rippleStyle := "--ripple-x:50%;--ripple-y:38%;--ripple-diameter:150vmax;"
-
 	return layout.Doc(
 		"Journals - RES IMPERII",
 		Style.URL(),
-		h.Div(h.Class("water-stage"),
-			h.Main(h.Class("journals-page"),
-				renderJournalsHeader(isAuth),
-				h.Div(
-					h.ID("journals-catalog-stage"),
-					g.Attr("hx-get", contentURL),
-					g.Attr("hx-trigger", "load"),
-					g.Attr("hx-swap", "innerHTML swap:120ms"),
-					h.P(h.Class("journals-empty journals-loading-placeholder"), g.Attr("aria-live", "polite"), loading.Dots("Loading entries…")),
-				),
+		h.Main(h.Class("journals-page"),
+			renderJournalsHeader(isAuth),
+			h.Div(
+				h.ID("journals-catalog-stage"),
+				g.Attr("hx-get", contentURL),
+				g.Attr("hx-trigger", "load"),
+				g.Attr("hx-swap", "innerHTML swap:120ms"),
+				h.P(h.Class("journals-empty journals-loading-placeholder"), g.Attr("aria-live", "polite"), loading.Dots("Loading entries…", loading.Twinkle)),
 			),
-		),
-		h.Div(
-			h.Class("card-water-ripple is-pagewide"),
-			g.Attr("style", rippleStyle),
-			g.Attr("data-water-dismiss-on-swap", "journals-catalog-stage"),
-			g.Attr("aria-hidden", "true"),
-			h.Span(h.Class("card-water-wave wave-1")),
-			h.Span(h.Class("card-water-wave wave-2")),
-			h.Span(h.Class("card-water-wave wave-3")),
 		),
 		h.Script(h.Src(assets.JournalMediaJS.URL())),
 		catalogScript,

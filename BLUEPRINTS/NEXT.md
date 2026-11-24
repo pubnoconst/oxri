@@ -1,14 +1,14 @@
 # Next
 
-- **Base Commit on `main`**: `b3ba4a9` (PR #44 — catalog paginated, 12 per page)
-- **Active Branch**: `v2-phone-loaders` (PR #45): touch phones get a 3x3 dot-matrix loader instead of water everywhere (tweet slot line, catalog, Confirming, slow navigation); desktop unchanged (RATIONALE 046).
+- **Base Commit on `main`**: `ac1ec45` (PR #45 — dot-matrix loaders on phones)
+- **Active Branch**: `v2-dot-matrix` (PR #46): full dot matrix on every device; the water ripple is retired and archived on the `water-ripple` branch. Seeded puzzle = working on your action, seeded twinkle = downloading, comet = waiting on you; the tweet loading line is centred; cards no longer snap open when tweets arrive close together (RATIONALE 047).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
-- **Branches**: `main`, `prod`, `v2` (live); `v1`, `fsharp-legacy`, `rust-experiment` (archived lineage, kept on purpose).
-- **Active Experiment / Undo Instructions**: None. To reset a device's water quality level: in the browser console, `localStorage.removeItem("res-imperii.water-quality")` (and `"res-imperii.water-off-at"`). On a phone: Chrome → Site settings → the site → Clear data.
+- **Branches**: `main`, `prod`, `v2` (live); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
+- **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
 
 ## Principles
 
-- **Design:** Subtlety is the key. Linen is felt, not seen. Cards are their own cloth, told apart by weave and shadow, never by tint. Water shows as refraction, not paint.
+- **Design:** Subtlety is the key. Linen is felt, not seen. Cards are their own cloth, told apart by weave and shadow, never by tint. Waiting is one quiet 3×3 dot matrix: CSS-drawn, opacity-only, the same on every device.
 - **Code:** Many small modules, each with one reason to change. Diligence can betray you; the type system won't. Use packages where the compiler should enforce a boundary, and files for cohesion within one.
 
 ## Modularity / type-safety plan (one PR each, no visible change, tests green)
@@ -23,7 +23,7 @@
 
 ## Next on Mind
 
-1. On the S9+ (and Pixel 10), after PR #45 ships: dots on the catalog, a "Loading preview" line per tweet that unrolls into the tweet, no tap ripple, the Confirming overlay with dots, and the "Loading" dots on a slow navigation.
+1. On the S9+ (and desktop), after PR #46 ships: seeded twinkles on tweet slots, the puzzle on Confirming and sign-in, the comet on passkey prompts, and cards unrolling smoothly (no snap) as tweets arrive.
    - Next budget-phone candidates: build tweets only when their card nears the screen, a couple at a time (12 iframes at once is the heaviest thing left on a page); check what the catalog does if `/journals/content` fails or stalls (Render cold start on slow mobile data).
 2. Continue the plan from step 3.
 3. **Edge tweets (deferred by the owner, "we will address Edge later"):** tweets take a long time to load in Edge. Start in Edge DevTools on `/journals`: look for "Tracking Prevention blocked …twitter.com" and check the network timing of `platform.twitter.com` / `syndication.twitter.com`. The 12 s link-card fallback still bounds the worst case.

@@ -7,23 +7,18 @@
   let pendingTimer;
   let resetTimer;
 
-  // Phones have no tap ripple (water-ripple.js isPhoneUI); a slow navigation
-  // shows the shared dot matrix instead (site.css .nav-dot-loading, visible
-  // only while .navigation-pending and only on phones).
+  // A slow navigation shows the site's dot matrix at the bottom of the screen
+  // (site.css .nav-dot-loading, visible only while .navigation-pending); the
+  // page itself dims at once (.navigation-leaving). Following a link is a
+  // download (twinkle, "Loading"); a POST is the site working on what you did
+  // (puzzle, "Working"): signing in, saving a book.
   let navDots = null;
-  function ensureNavDots() {
-    if (navDots && navDots.isConnected) return;
+  function showNavDots(working) {
+    if (navDots) navDots.remove();
     navDots = document.createElement("div");
-    navDots.className = "nav-dot-loading dot-loading";
+    navDots.className = "nav-dot-loading";
     navDots.setAttribute("role", "status");
-    const matrix = document.createElement("span");
-    matrix.className = "dot-matrix";
-    matrix.setAttribute("aria-hidden", "true");
-    for (let i = 0; i < 9; i++) matrix.append(document.createElement("i"));
-    const label = document.createElement("span");
-    label.className = "dot-loading-label";
-    label.textContent = "Loading";
-    navDots.append(matrix, label);
+    navDots.append(window.ResImperiiDots.create(working ? "Working" : "Loading", working ? "puzzle" : "twinkle"));
     document.body.append(navDots);
   }
 
@@ -62,7 +57,7 @@
     document.documentElement.classList.add(leavingClass);
     pendingTimer = window.setTimeout(() => {
       if (event.defaultPrevented) return;
-      ensureNavDots();
+      showNavDots(false);
       document.documentElement.classList.add(pendingClass);
       resetTimer = window.setTimeout(clearNavigationState, resetAfterMs);
     }, delayMs);
@@ -78,8 +73,8 @@
     }
   });
 
-  // A submit that will navigate is a navigation in flight too: mark it so the
-  // touch ripple (touch-ripple.js) keeps pulsing if the response is slow.
+  // A submit that will navigate is a navigation in flight too: dim the page,
+  // and show the dots if the response is slow.
   // Registered after the data-confirm handler, so a cancelled confirm is seen
   // as defaultPrevented. Forms with the "Confirming" overlay have their own UI.
   document.addEventListener("submit", (event) => {
@@ -89,8 +84,9 @@
     if (form.target && form.target.toLowerCase() !== "_self") return;
     clearNavigationState();
     document.documentElement.classList.add(leavingClass);
+    const working = (form.getAttribute("method") || "get").toLowerCase() === "post";
     pendingTimer = window.setTimeout(() => {
-      ensureNavDots();
+      showNavDots(working);
       document.documentElement.classList.add(pendingClass);
     }, delayMs);
     resetTimer = window.setTimeout(clearNavigationState, resetAfterMs);

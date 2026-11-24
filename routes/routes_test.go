@@ -38,8 +38,6 @@ func TestLandingPageAndComponentCSS(t *testing.T) {
 		assets.HTMXJS.URL(),
 		assets.ThemeToggleJS.URL(),
 		assets.NavigationFeedbackJS.URL(),
-		assets.WaterRippleJS.URL(),
-		assets.TouchRippleJS.URL(),
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("missing %q in landing page HTML", expected)

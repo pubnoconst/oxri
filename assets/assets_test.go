@@ -26,8 +26,8 @@ func TestEveryFileHasAHandle(t *testing.T) {
 }
 
 func TestURLCarriesContentHash(t *testing.T) {
-	b, _ := files.ReadFile("js/water-ripple.js")
-	if got, want := WaterRippleJS.URL(), "/assets/js/water-ripple.js?v="+contentHash(b); got != want {
+	b, _ := files.ReadFile("js/journal-media.js")
+	if got, want := JournalMediaJS.URL(), "/assets/js/journal-media.js?v="+contentHash(b); got != want {
 		t.Fatalf("URL = %q, want %q", got, want)
 	}
 	a := Component("/views/x/x.css", "a{}")
@@ -55,7 +55,7 @@ func TestCachingFollowsTheHash(t *testing.T) {
 			t.Errorf("%s: expected 200 + no-cache, got %d %q", stale, rec.Code, rec.Header().Get("Cache-Control"))
 		}
 	}
-	for _, bad := range []string{"/assets/", "/assets/js/", "/assets/js/../css/site.css", "/assets/nope.js", "/assets/js//water-ripple.js"} {
+	for _, bad := range []string{"/assets/", "/assets/js/", "/assets/js/../css/site.css", "/assets/nope.js", "/assets/js//journal-media.js"} {
 		if rec := get(bad); rec.Code != http.StatusNotFound {
 			t.Errorf("%s: expected 404, got %d", bad, rec.Code)
 		}

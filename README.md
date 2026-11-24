@@ -60,13 +60,13 @@ oxri/
 │   ├── booki/                       # Book I/II/III long-form reader & live editor (+ booki.css)
 │   ├── journals/                    # Journals catalog, permalink & Make Room views (+ journals.css)
 │   ├── editor/                      # 2-column compose & live preview editor (+ editor.css)
-│   ├── loading/                     # "Confirming, please wait." submit overlay with water ripple (+ loading.css)
+│   ├── loading/                     # "Confirming, please wait." submit overlay with the dot-matrix loader (+ loading.css)
 │   ├── login/                       # Passkey-first sign-in with password + TOTP fallback (+ login.css)
 │   ├── settings/                    # Administrative security settings & passkey management (+ settings.css)
 │   └── errorpage/                   # Client-safe 4xx/5xx error card with UUID reference & QR code
 └── assets/
     ├── assets.go                    # Embeds the files below; typed, content-hashed handles (assets.SiteCSS, …)
-    ├── css/site.css                 # CSS reset, design tokens (linen surfaces, water ripple), view transitions
+    ├── css/site.css                 # CSS reset, design tokens (linen surfaces), the dot-matrix loader, view transitions
     ├── js/                          # Locally vendored HTMX, markdown-it, DOMPurify & vanilla JS scripts
     └── favicon.png                  # Brand icon
 ```
@@ -77,9 +77,9 @@ oxri/
 
 - **Pure Go (`CGO_ENABLED=0`)**: Single-step compilation via Go and Mage (`magefile.go`). No C/C++ compiler toolchain (`gcc`/`clang`), no dynamic linking, and no external template code generation.
 - **Gomponents (`maragu.dev/gomponents`)**: Views are type-checked Go functions in `views/<component>/`. Each view owns its scoped stylesheet (`views/<component>/<component>.css`) layered over global tokens in `assets/css/site.css`.
-- **Embedded, Content-Hashed Assets (`assets/`)**: Every static file is embedded in the binary and referenced through a typed handle whose URL carries a hash of the exact bytes served (`/assets/js/water-ripple.js?v=<hash>`); view stylesheets get the same via `assets.Component`. A current hash is served `Cache-Control: immutable`; anything else revalidates. Version numbers are never written by hand: tests fail if an embedded file lacks a handle or if any Go source hand-writes an `/assets/` URL or `?v=` literal.
+- **Embedded, Content-Hashed Assets (`assets/`)**: Every static file is embedded in the binary and referenced through a typed handle whose URL carries a hash of the exact bytes served (`/assets/js/journal-media.js?v=<hash>`); view stylesheets get the same via `assets.Component`. A current hash is served `Cache-Control: immutable`; anything else revalidates. Version numbers are never written by hand: tests fail if an embedded file lacks a handle or if any Go source hand-writes an `/assets/` URL or `?v=` literal.
 - **Vendored Frontend Assets & Strict CSP**: HTMX (`htmx.min.js`), `markdown-it.min.js`, and `purify.min.js` are vendored locally. `Content-Security-Policy` enforces zero `'unsafe-eval'` and zero `'unsafe-inline'` scripts (`script-src 'self' https://platform.twitter.com`).
-- **Design Language**: Woven linen surfaces drawn in CSS (inline-SVG noise, no image files) — the page is one cloth, every card its own. "Please wait" states are water: an SVG displacement ripple (`assets/js/water-ripple.js`) that refracts the weave rather than painting a crest. Subtlety is the key.
+- **Design Language**: Woven linen surfaces drawn in CSS (inline-SVG noise, no image files) — the page is one cloth, every card its own. "Please wait" states are one quiet 3×3 dot matrix (`.dot-loading` in `site.css`), CSS-drawn and opacity-only so it stays smooth on budget phones while tweets load. (The earlier water ripple is archived on the `water-ripple` branch.) Subtlety is the key.
 - **Authorization by Capability (`domain.AdminCap`)**: Every administrative database write demands an `AdminCap`, which only `internal/auth` can mint after verifying a session. Admin handlers are typed `func(w, r, cap)` and can only be served through `routes/admin.go` (`adminOnly`, `freshAdminOnly`), so a handler that forgets the check does not compile. Writes reject the zero value at runtime, and a `go/ast` test pins where a zero literal may appear. Deliberately uncapped: sign-in bookkeeping, startup configuration, and the offline `cmd/backup` restore (pinned to that call site).
 - **Authentication & Step-Up Access Control**:
   - **FIDO2 / WebAuthn Passkeys** (`github.com/go-webauthn/webauthn`): Primary passwordless sign-in keyed by `RPID` in Turso (`passkeys` table). Adding or removing passkeys in `/settings` requires **fresh reauthentication within 5 minutes**.
