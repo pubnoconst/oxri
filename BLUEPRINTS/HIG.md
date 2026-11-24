@@ -23,7 +23,12 @@ The reference reader's device is a **budget Android phone (Samsung Galaxy A02s)*
 | Everything readable (headings, body, buttons, labels) | EB Garamond, fallback Georgia, serif | `--font-serif` (`--font-sans` aliases it) |
 | Counters, byte figures, codes | system monospace | `--font-mono` |
 
-- **One family.** There is no sans-serif. Hierarchy comes from size and weight (400 for text, 500 for emphasis), not from switching faces.
+- **One family.** There is no sans-serif. Hierarchy comes from size, not from switching faces.
+- **No bold. Bold is not the answer; bigger text is.**
+  - Everything is set in weight 400. It's the only weight loaded (with its true italic), and `font-synthesis-weight: none` stops the browser faking a heavier one, so a default bold (`strong`, `b`, `th`, a heading) stays regular. `TestNoBold` fails on any other weight.
+  - **To make something stand out, make it larger** (the space-to-free figure on Make Room is 1.2× its sentence), or give it full ink beside dimmer text (a clipping's author name beside the handle).
+  - **Strong emphasis in prose is small capitals:** `**Causal Succession**` reads in small caps, the book way to stress a phrase. Lighter emphasis is italic (`*…*`).
+- **Quoted matter is smaller and softer.** A post clipping's text is 0.93rem in ink mixed 84% toward the slip, against the author's own words at 1rem and up. EB Garamond has no weight below 400, so "lighter" always means size and ink, never a thinner face or opacity.
 - **Buttons** are set at 0.95rem with a 0.02em letter-spacing; small buttons at 0.8rem.
 - **Monospace is for figures that line up**, such as `0 / 3`, `167 / 2000` and `1.7 KB`. Use tabular numbers wherever digits change in place.
 

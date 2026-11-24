@@ -213,10 +213,29 @@ input[type="checkbox"]:indeterminate::before {
 }
 
 /* 3. Global Typography & Heading Standard */
+/* No bold anywhere (HIG §2): hierarchy is size, never weight. Only weight
+   400 (and its true italic) is loaded, and the browser may not fake a
+   heavier one, so a default bold (strong, b, th, a UA heading) stays
+   regular. */
+html {
+  font-synthesis-weight: none;
+}
+
+h1, h2, h3, h4, h5, h6, th, b, strong, summary {
+  font-weight: 400;
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-serif);
-  font-weight: 400;
   color: var(--page-ink);
+}
+
+/* Strong emphasis is set in small capitals, the book way to stress a phrase
+   without bold: **Causal Succession** reads in small caps. */
+strong,
+b {
+  font-variant-caps: small-caps;
+  letter-spacing: 0.03em;
 }
 
 a {

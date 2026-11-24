@@ -557,6 +557,14 @@
   line-height: 1.6;
 }
 
+/* The space to free is the figure that matters: larger, not bold (HIG §2).
+   Small capitals would not change a figure, so it doesn't take them. */
+.vacate-lead strong {
+  font-size: 1.2em;
+  font-variant-caps: normal;
+  letter-spacing: 0;
+}
+
 .vacate-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
