@@ -46,3 +46,21 @@ func TestRenderMarkdownSanitizesRunesAndSchemes(t *testing.T) {
 		t.Errorf("RenderMarkdown should preserve valid https:// link: %q", rendered)
 	}
 }
+
+// A signed-out reader is never offered "Add new entry"; the author is.
+func TestNewEntryLinkOnlyForAuthor(t *testing.T) {
+	render := func(isAuth bool) string {
+		var b strings.Builder
+		_ = CatalogShellPage(isAuth, "").Render(&b)
+		return b.String()
+	}
+	if out := render(false); strings.Contains(out, "Add new entry") || strings.Contains(out, `href="/journals/new"`) {
+		t.Errorf("signed-out catalog offers a new entry")
+	}
+	if out := render(false); !strings.Contains(out, "Author sign in") {
+		t.Errorf("signed-out catalog lost its sign-in link")
+	}
+	if out := render(true); !strings.Contains(out, "Add new entry") {
+		t.Errorf("author's catalog lost its new-entry link")
+	}
+}
