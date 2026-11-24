@@ -10,11 +10,13 @@ import (
 	"html"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/oxri/oxri-go/internal/db"
+	"github.com/oxri/oxri-go/internal/paging"
 	"github.com/oxri/oxri-go/views/layout"
 	"github.com/yuin/goldmark"
 	g "maragu.dev/gomponents"
@@ -49,12 +51,46 @@ type RenderedEntry struct {
 	FormattedSize  string
 }
 
-// CatalogView holds rendered entries alongside search query and active tag filters.
+// CatalogPageSize is how many entries one catalog page shows. Most entries
+// embed a tweet (a cross-origin iframe each), so a page is kept small enough
+// for budget phones; 12 fills 1, 2 or 3 grid columns evenly.
+const CatalogPageSize = 12
+
+// CatalogView holds one page of rendered entries alongside search query and
+// active tag filters.
 type CatalogView struct {
-	Entries      []RenderedEntry
+	Entries      []RenderedEntry // this page's entries only
 	AllTags      []string
 	Query        string
 	SelectedTags []string
+	Page         paging.Page
+}
+
+// filterValues is the current search and tag selection as query values.
+func (v CatalogView) filterValues() url.Values {
+	vals := url.Values{}
+	if q := strings.TrimSpace(v.Query); q != "" {
+		vals.Set("q", q)
+	}
+	for _, t := range v.SelectedTags {
+		if norm := db.FormatTagTitleCase(t); norm != "" {
+			vals.Add("tag", norm)
+		}
+	}
+	return vals
+}
+
+// PageURL returns the /journals URL of page n with the current search and tag
+// filters kept. Page 1 has no page parameter.
+func (v CatalogView) PageURL(n int) string {
+	vals := v.filterValues()
+	if n > 1 {
+		vals.Set("page", strconv.Itoa(n))
+	}
+	if encoded := vals.Encode(); encoded != "" {
+		return "/journals?" + encoded
+	}
+	return "/journals"
 }
 
 func (v CatalogView) HasFilters() bool {
@@ -245,7 +281,7 @@ func CatalogContentFragment(isAuth bool, view CatalogView) g.Node {
 			h.Div(h.Class("batch-select-group"),
 				h.Label(h.Class("batch-select-all"),
 					h.Input(h.Type("checkbox"), h.ID("select-all-entries")),
-					h.Span(g.Text("Select all")),
+					h.Span(g.Text(selectAllLabel(view.Page))),
 				),
 				h.Span(h.ID("selected-count"), h.Class("batch-count"), g.Text("0 selected")),
 			),
@@ -279,7 +315,38 @@ func CatalogContentFragment(isAuth bool, view CatalogView) g.Node {
 		filterBar,
 		batchBar,
 		feedContent,
+		paginationNav(view),
 	})
+}
+
+// selectAllLabel says what "Select all" covers once the catalog has pages.
+func selectAllLabel(p paging.Page) string {
+	if p.IsPaged() {
+		return "Select all on this page"
+	}
+	return "Select all"
+}
+
+// paginationNav renders Newer / Page n of m / Older below the feed, only when
+// there is more than one page. Entries are newest first, so the previous page
+// is "Newer".
+func paginationNav(view CatalogView) g.Node {
+	p := view.Page
+	if !p.IsPaged() {
+		return nil
+	}
+	link := func(enabled bool, n int, rel, label string) g.Node {
+		if !enabled {
+			return h.Span(h.Class("btn btn-neutral btn-sm journals-page-link is-disabled"), g.Attr("aria-disabled", "true"), g.Text(label))
+		}
+		return h.A(h.Href(view.PageURL(n)), h.Rel(rel), h.Class("btn btn-neutral btn-sm journals-page-link"), g.Text(label))
+	}
+	return h.Nav(h.Class("journals-pagination"), g.Attr("aria-label", "Journal pages"),
+		link(p.HasPrev(), p.Number-1, "prev", "← Newer"),
+		h.Span(h.Class("journals-page-status"), g.Attr("aria-current", "page"),
+			g.Textf("Page %d of %d", p.Number, p.Count)),
+		link(p.HasNext(), p.Number+1, "next", "Older →"),
+	)
 }
 
 func renderJournalsHeader(isAuth bool) g.Node {
