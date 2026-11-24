@@ -21,7 +21,7 @@ func TestProseCharacterPolicy(t *testing.T) {
 	if !allowed("Rōma æterna, Λόγος 123 — RES·IMPERII.\n\t«ἀρχή» … ‘quoted’") {
 		t.Error("valid Latin, Greek, numbers and punctuation were refused")
 	}
-	for _, bad := range []string{"Hello 🚀", "Hello мир", "Zero​Width", "bidi‮text", "nul\x00byte"} {
+	for _, bad := range []string{"Hello 🚀", "Hello мир", "Zero\u200bWidth", "bidi\u202etext", "nul\x00byte"} {
 		if allowed(bad) {
 			t.Errorf("%q was allowed", bad)
 		}

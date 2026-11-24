@@ -67,8 +67,11 @@ const (
 // register answers a navigator.credentials.create() challenge.
 func (a *softAuthenticator) register(rpID, challenge string) []byte {
 	a.t.Helper()
-	x := a.key.PublicKey.X.FillBytes(make([]byte, 32))
-	y := a.key.PublicKey.Y.FillBytes(make([]byte, 32))
+	point, err := a.key.PublicKey.Bytes() // uncompressed: 0x04 || X || Y
+	if err != nil {
+		a.t.Fatal(err)
+	}
+	x, y := point[1:33], point[33:65]
 	cose, err := cbor.Marshal(map[int]any{1: 2, 3: -7, -1: 1, -2: x, -3: y}) // EC2, ES256, P-256
 	if err != nil {
 		a.t.Fatal(err)
