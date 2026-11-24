@@ -47,7 +47,7 @@ func Box(s tweet.Snapshot) g.Node {
 				h.Span(h.Class("tweet-name"), g.Text(s.Name)),
 				h.Span(h.Class("tweet-handle"), g.Text("@"+s.Handle)),
 			),
-			h.A(h.Class("tweet-source"), h.Href(post), h.Target("_blank"), h.Rel("noopener noreferrer"), g.Text("View on X")),
+			h.A(h.Class("tweet-source link-quiet"), h.Href(post), h.Target("_blank"), h.Rel("noopener noreferrer"), g.Text("View on X")),
 		),
 	)
 }

@@ -138,15 +138,8 @@
 }
 
 .auth-alt-summary {
-  cursor: pointer;
   font-size: 0.92rem;
-  opacity: 0.62;
   text-align: center;
-  transition: opacity 150ms ease;
-}
-
-.auth-alt-summary:hover {
-  opacity: 0.95;
 }
 
 .auth-alt-body {

@@ -157,7 +157,7 @@
 .tag-suggestion-pill:hover,
 .tag-suggestion-pill:focus-visible {
   border-color: var(--border-focus);
-  background: color-mix(in srgb, var(--page-ink) 8%, transparent);
+  background: color-mix(in srgb, var(--page-ink) 6%, transparent);
 }
 
 .editor-options {
@@ -336,7 +336,6 @@
   background: var(--depth-sunk-surface);
   font-family: var(--font-mono);
 }
-.journal-rendered-content a { color: inherit; text-decoration-thickness: 1px; }
 
 /* Publish button action: centered horizontally at the bottom of the page */
 .journal-editor-actions {

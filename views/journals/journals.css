@@ -48,26 +48,9 @@
   align-items: center;
 }
 
+/* Author sign in / Sign out: quiet links (site.css .link-quiet). */
 .auth-action-link {
   font-size: 0.95rem;
-  color: inherit;
-  opacity: 0.55;
-  text-decoration: none;
-  transition: opacity 160ms ease;
-}
-
-button.auth-action-link {
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.auth-action-link:hover,
-.auth-action-link:focus-visible {
-  opacity: 1;
 }
 
 .journals-empty {
@@ -156,14 +139,6 @@ button.auth-action-link {
 
 .filter-clear-link {
   font-size: 0.88rem;
-  color: inherit;
-  opacity: 0.65;
-  text-decoration: underline;
-  text-underline-offset: 0.16em;
-}
-
-.filter-clear-link:hover {
-  opacity: 1;
 }
 
 .journals-tag-filters {
@@ -197,7 +172,7 @@ button.auth-action-link {
 .tag-filter-pill:hover,
 .tag-filter-pill:focus-visible {
   border-color: var(--border-focus);
-  background: color-mix(in srgb, var(--page-ink) 7%, transparent);
+  background: color-mix(in srgb, var(--page-ink) 6%, transparent);
 }
 
 .tag-filter-pill.is-active {
@@ -216,14 +191,6 @@ button.auth-action-link {
   padding: 0.16rem 0.2rem;
   font-family: var(--font-serif);
   font-size: 0.74rem;
-  opacity: 0.65;
-  cursor: pointer;
-  list-style: none;
-  text-underline-offset: 0.2em;
-}
-
-.tag-filter-more > summary::-webkit-details-marker {
-  display: none;
 }
 
 .tag-filter-more > summary::after {
@@ -234,12 +201,6 @@ button.auth-action-link {
 
 .tag-filter-more[open] > summary::after {
   transform: rotate(90deg);
-}
-
-.tag-filter-more > summary:hover,
-.tag-filter-more > summary:focus-visible {
-  opacity: 1;
-  text-decoration: underline;
 }
 
 .tag-filter-more[open] {
@@ -356,11 +317,10 @@ button.auth-action-link {
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
+/* A whole card is a link: its edge darkens on hover. It does not lift. */
 .journal-card.is-collage:hover,
 .journal-card.is-collage:focus-within {
-  transform: translateY(-2px);
   border-color: var(--border-focus);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--page-ink) 8%, transparent);
 }
 
 .journal-card.is-unpublished {
@@ -421,11 +381,6 @@ button.auth-action-link {
   opacity: 0.65;
   text-decoration: none;
   letter-spacing: 0.02em;
-}
-
-.entry-date:hover,
-.entry-date:focus-visible {
-  opacity: 1;
 }
 
 .journal-meta-badges {
@@ -533,7 +488,6 @@ button.auth-action-link {
   background: var(--depth-sunk-surface);
   font-family: var(--font-mono);
 }
-.journal-entry-body a { color: inherit; text-decoration-thickness: 1px; }
 
 /* Card Admin Footer */
 .journal-card-actions {
@@ -817,7 +771,6 @@ button.auth-action-link {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-action-link,
   .journal-card.is-collage,
   .vacate-progress-fill,
   .vacate-entry-row { transition: none; }

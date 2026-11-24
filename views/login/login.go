@@ -104,7 +104,7 @@ func TOTPPage(nextURL, errMsg string, requirePassword, hasPasskeys, reauth bool)
 				h.P(h.ID("passkey-login-status"), h.Class("auth-passkey-status"), g.Attr("role", "status"), g.Attr("hidden", "")),
 			),
 			h.Details(h.Class("auth-alt-fallback"), openAttr,
-				h.Summary(h.Class("auth-alt-summary"), g.Text("Or sign in with Password & Authenticator")),
+				h.Summary(h.Class("auth-alt-summary link-quiet"), g.Text("Or sign in with Password & Authenticator")),
 				h.Div(h.Class("auth-alt-body"),
 					errNode,
 					totpForm,

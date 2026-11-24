@@ -98,22 +98,15 @@
   opacity: 0.6;
 }
 
+/* A quiet link (site.css .link-quiet). */
 .tweet-source {
   margin-left: auto;
   flex: 0 0 auto;
   font-size: 0.82rem;
-  color: inherit;
-  opacity: 0.6;
-  text-underline-offset: 0.2em;
 }
 
 .tweet-source::after {
   content: " ↗";
-}
-
-.tweet-source:hover,
-.tweet-source:focus-visible {
-  opacity: 1;
 }
 
 /* Attachments: one keeps its shape (inline aspect-ratio, height capped);
@@ -174,7 +167,7 @@
   border-radius: 50%;
   background: rgba(15, 17, 19, 0.62);
   transform: translate(-50%, -50%);
-  transition: transform 160ms ease, background-color 160ms ease;
+  transition: background-color var(--interact-duration) ease;
 }
 
 .tweet-play-mark::after {
@@ -191,12 +184,6 @@
 .tweet-play:hover .tweet-play-mark,
 .tweet-play:focus-visible .tweet-play-mark {
   background: rgba(15, 17, 19, 0.8);
-  transform: translate(-50%, -50%) scale(1.06);
-}
-
-.tweet-play:focus-visible {
-  outline: 2px solid var(--border-focus);
-  outline-offset: 2px;
 }
 
 /* In the catalog's compact cards, a long post is cut to a few lines; the

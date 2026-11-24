@@ -39,7 +39,7 @@ The palette is a warm neutral page and ink, plus three accents used only for sta
 | `--accent-warn` | `#c98a2c` | `#e6b450` | caution |
 | `--accent-danger` | `#c74e4a` | `#e06c68` | destructive actions and errors |
 
-- **Surfaces and borders are derived** from page and ink with `color-mix`: `--surface-subtle`, `--border-subtle`, `--border-card`, `--border-input`, `--border-focus`. Never pick a new grey; derive it.
+- **Surfaces and borders are derived** from page and ink with `color-mix`: `--depth-sunk-surface` (and the other depth surfaces, §4), `--border-subtle`, `--border-card`, `--border-input`, `--border-focus`. Never pick a new grey; derive it.
 - **Accents never decorate.** A red that isn't destructive or an error, or a green that isn't "on", is a bug.
 - **Both themes are first-class.** The theme follows the system. A double-click on the page background toggles light and dark for the tab (`theme-toggle.js`, kept in `sessionStorage`). Every colour must come from a token that both themes define.
 
@@ -69,6 +69,27 @@ The palette is a warm neutral page and ink, plus three accents used only for sta
 
 ## 5. Controls
 
+### Links and buttons: which is which
+
+**A link goes somewhere; a button does something.** If following it changes the address and nothing else, it's a link. If it changes state (saves, deletes, publishes, signs out, filters a form), it's a button. Each kind has exactly one look and one response, defined once in `site.css` (§3b) and used by class, never restyled per page.
+
+| Kind | Class | At rest | Hover / focus | Pressed | Use |
+|---|---|---|---|---|---|
+| Prose link | (automatic inside entries, books) | underlined, full ink | underline thickens | — | links written into content |
+| Plain link | `.link-plain` | full ink, no underline | underline appears | — | primary navigation: the landing menu, "Return home" |
+| Quiet link | `.link-quiet` | ink at 65% (`--quiet-opacity`) | full ink, underline appears | — | page chrome: Back, Author sign in, Clear, an entry's date, "View on X", "More tags", "Or sign in with…" |
+| Button | `.btn` + kind (below) | a control on depth 1 | tints, edge darkens | sinks 1 px | actions |
+| Pill | `tag-filter-pill`, `tag-suggestion-pill` | small rounded control | tints 6% ink, edge darkens | — | filters and suggestions |
+| Whole card | `.journal-card.is-collage` | a card | edge darkens | — | a card that opens its entry |
+
+- **Nothing moves or grows on hover or focus.** No scaling, no sliding, no lifting. The only movement is a button sinking 1 px while pressed. `TestHoverAndFocusNeverMove` fails the build otherwise.
+- **One focus ring for everything you can press or follow:** a 2 px `--border-focus` outline, 2 px out (`:where(a, button, summary, …):focus-visible`). Text fields use their focus border instead (§5 Forms).
+- **One timing:** `--interact-duration` (140 ms), colour and opacity only.
+- **Exceptions, deliberately:**
+  - A state-changing action in the page chrome (Sign out, Log out) is a `<button>` wearing `.link-quiet`, because it belongs with the links around it but must POST.
+  - A navigation that is the main action of a toolbar ("Add new entry", Edit, pagination) is a link wearing `.btn`, because it sits among buttons.
+  - In both cases the element is chosen by what it does, and the class by where it sits.
+
 ### Buttons
 
 There are three kinds, ranked by how strongly they invite a click. Use **at most one encouraged button per view.**
@@ -80,12 +101,13 @@ There are three kinds, ranked by how strongly they invite a click. Use **at most
 | `.btn-destructive` | card surface, danger text and border | Delete, Delete all, Delete selected |
 
 - `.btn-sm` is for toolbars and card footers.
+- **Hover:** neutral tints 6% ink and its border darkens; destructive tints 10% danger and its border turns danger; encouraged deepens its fill. No opacity changes, no movement.
 - **Pressed** nudges the button down 1 px. **Disabled** is 45% opacity with a not-allowed cursor; a disabled control stays in place so the layout doesn't shift.
 - **Labels are verbs naming exactly what happens:** "Publish selected", "Clear space automatically", "Save Book II now". No "OK", "Submit" or "Continue".
 
 ### Links and navigation
 
-- **Back:** `layout.BackLink(href, label)`. A quiet chevron plus the destination's name ("Journals", "Back").
+- **Back:** `layout.BackLink(href, label)`. A quiet link: a chevron plus the destination's name ("Journals", "Back").
 - **Pagination:** "← Newer · Page n of m · Older →" under the feed, only when there is more than one page.
   - Entries are newest first, so the previous page is "Newer".
   - A disabled end keeps its place.
@@ -140,7 +162,7 @@ Waiting is shown with exactly one thing: a 3×3 matrix of 4 px dots, in `--page-
 |---|---|---|
 | Content arriving (a tweet) | FLIP: the slot opens in one layout, then unrolls (bottom clip) while the content below slides from its old place | 460 ms, `cubic-bezier(0.22, 1, 0.36, 1)` |
 | Page to page | cross-document view transition: old fades out, new eases in | 160 ms out, 220 ms in |
-| Control feedback | colour, opacity or a 1 px press | 160 ms |
+| Control feedback | colour, opacity, an underline, or a 1 px press (§5 Links and buttons) | 140 ms (`--interact-duration`) |
 | Navigation received | page dims to 60% | immediate |
 
 - **Arrivals push; they never pop.** Nothing appears at full size over existing content, and no content jumps.
@@ -176,8 +198,7 @@ Waiting is shown with exactly one thing: a 3×3 matrix of 4 px dots, in `--page-
 - **Status regions:** loaders and live messages use `role="status"` or `aria-live="polite"`. The dot matrix itself is `aria-hidden`; the label speaks.
 - **Focus is always visible:**
   - **Text fields** swap the outline for a `--border-focus` border.
-  - **Pills, chips and quiet links** define their own `:focus-visible` style.
-  - **Buttons** keep the browser's default focus ring; there is no custom style yet, and it must never be removed.
+  - **Everything else you can press or follow** (links, buttons, pills, summaries, checkboxes) shares one ring: a 2 px `--border-focus` outline, 2 px out (§5 Links and buttons).
   - **Never `outline: none` without a replacement.**
 - **Not colour alone:** state always has a word or shape too (a counter, a label, `aria-pressed` on tag pills).
 - **Reduced motion is honoured everywhere** (§6, §7).

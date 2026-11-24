@@ -86,7 +86,7 @@ func TestCatalogTagGroups(t *testing.T) {
 	var b strings.Builder
 	_ = CatalogContentFragment(false, view).Render(&b)
 	out := b.String()
-	if !strings.Contains(out, `<details class="tag-filter-more"><summary>More tags (3)</summary>`) {
+	if !strings.Contains(out, `<details class="tag-filter-more"><summary class="link-quiet">More tags (3)</summary>`) {
 		t.Errorf("missing More tags disclosure")
 	}
 	small := CatalogView{AllTags: byUse[:3]}
