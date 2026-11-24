@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `f1626ec` (PR #66 — a quoted passage shares the entry's character limit)
-- **Active Branch**: `media-load-fallback` (PR #67): long pasted links stay whole and are reported too long; media that fails to load becomes a link card (RATIONALE 068, `e548716`).
+- **Base Commit on `main`**: `08f5cd9` (PR #67 — long pasted links stay whole; media that fails to load becomes a link card)
+- **Active Branch**: `tweet-snapshot-on-save` (PR #68): a new entry's tweet snapshot is fetched before the save redirects, so the catalog shows the site's card without a refresh (RATIONALE 069, `82a7c73`).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
