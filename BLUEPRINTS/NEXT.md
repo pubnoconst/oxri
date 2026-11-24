@@ -1,7 +1,7 @@
 # Next
 
 - **Base Commit on `main`**: `f919332` (PR #62 — dead code removed)
-- **Active Branch**: `js-typecheck` (PR #63): the site's JavaScript is type-checked (strict, JSDoc) in CI (RATIONALE 064).
+- **Active Branch**: `js-typecheck` (PR #63): the site's JavaScript is type-checked (strict, JSDoc) in CI (RATIONALE 064, `3489fb6`).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
