@@ -193,7 +193,10 @@
     const peers = host && host.parentElement ? Array.from(host.parentElement.children) : [];
     const inner = [];
     for (let n = slot.nextElementSibling; n; n = n.nextElementSibling) inner.push(n);
-    const els = peers.concat(inner).filter((el) => el instanceof HTMLElement);
+    // The slot itself is measured too: when it opens, it unrolls in step with
+    // the content it pushes, so the tweet's visible bottom edge always meets
+    // the moving content (no overlap, no empty box).
+    const els = peers.concat(inner, [container]).filter((el) => el instanceof HTMLElement);
 
     // First: where things are now, including any in-flight FLIP offset.
     const first = new Map(els.map((el) => [el, el.getBoundingClientRect()]));
@@ -211,12 +214,14 @@
     els.forEach((el) => {
       const a = first.get(el);
       const b = el.getBoundingClientRect();
-      const dy = a.top - b.top;
-      const grew = peers.includes(el) ? b.height - a.height : 0;
+      const isSlot = el === container;
+      const dy = isSlot ? 0 : a.top - b.top; // the slot's own top does not move
+      const grew = isSlot || peers.includes(el) ? b.height - a.height : 0;
       if (Math.abs(dy) < 0.5 && grew < 0.5) return;
-      // Clip only the bottom edge while a card unrolls; keep its side shadows.
-      const from = { transform: `translateY(${dy.toFixed(1)}px)` };
-      const to = { transform: "translateY(0)" };
+      // Clip only the bottom edge while a card or the slot unrolls; keep side
+      // and top shadows.
+      const from = isSlot ? {} : { transform: `translateY(${dy.toFixed(1)}px)` };
+      const to = isSlot ? {} : { transform: "translateY(0)" };
       if (grew >= 0.5) {
         from.clipPath = `inset(-60px -60px ${grew.toFixed(1)}px -60px)`;
         to.clipPath = "inset(-60px -60px 0px -60px)";
@@ -265,7 +270,6 @@
         rippleHandle.fadeOut();
         setTimeout(() => rippleHandle.cleanup(), 420);
       }
-      requestAnimationFrame(() => stage.classList.add("is-ready"));
     };
 
     const onHeight = () => {
