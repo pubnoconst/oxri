@@ -143,16 +143,43 @@ func (s *Store) SaveBook(ctx context.Context, cap domain.AdminCap, slug, rawBody
 
 	now := time.Now().UTC()
 
+	// Books count toward the storage budget. The check and the write share one
+	// transaction (as journals do), and only a save that grows the book can be
+	// refused: shrinking a book is always allowed, even when storage is over.
 	s.writeMu.Lock()
-	_, execErr := s.db.ExecContext(ctx,
+	defer s.writeMu.Unlock()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	used, err := usedStorageBytesTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	var oldBody string
+	var oldBytes int64
+	if scanErr := tx.QueryRowContext(ctx, `SELECT body FROM books WHERE slug = ?;`, slug).Scan(&oldBody); scanErr == nil {
+		oldBytes = BookBytes(slug, title, oldBody)
+	}
+	newBytes := BookBytes(slug, title, body)
+	limit := s.MaxStorageBytes()
+	if projected := used - oldBytes + newBytes; newBytes > oldBytes && projected > limit {
+		return nil, &QuotaExceededError{RequiredBytes: projected - limit, EntryBytes: newBytes, UsedBytes: used, LimitBytes: limit}
+	}
+
+	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO books (slug, title, body, updated_at) VALUES (?, ?, ?, ?)
 		 ON CONFLICT(slug) DO UPDATE SET title = excluded.title, body = excluded.body, updated_at = excluded.updated_at;`,
 		slug, title, body, now.UnixMilli(),
-	)
-	s.writeMu.Unlock()
-	if execErr != nil {
-		return nil, execErr
+	); err != nil {
+		return nil, err
 	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	s.clearPendingBook(slug)
 
 	b := Book{
 		Slug:      slug,

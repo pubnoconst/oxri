@@ -58,9 +58,9 @@ func TestAdminWritesRejectZeroCap(t *testing.T) {
 		"SavePasskey": func() error {
 			return store.SavePasskey(ctx, forged, PasskeyRecord{ID: "cred-2", RPID: rpID, Name: "X", CredentialJSON: `{}`, CreatedAt: time.Now().UTC()})
 		},
-		"DeletePasskey":        func() error { return store.DeletePasskey(ctx, forged, "cred-1", rpID) },
-		"AutoVacateBytes":      func() error { _, err := store.AutoVacateBytes(ctx, forged, 1); return err },
-		"SetPendingSubmission": func() error { return store.SetPendingSubmission(forged, &PendingSubmission{Body: "x"}) },
+		"DeletePasskey":   func() error { return store.DeletePasskey(ctx, forged, "cred-1", rpID) },
+		"AutoVacateBytes": func() error { _, err := store.AutoVacateBytes(ctx, forged, 1); return err },
+		"SetPendingSave":  func() error { return store.SetPendingSave(forged, PendingJournal{Body: "x"}) },
 	}
 	for name, write := range writes {
 		if err := write(); !errors.Is(err, ErrUnauthorized) {
@@ -82,7 +82,7 @@ func TestAdminWritesRejectZeroCap(t *testing.T) {
 	if bookAfter, err := store.GetBook(ctx, "book-ii"); err != nil || bookAfter.Body != bookBefore.Body {
 		t.Errorf("book changed by forged write")
 	}
-	if store.GetPendingSubmission() != nil {
+	if store.GetPendingSave() != nil {
 		t.Errorf("pending submission stored by forged write")
 	}
 }

@@ -329,7 +329,7 @@ func TestStorageQuotaAndAutoVacatePriority(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedUsed := eBookmarked.EstimatedBytes() + eUnbookmarked.EstimatedBytes() + eUnpublished.EstimatedBytes()
+	expectedUsed := seededBookBytes(t, store) + eBookmarked.EstimatedBytes() + eUnbookmarked.EstimatedBytes() + eUnpublished.EstimatedBytes()
 	if used != expectedUsed {
 		t.Fatalf("UsedStorageBytes = %d, expected sum of entry estimates %d", used, expectedUsed)
 	}
@@ -396,8 +396,9 @@ func TestQuotaEnforcedOnEmptyDatabaseAndSingleEntryUpdate(t *testing.T) {
 	}
 	defer store.Close()
 
-	// 1. Empty database (used == 0) must still reject an entry exceeding MaxStorageBytes
-	store.SetMaxStorageBytes(100)
+	// 1. No journals yet (only the seeded books) must still reject an entry exceeding MaxStorageBytes
+	books := seededBookBytes(t, store)
+	store.SetMaxStorageBytes(books + 100)
 	oversized := JournalInput{
 		MediaURL:  "https://example.com/large.png",
 		Tags:      []string{"Log"},
@@ -415,7 +416,7 @@ func TestQuotaEnforcedOnEmptyDatabaseAndSingleEntryUpdate(t *testing.T) {
 		Body:      "Short",
 		Published: true,
 	}
-	store.SetMaxStorageBytes(EstimateInputBytes(small) + 10)
+	store.SetMaxStorageBytes(books + EstimateInputBytes(small) + 10)
 	created, err := store.Create(ctx, small)
 	if err != nil {
 		t.Fatalf("Create small failed: %v", err)
@@ -448,7 +449,7 @@ func TestMultiByteUTF8LatinAndGreekByteEstimationMatchesSQLite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	estGo := entry.EstimatedBytes()
+	estGo := seededBookBytes(t, store) + entry.EstimatedBytes() // books count too: SQL and Go must agree on both
 	if usedSQL != estGo {
 		t.Errorf("SQLite byte count (%d) != Go UTF-8 EstimatedBytes (%d) for multi-byte Latin/Greek", usedSQL, estGo)
 	}
@@ -471,7 +472,7 @@ func TestConcurrentCreatesNeverExceedQuota(t *testing.T) {
 	singleBytes := EstimateInputBytes(sample)
 
 	// Allow room for at most 3 entries
-	limit := singleBytes * 3
+	limit := seededBookBytes(t, store) + singleBytes*3
 	store.SetMaxStorageBytes(limit)
 
 	const workers = 10

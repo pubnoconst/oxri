@@ -19,21 +19,53 @@ type VacateSpaceView struct {
 	UsedBytes         int64
 	LimitBytes        int64
 	AutoPlan          db.AutoVacatePlan
-	PendingSub        *db.PendingSubmission
+	Pending           db.PendingSave // a held journal entry or book save, or nil
 	AutoResubmitReady bool
 }
 
-// HasPendingSubmission returns true when a stashed journal form is ready to be resubmitted.
-func (v VacateSpaceView) HasPendingSubmission() bool {
-	return v.PendingSub != nil
+// pendingDetails describes the held save for the page: what to call it, where
+// to resubmit it, the form fields that carry it, and the button label. The type
+// switch is exhaustive over the sealed db.PendingSave kinds.
+type pendingDetails struct {
+	noun   string // "entry", "Book II"
+	action string // resubmit URL
+	fields []g.Node
+	button string
 }
 
-// ResubmitActionURL returns the form action URL (/journals or /journals/{id}) for resubmitting the pending entry.
-func (v VacateSpaceView) ResubmitActionURL() string {
-	if v.PendingSub != nil && v.PendingSub.IsEdit && v.PendingSub.EntryID > 0 {
-		return fmt.Sprintf("/journals/%d", v.PendingSub.EntryID)
+func (v VacateSpaceView) pending() (pendingDetails, bool) {
+	switch p := v.Pending.(type) {
+	case db.PendingJournal:
+		action := "/journals"
+		if p.IsEdit && p.EntryID > 0 {
+			action = fmt.Sprintf("/journals/%d", p.EntryID)
+		}
+		fields := []g.Node{
+			h.Input(h.Type("hidden"), h.Name("media_url"), h.Value(p.MediaURL)),
+			h.Input(h.Type("hidden"), h.Name("tags"), h.Value(p.TagsRaw)),
+			h.Input(h.Type("hidden"), h.Name("body"), h.Value(p.Body)),
+		}
+		if p.Published {
+			fields = append(fields, h.Input(h.Type("hidden"), h.Name("published"), h.Value("1")))
+		}
+		if p.Bookmarked {
+			fields = append(fields, h.Input(h.Type("hidden"), h.Name("bookmarked"), h.Value("1")))
+		}
+		return pendingDetails{noun: "entry", action: action, fields: fields, button: "Save entry now"}, true
+	case db.PendingBook:
+		title, ok := db.BookTitle(p.Slug)
+		if !ok {
+			return pendingDetails{}, false
+		}
+		return pendingDetails{
+			noun:   title,
+			action: "/" + p.Slug,
+			fields: []g.Node{h.Input(h.Type("hidden"), h.Name("body"), h.Value(p.Body))},
+			button: "Save " + title + " now",
+		}, true
+	default:
+		return pendingDetails{}, false
 	}
-	return "/journals"
 }
 
 // InitialProgressPercent returns 100 when RequiredBytes <= 0, or 0 initially before manual selection.
@@ -94,18 +126,14 @@ func VacateSpacePage(view VacateSpaceView) g.Node {
 	}
 
 	var resubmitForm g.Node
-	if view.HasPendingSubmission() {
-		var pubHidden, bmHidden g.Node
-		if view.PendingSub.Published {
-			pubHidden = h.Input(h.Type("hidden"), h.Name("published"), h.Value("1"))
+	pd, hasPending := view.pending()
+	if hasPending {
+		hintText := "Your new " + pd.noun + " is ready and will be saved automatically once you make room."
+		if pd.noun != "entry" {
+			hintText = "Your changes to " + pd.noun + " are ready and will be saved automatically once you make room."
 		}
-		if view.PendingSub.Bookmarked {
-			bmHidden = h.Input(h.Type("hidden"), h.Name("bookmarked"), h.Value("1"))
-		}
-
-		hintText := "Your new entry is ready and will be saved automatically once you make room."
 		if view.RequiredBytes <= 0 {
-			hintText = "Enough space is available — saving your entry now…"
+			hintText = "Enough space is available — saving now…"
 		}
 
 		btnAttrs := []g.Node{
@@ -116,25 +144,28 @@ func VacateSpacePage(view VacateSpaceView) g.Node {
 		if view.RequiredBytes > 0 {
 			btnAttrs = append(btnAttrs, h.Disabled())
 		}
-		btnAttrs = append(btnAttrs, g.Text("Save entry now"))
+		btnAttrs = append(btnAttrs, g.Text(pd.button))
 
 		resubmitForm = h.Form(
 			h.ID("resubmit-journal-form"),
 			h.Class("vacate-resubmit-form"),
 			h.Method("POST"),
-			h.Action(view.ResubmitActionURL()),
+			h.Action(pd.action),
 			g.Attr("data-confirm-loading", "true"),
 			g.Attr("data-auto-resubmit", fmt.Sprintf("%t", view.AutoResubmitReady)),
-			h.Input(h.Type("hidden"), h.Name("media_url"), h.Value(view.PendingSub.MediaURL)),
-			h.Input(h.Type("hidden"), h.Name("tags"), h.Value(view.PendingSub.TagsRaw)),
-			h.Input(h.Type("hidden"), h.Name("body"), h.Value(view.PendingSub.Body)),
-			pubHidden,
-			bmHidden,
+			g.Group(pd.fields),
 			h.Div(h.Class("vacate-resubmit-bar"),
 				h.Span(h.Class("vacate-resubmit-hint"), g.Text(hintText)),
 				h.Button(btnAttrs...),
 			),
 		)
+	}
+
+	// What is waiting, for the lead text and the first metric.
+	waitingLabel, waitingLead, fullText := "This entry", "your new entry", "Your journal archive is full. "
+	if hasPending && pd.noun != "entry" {
+		// Books count toward storage but are never removed, so say storage, not archive.
+		waitingLabel, waitingLead, fullText = pd.noun, "your changes to "+pd.noun, "Storage is full. "
 	}
 
 	var autoPlanNode g.Node
@@ -255,13 +286,13 @@ func VacateSpacePage(view VacateSpaceView) g.Node {
 				g.Attr("data-required-bytes", fmt.Sprintf("%d", view.RequiredBytes)),
 				g.Attr("data-entry-bytes", fmt.Sprintf("%d", view.PendingEntryBytes)),
 				h.P(h.Class("vacate-lead"),
-					g.Text("Your journal archive is full. Remove a few older entries to free up at least "),
+					g.Text(fullText+"Remove a few older journal entries to free up at least "),
 					h.Strong(g.Text(FormatBytes(view.RequiredBytes))),
-					g.Text(", and your new entry will be saved automatically."),
+					g.Text(", and "+waitingLead+" will be saved automatically."),
 				),
 				h.Div(h.Class("vacate-metrics"),
 					h.Div(h.Class("vacate-metric-item"),
-						h.Span(h.Class("vacate-metric-label"), g.Text("This entry")),
+						h.Span(h.Class("vacate-metric-label"), g.Text(waitingLabel)),
 						h.Span(h.Class("vacate-metric-value"), h.ID("vacate-entry-bytes"), g.Text(FormatBytes(view.PendingEntryBytes))),
 					),
 					h.Div(h.Class("vacate-metric-item"),

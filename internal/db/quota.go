@@ -64,81 +64,6 @@ func EstimateInputBytes(in JournalInput) int64 {
 	return total
 }
 
-// PendingSubmission holds an author's stashed journal form payload when a create
-// or update operation is redirected to /journals/vacate-space/.
-type PendingSubmission struct {
-	IsEdit     bool
-	EntryID    int64
-	MediaURL   string
-	TagsRaw    string
-	Body       string
-	Published  bool
-	Bookmarked bool
-	EntryBytes int64
-}
-
-// SetPendingSubmission stashes a pending journal form submission for resubmission after vacating space.
-func (s *Store) SetPendingSubmission(cap domain.AdminCap, sub *PendingSubmission) error {
-	if err := requireCap(cap); err != nil {
-		return err
-	}
-	s.idMu.Lock()
-	defer s.idMu.Unlock()
-	s.pendingSub = sub
-	return nil
-}
-
-// GetPendingSubmission returns the currently stashed pending journal submission, if any.
-func (s *Store) GetPendingSubmission() *PendingSubmission {
-	s.idMu.Lock()
-	defer s.idMu.Unlock()
-	if s.pendingSub == nil {
-		return nil
-	}
-	cp := *s.pendingSub
-	return &cp
-}
-
-// ClearPendingSubmission clears any stashed pending journal submission.
-func (s *Store) ClearPendingSubmission() {
-	s.idMu.Lock()
-	defer s.idMu.Unlock()
-	s.pendingSub = nil
-}
-
-// RequiredBytesForPending calculates how many more bytes must still be vacated for the
-// stashed pending submission (or returns 0 if it now fits within MaxStorageBytes).
-func (s *Store) RequiredBytesForPending(ctx context.Context) (required int64, entryBytes int64, used int64, limit int64, err error) {
-	used, err = s.UsedStorageBytes(ctx)
-	if err != nil {
-		return 0, 0, 0, 0, err
-	}
-	limit = s.MaxStorageBytes()
-	sub := s.GetPendingSubmission()
-	if sub == nil {
-		if used > limit {
-			return used - limit, 0, used, limit, nil
-		}
-		return 0, 0, used, limit, nil
-	}
-	entryBytes = sub.EntryBytes
-	availableToVacate := used
-	projected := used + entryBytes
-	if sub.IsEdit && sub.EntryID > 0 {
-		if existing, getErr := s.Get(ctx, sub.EntryID, true); getErr == nil {
-			availableToVacate = used - existing.EstimatedBytes()
-			projected = availableToVacate + entryBytes
-		}
-	}
-	if projected > limit {
-		required = projected - limit
-		if availableToVacate > 0 && required > availableToVacate {
-			required = availableToVacate
-		}
-	}
-	return required, entryBytes, used, limit, nil
-}
-
 // SetMaxStorageBytes overrides the maximum storage limit (useful in unit tests).
 func (s *Store) SetMaxStorageBytes(limit int64) {
 	s.idMu.Lock()
@@ -162,20 +87,39 @@ func (s *Store) MaxStorageBytes() int64 {
 	return DefaultMaxStorageBytes
 }
 
-// usedStorageBytesSQL uses length(CAST(col AS BLOB)) so SQLite measures exact UTF-8 byte
-// counts rather than Unicode code point counts, matching Go's len(str) identically for
-// multi-byte Latin diacritics and Greek characters.
-const usedStorageBytesSQL = `
+// Storage accounting uses length(CAST(col AS BLOB)) so SQLite measures exact
+// UTF-8 byte counts rather than Unicode code points, matching Go's len(str) for
+// multi-byte Latin diacritics and Greek characters. Every row also costs
+// RowOverheadBytes. Books count toward the budget like journals (one honest
+// usage number), but only journals can be vacated: books are never evicted.
+var (
+	journalStorageBytesSQL = fmt.Sprintf(`
 SELECT COALESCE(SUM(
-  82 +
+  %d +
   length(CAST(media_url AS BLOB)) +
   length(CAST(COALESCE(tag1, '') AS BLOB)) +
   length(CAST(COALESCE(tag2, '') AS BLOB)) +
   length(CAST(COALESCE(tag3, '') AS BLOB)) +
   length(CAST(body AS BLOB))
-), 0) FROM journals;`
+), 0) FROM journals`, RowOverheadBytes)
 
-// UsedStorageBytes returns the total UTF-8 content + row header byte footprint across all rows in `journals`.
+	bookStorageBytesSQL = fmt.Sprintf(`
+SELECT COALESCE(SUM(
+  %d +
+  length(CAST(slug AS BLOB)) +
+  length(CAST(title AS BLOB)) +
+  length(CAST(body AS BLOB))
+), 0) FROM books`, RowOverheadBytes)
+
+	usedStorageBytesSQL = "SELECT (" + journalStorageBytesSQL + ") + (" + bookStorageBytesSQL + ");"
+)
+
+// BookBytes is a book row's storage footprint, matching bookStorageBytesSQL.
+func BookBytes(slug, title, body string) int64 {
+	return RowOverheadBytes + int64(len(slug)) + int64(len(title)) + int64(len(body))
+}
+
+// UsedStorageBytes returns the total storage footprint of journals and books.
 func (s *Store) UsedStorageBytes(ctx context.Context) (int64, error) {
 	return usedStorageBytesTx(ctx, s.db)
 }
@@ -186,6 +130,15 @@ func usedStorageBytesTx(ctx context.Context, q queryExecer) (int64, error) {
 		return 0, err
 	}
 	return used, nil
+}
+
+// journalStorageBytes is the part of usage that vacating can free.
+func (s *Store) journalStorageBytes(ctx context.Context) (int64, error) {
+	var n int64
+	if err := s.db.QueryRowContext(ctx, journalStorageBytesSQL+";").Scan(&n); err != nil {
+		return 0, err
+	}
+	return n, nil
 }
 
 // checkQuotaForCreateTx evaluates projected usage <= limit inside the active write transaction,

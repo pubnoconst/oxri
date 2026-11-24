@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"testing"
 
 	"github.com/oxri/oxri-go/internal/domain"
 )
@@ -34,4 +35,19 @@ func (s *Store) Update(ctx context.Context, id int64, in JournalInput) error {
 		return err
 	}
 	return s.UpdateValidated(ctx, testCap, id, entry)
+}
+
+// seededBookBytes is the storage the three seeded books use; books count
+// toward the budget, so quota tests build their limits on top of it.
+func seededBookBytes(t *testing.T, s *Store) int64 {
+	t.Helper()
+	var total int64
+	for _, slug := range []string{"book-i", "book-ii", "book-iii"} {
+		b, err := s.GetBook(context.Background(), slug)
+		if err != nil {
+			t.Fatalf("GetBook(%s): %v", slug, err)
+		}
+		total += BookBytes(b.Slug, b.Title, b.Body)
+	}
+	return total
 }
