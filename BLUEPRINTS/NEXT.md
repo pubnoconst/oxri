@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `ac1ec45` (PR #45 — dot-matrix loaders on phones)
-- **Active Branch**: `v2-dot-matrix` (PR #46): full dot matrix on every device; the water ripple is retired and archived on the `water-ripple` branch. Seeded puzzle = working on your action, seeded twinkle = downloading, comet = waiting on you; the tweet loading line is centred; cards no longer snap open when tweets arrive close together (RATIONALE 047).
+- **Base Commit on `main`**: `c066877` (PR #46 — full dot matrix: seeded puzzle/twinkle, comet; water archived on `water-ripple`)
+- **Active Branch**: `v2-tags-hig` (PR #47): `HIG.md` (the UI language) and an instructional Tags placeholder (RATIONALE 048).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main`, `prod`, `v2` (live); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
