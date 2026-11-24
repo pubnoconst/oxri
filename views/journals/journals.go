@@ -290,11 +290,12 @@ func CatalogContentFragment(isAuth bool, view CatalogView) g.Node {
 			h.Div(h.Class("batch-buttons"),
 				h.Button(h.Type("submit"), h.Name("action"), h.Value("publish_selected"), h.Class("btn btn-neutral btn-sm"), g.Attr("data-requires-selection", "true"), h.Disabled(), g.Text("Publish selected")),
 				h.Button(h.Type("submit"), h.Name("action"), h.Value("unpublish_selected"), h.Class("btn btn-neutral btn-sm"), g.Attr("data-requires-selection", "true"), h.Disabled(), g.Text("Unpublish selected")),
-				h.Button(h.Type("submit"), h.Name("action"), h.Value("delete_selected"), h.Class("btn btn-destructive btn-sm"), g.Attr("data-requires-selection", "true"), h.Disabled(), g.Text("Delete selected")),
+				batchConfirmButton("delete_selected", "btn btn-destructive btn-sm", "Delete selected", true),
 				h.Span(h.Class("batch-divider"), g.Attr("aria-hidden", "true")),
-				h.Button(h.Type("submit"), h.Name("action"), h.Value("unpublish_all"), h.Class("btn btn-neutral btn-sm"), g.Text("Unpublish all")),
-				h.Button(h.Type("submit"), h.Name("action"), h.Value("delete_all"), h.Class("btn btn-destructive btn-sm"), g.Text("Delete all")),
+				batchConfirmButton("unpublish_all", "btn btn-neutral btn-sm", "Unpublish all", false),
+				batchConfirmButton("delete_all", "btn btn-destructive btn-sm", "Delete all", false),
 			),
+			h.Div(h.ID(batchConfirmSlot), h.Class("confirm-slot")),
 		)
 	}
 
@@ -526,12 +527,7 @@ func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 				h.Button(h.Type("submit"), h.Class("btn btn-neutral btn-sm"), g.Text(bmText)),
 			),
 			pubForm,
-			h.Form(
-				h.Method("POST"),
-				h.Action(ActionURL(item.Entry.ID, "delete")),
-				g.Attr("data-confirm", "Delete this journal entry permanently?"),
-				h.Button(h.Type("submit"), h.Class("btn btn-destructive btn-sm"), g.Text("Delete")),
-			),
+			confirmTrigger(ActionURL(item.Entry.ID, "delete"), confirmSlotID(item.Entry.ID), "Delete"),
 		)
 	}
 
@@ -552,5 +548,37 @@ func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 		tagsBlock,
 		contentBlock,
 		adminFooter,
+		g.If(isAuth, h.Div(h.ID(confirmSlotID(item.Entry.ID)), h.Class("confirm-slot"))),
+	)
+}
+
+// batchConfirmSlot is where a batch action's prompt appears.
+const batchConfirmSlot = "batch-confirm"
+
+// batchConfirmButton asks before a batch action: it fetches the prompt (with
+// the selected ids) into the batch bar; the prompt's button submits the form.
+func batchConfirmButton(action, cls, label string, needsSelection bool) g.Node {
+	return h.Button(h.Type("button"), h.Class(cls),
+		g.Attr("hx-get", "/journals/batch/confirm"),
+		g.Attr("hx-vals", fmt.Sprintf(`{"action":%q}`, action)),
+		g.Attr("hx-include", ".entry-select-cb:checked"),
+		g.Attr("hx-target", "#"+batchConfirmSlot),
+		g.Attr("hx-swap", "innerHTML"),
+		g.Attr("aria-controls", batchConfirmSlot),
+		g.If(needsSelection, g.Group([]g.Node{g.Attr("data-requires-selection", "true"), h.Disabled()})),
+		g.Text(label),
+	)
+}
+
+// confirmSlotID is where an entry's delete prompt appears (views/confirm).
+func confirmSlotID(id int64) string { return fmt.Sprintf("confirm-entry-%d", id) }
+
+// confirmTrigger is a destructive control that asks first: with HTMX it
+// fetches the prompt into slotID; without JavaScript the same URL is a page.
+func confirmTrigger(href, slotID, label string) g.Node {
+	return h.A(h.Class("btn btn-destructive btn-sm"), h.Href(href),
+		g.Attr("hx-get", href), g.Attr("hx-target", "#"+slotID), g.Attr("hx-swap", "innerHTML"),
+		g.Attr("aria-controls", slotID),
+		g.Text(label),
 	)
 }

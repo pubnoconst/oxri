@@ -97,6 +97,7 @@ func NewRouter(cfg Config) http.Handler {
 	r.Get("/journals/new", handleJournalNew(cfg.Store, cfg.AuthService))
 	r.Post("/journals", handleJournalCreate(cfg.Store, cfg.AuthService))
 	r.Post("/journals/batch", handleJournalBatch(cfg.Store, cfg.AuthService))
+	r.Get("/journals/batch/confirm", handleJournalBatchConfirm(cfg.AuthService))
 	r.Get("/journals/vacate-space", handleJournalVacateSpacePage(cfg.Store, cfg.AuthService))
 	r.Get("/journals/vacate-space/", handleJournalVacateSpacePage(cfg.Store, cfg.AuthService))
 	r.Post("/journals/vacate-space", handleJournalVacateSpaceSubmit(cfg.Store, cfg.AuthService))
@@ -104,6 +105,7 @@ func NewRouter(cfg Config) http.Handler {
 	r.Get("/journals/{id}", handleJournalEntry(cfg.Store, cfg.AuthService))
 	r.Get("/journals/{id}/edit", handleJournalEditForm(cfg.Store, cfg.AuthService))
 	r.Post("/journals/{id}", handleJournalUpdate(cfg.Store, cfg.AuthService))
+	r.Get("/journals/{id}/delete", handleJournalDeleteConfirm(cfg.AuthService))
 	r.Post("/journals/{id}/delete", handleJournalDelete(cfg.Store, cfg.AuthService))
 	r.Post("/journals/{id}/publish", handleJournalPublish(cfg.Store, cfg.AuthService, true))
 	r.Post("/journals/{id}/unpublish", handleJournalPublish(cfg.Store, cfg.AuthService, false))
@@ -122,6 +124,7 @@ func NewRouter(cfg Config) http.Handler {
 	r.Get("/settings", handleSettings(cfg.Store, cfg.AuthService))
 	r.Post("/settings/passkeys/begin", handlePasskeyRegisterBegin(cfg.Store, cfg.AuthService))
 	r.Post("/settings/passkeys/finish", handlePasskeyRegisterFinish(cfg.Store, cfg.AuthService))
+	r.Get("/settings/passkeys/{id}/delete", handlePasskeyDeleteConfirm(cfg.Store, cfg.AuthService))
 	r.Post("/settings/passkeys/{id}/delete", handlePasskeyDelete(cfg.Store, cfg.AuthService))
 
 	return r

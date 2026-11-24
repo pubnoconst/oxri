@@ -120,7 +120,7 @@ func TestJournalCatalogIsPaginated(t *testing.T) {
 	}
 	// …but never off-site or to another path.
 	for _, ref := range []string{"https://evil.example/journals?page=2", "http://example.com/login?next=x", "http://example.com/journals/5?page=2", ""} {
-		rec = do(http.MethodPost, fmt.Sprintf("/journals/%d/delete", list[1].ID), url.Values{}, ref)
+		rec = do(http.MethodPost, fmt.Sprintf("/journals/%d/delete", list[1].ID), url.Values{"confirmed": {"1"}}, ref)
 		if loc := rec.Header().Get("Location"); loc != "/journals" {
 			t.Errorf("Referer %q: redirected to %q, want /journals", ref, loc)
 		}

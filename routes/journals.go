@@ -15,6 +15,7 @@ import (
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/internal/paging"
 	"github.com/oxri/oxri-go/serverfns"
+	"github.com/oxri/oxri-go/views/confirm"
 	"github.com/oxri/oxri-go/views/editor"
 	"github.com/oxri/oxri-go/views/errorpage"
 	"github.com/oxri/oxri-go/views/journals"
@@ -368,6 +369,10 @@ func handleJournalDelete(store *db.Store, authSvc *auth.Service) http.HandlerFun
 			errorpage.Render(w, http.StatusNotFound, "")
 			return
 		}
+		if !confirm.Confirmed(r) {
+			http.Redirect(w, r, fmt.Sprintf("/journals/%d/delete", id), http.StatusSeeOther)
+			return
+		}
 		if store == nil {
 			errorpage.Render(w, http.StatusServiceUnavailable, "")
 			return
@@ -430,11 +435,10 @@ func handleJournalBatch(store *db.Store, authSvc *auth.Service) http.HandlerFunc
 		}
 		_ = r.ParseForm()
 		action := r.FormValue("action")
-		var ids []int64
-		for _, rawID := range r.Form["ids"] {
-			if id, err := strconv.ParseInt(rawID, 10, 64); err == nil && id > 0 {
-				ids = append(ids, id)
-			}
+		ids := parseIDs(r.Form["ids"])
+		if _, mustConfirm := batchPrompts[action]; mustConfirm && !confirm.Confirmed(r) {
+			errorpage.Render(w, http.StatusBadRequest, "Confirm that first.")
+			return
 		}
 
 		var err error
@@ -459,6 +463,17 @@ func handleJournalBatch(store *db.Store, authSvc *auth.Service) http.HandlerFunc
 		}
 		http.Redirect(w, r, catalogReturnTarget(r), http.StatusSeeOther)
 	})
+}
+
+// parseIDs keeps the positive integer ids among untrusted form values.
+func parseIDs(raw []string) []int64 {
+	var ids []int64
+	for _, rawID := range raw {
+		if id, err := strconv.ParseInt(rawID, 10, 64); err == nil && id > 0 {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
 
 func parseEntryID(r *http.Request) (int64, bool) {
