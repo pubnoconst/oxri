@@ -84,6 +84,16 @@ func handleBookSave(store *db.Store, authSvc *auth.Service, slug string, limiter
 
 		rawBody := r.FormValue("body")
 		if _, err := store.SaveBook(r.Context(), cap, slug, rawBody); err != nil {
+			if errors.Is(err, db.ErrQuotaExceeded) {
+				// The book is valid but storage is full: hold it and send the author
+				// to Make Room. Only journal entries are vacated; once enough space is
+				// free, the page saves the book automatically.
+				if body, vErr := db.ValidateBookBody(rawBody); vErr == nil {
+					_ = store.SetPendingSave(cap, db.PendingBook{Slug: slug, Body: body, BookBytes: db.BookBytes(slug, title, body)})
+					http.Redirect(w, r, "/journals/vacate-space/", http.StatusSeeOther)
+					return
+				}
+			}
 			if errors.Is(err, db.ErrInvalidInput) || errors.Is(err, db.ErrBookTooLarge) {
 				safeEcho := db.SanitizeProseInput(rawBody)
 				if len(safeEcho) > db.MaxBookBodyBytes {

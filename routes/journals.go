@@ -164,7 +164,7 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 		if _, err := store.CreateValidated(r.Context(), cap, validated); err != nil {
 			if errors.Is(err, db.ErrQuotaExceeded) {
 				sanitizeFormDataForEcho(&formData)
-				_ = store.SetPendingSubmission(cap, &db.PendingSubmission{
+				_ = store.SetPendingSave(cap, db.PendingJournal{
 					IsEdit:     false,
 					MediaURL:   formData.MediaURL,
 					TagsRaw:    formData.Tags,
@@ -249,7 +249,7 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service) http.HandlerFun
 			}
 			if errors.Is(err, db.ErrQuotaExceeded) {
 				sanitizeFormDataForEcho(&formData)
-				_ = store.SetPendingSubmission(cap, &db.PendingSubmission{
+				_ = store.SetPendingSave(cap, db.PendingJournal{
 					IsEdit:     true,
 					EntryID:    id,
 					MediaURL:   formData.MediaURL,
@@ -290,8 +290,8 @@ func handleJournalVacateSpacePage(store *db.Store, authSvc *auth.Service) http.H
 			renderInternalError(w, r, http.StatusInternalServerError, err)
 			return
 		}
-		pendingSub := store.GetPendingSubmission()
-		autoResubmit := r.URL.Query().Get("vacated") == "1" && requiredBytes <= 0 && pendingSub != nil
+		pending := store.GetPendingSave()
+		autoResubmit := r.URL.Query().Get("vacated") == "1" && requiredBytes <= 0 && pending != nil
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = journals.VacateSpacePage(journals.VacateSpaceView{
@@ -301,7 +301,7 @@ func handleJournalVacateSpacePage(store *db.Store, authSvc *auth.Service) http.H
 			UsedBytes:         usedBytes,
 			LimitBytes:        limitBytes,
 			AutoPlan:          autoPlan,
-			PendingSub:        pendingSub,
+			Pending:           pending,
 			AutoResubmitReady: autoResubmit,
 		}).Render(w)
 	})

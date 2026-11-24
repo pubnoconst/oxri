@@ -40,7 +40,7 @@ type Store struct {
 	idMu            sync.Mutex
 	lastID          int64
 	maxStorageBytes int64
-	pendingSub      *PendingSubmission
+	pendingSave     PendingSave
 
 	cacheMu       sync.RWMutex
 	cachedEntries []Journal

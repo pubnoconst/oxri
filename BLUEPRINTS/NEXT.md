@@ -2,6 +2,7 @@
 
 - **Base Commit on `main`**: `407898d` (PR #40 — no placeholder while a tweet loads; the slot unrolls with the push)
 - **Active Branch**: `v2-entry-cap` (PR #41): journal entry body capped at 2,000 characters, with a live editor counter (RATIONALE 042).
+- **Stacked on it**: `v2-book-vacate` (PR #42): books count toward the 4.5 GB storage budget; an over-quota book save goes through Make Room, which frees journal space only (books are never evicted) and then saves the book (RATIONALE 043).
 - **Branches**: `main`, `prod`, `v2` (live); `v1`, `fsharp-legacy`, `rust-experiment` (archived lineage, kept on purpose).
 - **Active Experiment / Undo Instructions**: None. To reset a device's water quality level: in the browser console, `localStorage.removeItem("res-imperii.water-quality")`.
 

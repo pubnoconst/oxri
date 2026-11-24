@@ -95,7 +95,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
 		return nil, err
 	}
 	s.invalidateCache()
-	s.ClearPendingSubmission()
+	s.clearPendingJournal()
 
 	return &Journal{
 		ID:         id,
@@ -152,7 +152,7 @@ WHERE id = ?;`
 		return err
 	}
 	s.invalidateCache()
-	s.ClearPendingSubmission()
+	s.clearPendingJournal()
 	return nil
 }
 
