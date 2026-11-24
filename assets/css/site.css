@@ -713,6 +713,90 @@ a {
   }
 }
 
+/* ---- Phone loading UX: a 3x3 dot matrix instead of water ------------------
+   Phones (touch is the primary input) never run water (water-ripple.js
+   isPhoneUI uses the same query). The matrix is drawn with CSS, not glyphs, so
+   it looks the same on every phone, and it animates opacity only, which the
+   compositor keeps running even while the main thread is busy loading tweets.
+   Markup: views/loading.Dots and dotLoading() in journal-media.js. */
+.dot-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--page-ink);
+}
+
+.dot-matrix {
+  display: none; /* phones only, see below */
+  grid-template-columns: repeat(3, 4px);
+  grid-auto-rows: 4px;
+  gap: 3px;
+  flex: none;
+}
+
+.dot-matrix > i {
+  display: block;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.16;
+  animation: dot-matrix-sweep 1.05s ease-in-out infinite;
+}
+
+/* A diagonal sweep: each dot's delay is its diagonal (row + column). */
+.dot-matrix > i:nth-child(2), .dot-matrix > i:nth-child(4) { animation-delay: 0.12s; }
+.dot-matrix > i:nth-child(3), .dot-matrix > i:nth-child(5), .dot-matrix > i:nth-child(7) { animation-delay: 0.24s; }
+.dot-matrix > i:nth-child(6), .dot-matrix > i:nth-child(8) { animation-delay: 0.36s; }
+.dot-matrix > i:nth-child(9) { animation-delay: 0.48s; }
+
+@keyframes dot-matrix-sweep {
+  0%, 100% { opacity: 0.16; }
+  35% { opacity: 0.85; }
+}
+
+.dot-loading-label {
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  opacity: 0.7;
+}
+
+/* Slow navigation on phones: a small fixed loader near the bottom. */
+.nav-dot-loading {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 70;
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .dot-matrix {
+    display: inline-grid;
+  }
+
+  /* No water on phones: hide every ring (cards, catalog, Confirming). */
+  .card-water-ripple {
+    display: none !important;
+  }
+
+  /* Calm "received" cue for a navigation, and the dots if it is slow. The
+     loader itself is not dimmed. */
+  :root.navigation-leaving body > :not(.nav-dot-loading) {
+    opacity: 0.6;
+  }
+
+  :root.navigation-pending .nav-dot-loading {
+    display: inline-flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot-matrix > i {
+    opacity: 0.6;
+  }
+}
+
 /* Without a ripple (reduced motion, or the water quality governor switched
    refraction off on this device: .water-off), keep a calm, static "received" cue. */
 :root.water-off.navigation-leaving body {

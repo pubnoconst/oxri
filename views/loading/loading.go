@@ -97,6 +97,27 @@ func rippleRings() g.Node {
 	)
 }
 
+// Dots renders the phone loader: a 3x3 dot matrix and a label (site.css
+// .dot-loading). The matrix shows on phones only (pointer: coarse); elsewhere
+// just the label shows, so it can stand in for plain loading text. The JS twin
+// is dotLoading() in journal-media.js.
+func Dots(label string) g.Node {
+	return h.Span(h.Class("dot-loading"),
+		dotMatrix(),
+		h.Span(h.Class("dot-loading-label"), g.Text(label)),
+	)
+}
+
+// dotMatrix is the 3x3 matrix alone (nine dots; the sweep is in site.css).
+// The Confirming phrase on phones uses it directly, beside the phrase.
+func dotMatrix() g.Node {
+	dots := make([]g.Node, 9)
+	for i := range dots {
+		dots[i] = h.I()
+	}
+	return h.Span(h.Class("dot-matrix"), g.Attr("aria-hidden", "true"), g.Group(dots))
+}
+
 // Page renders the standalone awaiting confirmation view inside the base layout shell.
 func Page(phrase string) g.Node {
 	if phrase == "" {
@@ -119,7 +140,7 @@ func Stage(phrase string) g.Node {
 		h.Class("loading-page"),
 		g.Attr("aria-live", "polite"),
 		g.Attr("aria-busy", "true"),
-		phraseNode(phrase),
+		h.Div(h.Class("loading-phrase-row"), dotMatrix(), phraseNode(phrase)),
 		rippleRings(),
 	)
 }
@@ -143,7 +164,7 @@ func Overlay(phrase string, initiallyVisible bool) g.Node {
 	if !initiallyVisible {
 		attrs = append(attrs, g.Attr("hidden", ""))
 	}
-	attrs = append(attrs, phraseNode(phrase), rippleRings())
+	attrs = append(attrs, h.Div(h.Class("loading-phrase-row"), dotMatrix(), phraseNode(phrase)), rippleRings())
 
 	return g.Group([]g.Node{
 		h.Link(h.Rel("stylesheet"), h.Href(Style.URL())),

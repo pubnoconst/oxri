@@ -7,6 +7,26 @@
   let pendingTimer;
   let resetTimer;
 
+  // Phones have no tap ripple (water-ripple.js isPhoneUI); a slow navigation
+  // shows the shared dot matrix instead (site.css .nav-dot-loading, visible
+  // only while .navigation-pending and only on phones).
+  let navDots = null;
+  function ensureNavDots() {
+    if (navDots && navDots.isConnected) return;
+    navDots = document.createElement("div");
+    navDots.className = "nav-dot-loading dot-loading";
+    navDots.setAttribute("role", "status");
+    const matrix = document.createElement("span");
+    matrix.className = "dot-matrix";
+    matrix.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < 9; i++) matrix.append(document.createElement("i"));
+    const label = document.createElement("span");
+    label.className = "dot-loading-label";
+    label.textContent = "Loading";
+    navDots.append(matrix, label);
+    document.body.append(navDots);
+  }
+
   function clearNavigationState() {
     window.clearTimeout(pendingTimer);
     window.clearTimeout(resetTimer);
@@ -42,6 +62,7 @@
     document.documentElement.classList.add(leavingClass);
     pendingTimer = window.setTimeout(() => {
       if (event.defaultPrevented) return;
+      ensureNavDots();
       document.documentElement.classList.add(pendingClass);
       resetTimer = window.setTimeout(clearNavigationState, resetAfterMs);
     }, delayMs);
@@ -68,6 +89,10 @@
     if (form.target && form.target.toLowerCase() !== "_self") return;
     clearNavigationState();
     document.documentElement.classList.add(leavingClass);
+    pendingTimer = window.setTimeout(() => {
+      ensureNavDots();
+      document.documentElement.classList.add(pendingClass);
+    }, delayMs);
     resetTimer = window.setTimeout(clearNavigationState, resetAfterMs);
   });
 

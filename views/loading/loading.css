@@ -125,3 +125,22 @@
     display: none;
   }
 }
+
+/* The dot matrix sits beside the phrase (phones only: site.css hides it
+   elsewhere). On phones the phrase stands still; the matrix is the motion. */
+.loading-phrase-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  position: relative;
+  z-index: 2;
+}
+
+@media (pointer: coarse) {
+  .loading-char {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

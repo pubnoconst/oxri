@@ -49,7 +49,7 @@
   }
 
   function drop(x, y, gain) {
-    if (reducedMotion() || !window.ResImperiiWater) return;
+    if (reducedMotion() || !window.ResImperiiWater || window.ResImperiiWater.isPhoneUI()) return;
     // Device quality (water-ripple.js governor): 3 every echo, 2 nearest echo,
     // 1 drop only, 0 off (navigation-feedback's static cue applies instead).
     const level = window.ResImperiiWater.quality.get();

@@ -29,9 +29,46 @@
   //   3. Once the push has finished, the tweet eases in and the ripple fades.
   // The tweet itself is never shown half-laid-out, and nothing waits on a
   // fixed "settle" timer.
+  // dotLoading builds the shared phone loader: a 3x3 dot matrix and a label
+  // (site.css .dot-loading; the Go twin is views/loading.Dots).
+  function dotLoading(label) {
+    const wrap = document.createElement("span");
+    wrap.className = "dot-loading";
+    const matrix = document.createElement("span");
+    matrix.className = "dot-matrix";
+    matrix.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < 9; i++) matrix.append(document.createElement("i"));
+    const text = document.createElement("span");
+    text.className = "dot-loading-label";
+    text.textContent = label;
+    wrap.append(matrix, text);
+    return wrap;
+  }
+
+  const isPhoneUI = () =>
+    window.ResImperiiWater ? window.ResImperiiWater.isPhoneUI() : !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+
+  // On phones the waiting cue is one quiet line where the tweet will open, no
+  // water. When the tweet arrives, clearPending removes the line inside the
+  // FLIP's layout step, so the slot unrolls from the line to the tweet.
+  function showLineLoader(container) {
+    container.classList.add("is-loading-line");
+    container.setAttribute("role", "status");
+    container.append(dotLoading("Loading preview"));
+    return {
+      fadeOut() {},
+      cleanup() {
+        const line = container.querySelector(":scope > .dot-loading");
+        if (line) line.remove();
+        container.classList.remove("is-loading-line");
+      },
+    };
+  }
+
   function showRippleLoader(container) {
     container.style.height = "";
     container.replaceChildren();
+    if (isPhoneUI()) return showLineLoader(container);
 
     // Nothing is rendered or reserved while the tweet loads: the slot is
     // collapsed (is-pending: no height, no gap) and only the card's own content
@@ -122,7 +159,9 @@
 
   // clearPending ends the collapsed loading state of a tweet slot.
   function clearPending(container) {
-    container.classList.remove("is-pending");
+    const line = container.querySelector(":scope > .dot-loading");
+    if (line) line.remove();
+    container.classList.remove("is-pending", "is-loading-line");
     container.removeAttribute("role");
     container.removeAttribute("aria-label");
   }
