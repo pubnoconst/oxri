@@ -99,6 +99,7 @@ Every field follows the same anatomy, top to bottom:
 
 - Up to **3** unique tags per entry, each up to **8** ASCII letters or digits (A–Z, 0–9), separated by commas, stored in Title Case.
 - Tags show as quiet chips (`journal-tag-chip`) and as filter pills (`tag-filter-pill`, `is-active` when selected).
+- **Tags are ordered by use** (`db.TagsByUse`), most used first. The catalog shows the 12 most used (`journals.CatalogTagLimit`) plus any selected tag; the rest wait, alphabetical, behind "More tags (N)" (`<details>`). The editor's suggestions lead with the most used ("Most used:" while the field is empty), then, while typing, tags that start with the text before tags that contain it.
 
 ## 6. Loading: the dot matrix
 
