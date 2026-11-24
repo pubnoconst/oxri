@@ -1,7 +1,8 @@
 # Next
 
-- **Base Commit on `main`**: `a57696e` (PR #43 — water recovers from "off"; painted loading crest while off)
-- **Active Branch**: `v2-journal-pages` (PR #44): the journal catalog is paginated, 12 entries per page, so budget phones never render the whole archive (RATIONALE 045).
+- **Base Commit on `main`**: `b3ba4a9` (PR #44 — catalog paginated, 12 per page)
+- **Active Branch**: `v2-phone-loaders` (PR #45): touch phones get a 3x3 dot-matrix loader instead of water everywhere (tweet slot line, catalog, Confirming, slow navigation); desktop unchanged (RATIONALE 046).
+- **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main`, `prod`, `v2` (live); `v1`, `fsharp-legacy`, `rust-experiment` (archived lineage, kept on purpose).
 - **Active Experiment / Undo Instructions**: None. To reset a device's water quality level: in the browser console, `localStorage.removeItem("res-imperii.water-quality")` (and `"res-imperii.water-off-at"`). On a phone: Chrome → Site settings → the site → Clear data.
 
@@ -22,8 +23,8 @@
 
 ## Next on Mind
 
-1. Check the Pixel 10 (PR #43 shipped): taps should ripple again (level 1). If they are choppy there, the phone will step down to off again after two slow taps, and loading ripples will show the painted crest. The lasting fix for a phone that can't refract the viewport smoothly: limit the filter to the wave's bounding box, or a ring-only (transform/opacity) tier. (No Safari device is available; the governor's cautious Safari start, level 1, stays unverified.)
-   - If the loading ripple still feels too brief on phone-sized cards, scale its duration and reach to the card's size.
+1. On the S9+ (and Pixel 10), after PR #45 ships: dots on the catalog, a "Loading preview" line per tweet that unrolls into the tweet, no tap ripple, the Confirming overlay with dots, and the "Loading" dots on a slow navigation.
+   - Next budget-phone candidates: build tweets only when their card nears the screen, a couple at a time (12 iframes at once is the heaviest thing left on a page); check what the catalog does if `/journals/content` fails or stalls (Render cold start on slow mobile data).
 2. Continue the plan from step 3.
 3. **Edge tweets (deferred by the owner, "we will address Edge later"):** tweets take a long time to load in Edge. Start in Edge DevTools on `/journals`: look for "Tracking Prevention blocked …twitter.com" and check the network timing of `platform.twitter.com` / `syndication.twitter.com`. The 12 s link-card fallback still bounds the worst case.
 4. Run `mage backup` and author Books II and III via `/book-ii/edit` and `/book-iii/edit`.
