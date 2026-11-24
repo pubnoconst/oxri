@@ -43,3 +43,4 @@ Desktop.ini
 # Legacy build directories
 /target/
 /obj/
+node_modules/

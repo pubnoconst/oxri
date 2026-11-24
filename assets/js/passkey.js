@@ -5,6 +5,7 @@
 (() => {
   "use strict";
 
+  /** @param {string} b64url */
   function b64urlToBytes(b64url) {
     const pad = "=".repeat((4 - (b64url.length % 4)) % 4);
     const b64 = (b64url + pad).replace(/-/g, "+").replace(/_/g, "/");
@@ -14,6 +15,7 @@
     return out;
   }
 
+  /** @param {ArrayBuffer} buf */
   function bytesToB64url(buf) {
     const bytes = new Uint8Array(buf);
     let str = "";
@@ -24,6 +26,12 @@
   // showStatus sets the passkey status line. waiting=true means the browser is
   // asking the person for their passkey: the comet (dot-matrix.js) shows that
   // it is their turn.
+  /**
+   * @param {HTMLElement | null} el
+   * @param {string} msg
+   * @param {boolean} [isError]
+   * @param {boolean} [waiting]
+   */
   function showStatus(el, msg, isError, waiting) {
     if (!el) return;
     el.textContent = msg;
@@ -34,13 +42,17 @@
     el.classList.toggle("is-error", Boolean(isError));
   }
 
+  /**
+   * @param {HTMLButtonElement} btn
+   * @param {HTMLElement | null} statusEl
+   */
   async function registerPasskey(btn, statusEl) {
     if (!window.PublicKeyCredential || !navigator.credentials) {
       showStatus(statusEl, "This browser does not support Passkeys (WebAuthn).", true);
       return;
     }
 
-    const labelInput = document.getElementById("passkey-label-input");
+    const labelInput = /** @type {HTMLInputElement | null} */ (document.getElementById("passkey-label-input"));
     const label = (labelInput ? labelInput.value : "").trim() || "Passkey";
 
     btn.disabled = true;
@@ -61,25 +73,26 @@
       pubKey.challenge = b64urlToBytes(pubKey.challenge);
       pubKey.user.id = b64urlToBytes(pubKey.user.id);
       if (Array.isArray(pubKey.excludeCredentials)) {
-        pubKey.excludeCredentials = pubKey.excludeCredentials.map((c) => ({
+        pubKey.excludeCredentials = pubKey.excludeCredentials.map((/** @type {{ id: string }} */ c) => ({
           ...c,
           id: b64urlToBytes(c.id),
         }));
       }
 
-      const cred = await navigator.credentials.create({ publicKey: pubKey });
+      const cred = /** @type {PublicKeyCredential | null} */ (await navigator.credentials.create({ publicKey: pubKey }));
       if (!cred) {
         throw new Error("Passkey registration was cancelled.");
       }
+      const attestation = /** @type {AuthenticatorAttestationResponse} */ (cred.response);
 
       const payload = {
         id: cred.id,
         rawId: bytesToB64url(cred.rawId),
         type: cred.type,
         response: {
-          attestationObject: bytesToB64url(cred.response.attestationObject),
-          clientDataJSON: bytesToB64url(cred.response.clientDataJSON),
-          transports: typeof cred.response.getTransports === "function" ? cred.response.getTransports() : [],
+          attestationObject: bytesToB64url(attestation.attestationObject),
+          clientDataJSON: bytesToB64url(attestation.clientDataJSON),
+          transports: typeof attestation.getTransports === "function" ? attestation.getTransports() : [],
         },
       };
 
@@ -97,14 +110,19 @@
       showStatus(statusEl, "Passkey added. Reloading…", false);
       window.location.reload();
     } catch (err) {
-      const msg = err && err.name === "NotAllowedError"
+      // DOMException (the browser's prompt) is an Error too.
+      const msg = err instanceof Error && err.name === "NotAllowedError"
         ? "Passkey prompt was cancelled or timed out."
-        : (err && err.message ? err.message : "Passkey registration failed.");
+        : (err instanceof Error && err.message ? err.message : "Passkey registration failed.");
       showStatus(statusEl, msg, true);
       btn.disabled = false;
     }
   }
 
+  /**
+   * @param {HTMLButtonElement} btn
+   * @param {HTMLElement | null} statusEl
+   */
   async function loginWithPasskey(btn, statusEl) {
     if (!window.PublicKeyCredential || !navigator.credentials) {
       showStatus(statusEl, "This browser does not support Passkeys (WebAuthn).", true);
@@ -129,26 +147,27 @@
       const pubKey = opts.publicKey;
       pubKey.challenge = b64urlToBytes(pubKey.challenge);
       if (Array.isArray(pubKey.allowCredentials)) {
-        pubKey.allowCredentials = pubKey.allowCredentials.map((c) => ({
+        pubKey.allowCredentials = pubKey.allowCredentials.map((/** @type {{ id: string }} */ c) => ({
           ...c,
           id: b64urlToBytes(c.id),
         }));
       }
 
-      const assertion = await navigator.credentials.get({ publicKey: pubKey });
+      const assertion = /** @type {PublicKeyCredential | null} */ (await navigator.credentials.get({ publicKey: pubKey }));
       if (!assertion) {
         throw new Error("Passkey sign-in was cancelled.");
       }
+      const signed = /** @type {AuthenticatorAssertionResponse} */ (assertion.response);
 
       const payload = {
         id: assertion.id,
         rawId: bytesToB64url(assertion.rawId),
         type: assertion.type,
         response: {
-          authenticatorData: bytesToB64url(assertion.response.authenticatorData),
-          clientDataJSON: bytesToB64url(assertion.response.clientDataJSON),
-          signature: bytesToB64url(assertion.response.signature),
-          userHandle: assertion.response.userHandle ? bytesToB64url(assertion.response.userHandle) : "",
+          authenticatorData: bytesToB64url(signed.authenticatorData),
+          clientDataJSON: bytesToB64url(signed.clientDataJSON),
+          signature: bytesToB64url(signed.signature),
+          userHandle: signed.userHandle ? bytesToB64url(signed.userHandle) : "",
         },
       };
 
@@ -166,22 +185,22 @@
       const data = await finishResp.json();
       window.location.assign(data.redirect || nextURL);
     } catch (err) {
-      const msg = err && err.name === "NotAllowedError"
+      const msg = err instanceof Error && err.name === "NotAllowedError"
         ? "Passkey prompt was cancelled or timed out."
-        : (err && err.message ? err.message : "Passkey sign-in failed.");
+        : (err instanceof Error && err.message ? err.message : "Passkey sign-in failed.");
       showStatus(statusEl, msg, true);
       btn.disabled = false;
     }
   }
 
   function init() {
-    const addBtn = document.getElementById("add-passkey-btn");
+    const addBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById("add-passkey-btn"));
     const addStatus = document.getElementById("passkey-register-status");
     if (addBtn) {
       addBtn.addEventListener("click", () => registerPasskey(addBtn, addStatus));
     }
 
-    const loginBtn = document.getElementById("passkey-login-btn");
+    const loginBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById("passkey-login-btn"));
     const loginStatus = document.getElementById("passkey-login-status");
     if (loginBtn) {
       loginBtn.addEventListener("click", () => loginWithPasskey(loginBtn, loginStatus));

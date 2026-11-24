@@ -7,3 +7,8 @@ BLUEPRINTS/
 *_test.go
 README.md
 magefile.go
+node_modules/
+package.json
+package-lock.json
+tsconfig.json
+assets/types/

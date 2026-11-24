@@ -19,6 +19,7 @@
 
   // The browser chrome (status bar, installed-app title bar) follows the page
   // colour of the chosen theme; layout.go sets the system-theme defaults.
+  /** @param {"light" | "dark"} theme */
   function syncThemeColor(theme) {
     const page = theme === "dark" ? "#0f1113" : "#f5f4f0";
     document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
@@ -26,6 +27,7 @@
     });
   }
 
+  /** @param {"light" | "dark"} theme */
   function applyTheme(theme) {
     root.dataset.theme = theme;
     syncThemeColor(theme);
@@ -47,6 +49,7 @@
   // or embedded media do not trigger the toggle.
   window.addEventListener("dblclick", (event) => {
     // Ignore interactive elements, form controls, links, code, and embedded media
+    if (!(event.target instanceof Element)) return;
     const interactive = event.target.closest(
       "a, button, input, textarea, select, label, code, pre, iframe, video, audio, [contenteditable='true']"
     );

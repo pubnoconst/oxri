@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `f46e3ad` (PR #61 — no bold)
-- **Active Branch**: `dead-code` (PR #62): dead and legacy code removed, verified by deadcode, staticcheck, tsc and PurgeCSS; JS contract test (RATIONALE 063).
+- **Base Commit on `main`**: `f919332` (PR #62 — dead code removed)
+- **Active Branch**: `js-typecheck` (PR #63): the site's JavaScript is type-checked (strict, JSDoc) in CI (RATIONALE 064).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
@@ -20,9 +20,7 @@ The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG
 3. Typed route paths (`paths.Login(next)`, `paths.JournalEdit(id)`) and form structs shared by view and handler.
 4. Split `routes` into feature packages (`web/journals`, `web/auth`, `web/books`) plus `httpx` single-purpose middleware.
 5. Split `db.Store` (42 methods) into narrow repositories (`Journals`, `Books`, `Passkeys`, `AuthState`).
-6. JS: `// @ts-check` + JSDoc + `tsc --noEmit` in CI (no build step), then native ES modules, one job per file. (Highest value for the frontend: most bugs this project has had lived in untyped JS.)
-   - Starting point (RATIONALE 063): `tsc --allowJs --checkJs --noEmit --noUnusedLocals --noUnusedParameters` finds no dead code but 85 type errors, all narrowing (`getElementById` gives `HTMLElement`, so `.value`, `.submit`) or undeclared globals (`twttr`, `markdownit`, `DOMPurify`, `ResImperii*`). JSDoc casts and a small `globals.d.ts` would clear them. The cross-file globals are already checked by `TestScriptGlobalsMatchTheirCallers`.
-   - Also worth adding to CI: `staticcheck ./...` (clean as of PR #62) and `deadcode -test ./...` (clean).
+6. ~~JS type-checked in CI: JSDoc types, `tsc --noEmit` with `strict` (`tsconfig.json`, `assets/types/globals.d.ts`, `mage typecheck`)~~ (PR #63). Next for the JS: native ES modules, one job per file. Also worth adding to CI: `staticcheck ./...` and `deadcode -test ./...` (both clean as of PR #62).
 7. CSS split by component.
 
 ## Next on Mind

@@ -3,6 +3,10 @@
  * Supports YouTube, Vimeo, X / Twitter posts, images, audio, and video.
  */
 (() => {
+  /**
+   * @param {string | null | undefined} value
+   * @returns {URL | null}
+   */
   function safeUrl(value) {
     if (!value) return null;
     try {
@@ -34,6 +38,10 @@
   // clearPending removes it inside the FLIP's layout step, so the slot unrolls
   // from the line into the tweet.
   let slotCount = 0;
+  /**
+   * @param {HTMLElement} container
+   * @param {string} seed
+   */
   function showLineLoader(container, seed) {
     container.style.height = "";
     container.replaceChildren();
@@ -43,6 +51,7 @@
   }
 
   // clearPending ends the loading state of a tweet slot.
+  /** @param {HTMLElement} container */
   function clearPending(container) {
     const line = container.querySelector(":scope > .dot-loading");
     if (line) line.remove();
@@ -50,6 +59,11 @@
     container.removeAttribute("role");
   }
 
+  /**
+   * @param {HTMLElement} container
+   * @param {string} username
+   * @param {string} tweetId
+   */
   function showTweetFallback(container, username, tweetId) {
     clearPending(container);
     container.classList.remove("is-revealed");
@@ -111,6 +125,7 @@
   // animates everything it moved or grew from where it visually was.
   // visualRect: an element's on-screen top and visible height, accounting for
   // a FLIP animation of ours that is still clipping its bottom edge.
+  /** @param {HTMLElement} el */
   function visualRect(el) {
     const r = el.getBoundingClientRect();
     let clipBottom = 0;
@@ -121,6 +136,10 @@
     return { top: r.top, height: r.height - clipBottom };
   }
 
+  /**
+   * @param {HTMLElement} container
+   * @param {() => void} change
+   */
   function flipPush(container, change) {
     const slot = container.closest(".journal-media-slot") || container;
     const host = container.closest(".journal-card") || slot.parentElement;
@@ -152,6 +171,7 @@
     });
     els.forEach((el) => {
       const a = first.get(el);
+      if (!a) return;
       const b = el.getBoundingClientRect();
       const isSlot = el === container;
       const dy = isSlot ? 0 : a.top - b.top; // the slot's own top does not move
@@ -159,7 +179,9 @@
       if (Math.abs(dy) < 0.5 && grew < 0.5) return;
       // Clip only the bottom edge while a card or the slot unrolls; keep side
       // and top shadows.
+      /** @type {Keyframe} */
       const from = isSlot ? {} : { transform: `translateY(${dy.toFixed(1)}px)` };
+      /** @type {Keyframe} */
       const to = isSlot ? {} : { transform: "translateY(0)" };
       if (grew >= 0.5) {
         from.clipPath = `inset(-60px -60px ${grew.toFixed(1)}px -60px)`;
@@ -174,15 +196,21 @@
   }
   const TWEET_GIVE_UP_MS = 12000; // embed blocked/never rendered -> show the link card
 
+  /**
+   * @param {HTMLElement} container
+   * @param {HTMLElement} stage
+   */
   function expandAndRevealTweet(container, stage) {
     let target = 0;
     let revealed = false;
     let stopped = false;
+    /** @type {ResizeObserver | null} */
     let observer = null;
 
     // Measure Twitter's iframe itself, never the stage/container: once the stage
     // is in flow it takes the container's height, which would feed back into
     // itself. offsetHeight ignores the stage's scale-in transform.
+    /** @type {HTMLIFrameElement | null} */
     let observedFrame = null;
     const measure = () => {
       const frame = stage.querySelector("iframe");
@@ -255,6 +283,11 @@
     };
   }
 
+  /**
+   * @param {HTMLElement} container
+   * @param {string} username
+   * @param {string} tweetId
+   */
   function renderTweet(container, username, tweetId) {
     ensureTwitterWidgetsScript();
     const theme = getActiveTheme();
@@ -262,7 +295,7 @@
     // Card text is visible; the slot shows "Loading preview" while we wait.
     showLineLoader(container, tweetId);
 
-    const doCreate = (twttr) => {
+    const doCreate = (/** @type {TwitterWidgets} */ twttr) => {
       const stage = document.createElement("div");
       stage.className = "tweet-embed-stage is-staging";
       container.append(stage);
@@ -326,10 +359,11 @@
     }
   }
 
+  /** @param {HTMLImageElement | HTMLIFrameElement} el */
   function bindMediaFadeIn(el) {
     el.classList.add("media-fade-in");
     const reveal = () => el.classList.add("is-loaded");
-    if (el.tagName === "IMG" && el.complete && el.naturalWidth > 0) {
+    if (el instanceof HTMLImageElement && el.complete && el.naturalWidth > 0) {
       requestAnimationFrame(reveal);
       return;
     }
@@ -337,11 +371,15 @@
     el.addEventListener("error", reveal, { once: true });
   }
 
+  /**
+   * @param {URL} url
+   * @returns {HTMLElement | null}
+   */
   function createMedia(url) {
     const host = url.hostname.toLowerCase().replace(/^www\./, "");
     const path = url.pathname.toLowerCase();
 
-    const frame = (src, title) => {
+    const frame = (/** @type {string} */ src, /** @type {string} */ title) => {
       const iframe = document.createElement("iframe");
       iframe.src = src;
       iframe.title = title;
@@ -416,17 +454,22 @@
 
   // whenNear runs build once el is within about a screen of the viewport.
   const nearObserver = "IntersectionObserver" in window
-    ? new IntersectionObserver((entries) => {
+    ? new IntersectionObserver((entries, observer) => {
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
-          nearObserver.unobserve(entry.target);
+          observer.unobserve(entry.target);
           const build = pendingBuilds.get(entry.target);
           pendingBuilds.delete(entry.target);
           if (build) build();
         });
       }, { rootMargin: "600px 0px" })
     : null;
+  /** @type {WeakMap<Element, () => void>} */
   const pendingBuilds = new WeakMap();
+  /**
+   * @param {HTMLElement} el
+   * @param {() => void} build
+   */
   function whenNear(el, build) {
     if (!nearObserver) {
       build();
@@ -452,6 +495,7 @@
     renderTweet(container, username || "post", tweetId);
   });
 
+  /** @param {URL} url */
   function createLinkFallback(url) {
     const card = document.createElement("div");
     card.className = "tweet-fallback-card";

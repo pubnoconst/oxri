@@ -6,13 +6,22 @@
  * Disallowed characters are NEVER rendered in the preview pane or echoed in error messages.
  */
 (() => {
-  const contentInput = document.getElementById("journal-content");
-  const mediaInput = document.getElementById("journal-media-link");
-  const tagsInput = document.getElementById("journal-tags");
-  const renderedContent = document.getElementById("journal-rendered-content");
-  const mediaPreview = document.getElementById("journal-preview-media");
-  const tagsPreview = document.getElementById("journal-preview-tags");
-  const preview = document.getElementById("journal-preview");
+  // The elements the editor cannot work without, typed and checked once. On a
+  // page without the editor this is null and the script does nothing.
+  function requiredElements() {
+    const contentInput = /** @type {HTMLTextAreaElement | null} */ (document.getElementById("journal-content"));
+    const mediaInput = /** @type {HTMLInputElement | null} */ (document.getElementById("journal-media-link"));
+    const tagsInput = /** @type {HTMLInputElement | null} */ (document.getElementById("journal-tags"));
+    const renderedContent = document.getElementById("journal-rendered-content");
+    const mediaPreview = document.getElementById("journal-preview-media");
+    const tagsPreview = document.getElementById("journal-preview-tags");
+    const preview = document.getElementById("journal-preview");
+    if (!contentInput || !mediaInput || !tagsInput || !renderedContent || !mediaPreview || !tagsPreview || !preview) return null;
+    return { contentInput, mediaInput, tagsInput, renderedContent, mediaPreview, tagsPreview, preview };
+  }
+  const required = requiredElements();
+  if (!required) return;
+  const { contentInput, mediaInput, tagsInput, renderedContent, mediaPreview, tagsPreview, preview } = required;
 
   const mediaCount = document.getElementById("media-char-count");
   const mediaError = document.getElementById("media-error");
@@ -23,11 +32,10 @@
   const bodyCount = document.getElementById("body-char-count");
   // The body limit comes from the textarea's maxlength (set from the Go domain
   // constant), so it is defined in exactly one place.
-  const MAX_BODY_LEN = contentInput && contentInput.maxLength > 0 ? contentInput.maxLength : Infinity;
-  const submitBtn = document.getElementById("publish-submit-btn");
-  const form = document.getElementById("journal-editor-form");
+  const MAX_BODY_LEN = contentInput.maxLength > 0 ? contentInput.maxLength : Infinity;
+  const submitBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById("publish-submit-btn"));
+  const form = /** @type {HTMLFormElement | null} */ (document.getElementById("journal-editor-form"));
 
-  if (!contentInput || !mediaInput || !tagsInput || !renderedContent || !mediaPreview || !tagsPreview || !preview) return;
   if (!window.markdownit || !window.DOMPurify || !window.ResImperiiMedia) {
     preview.textContent = "The live preview libraries did not load. Check your connection and reload.";
     return;
@@ -46,19 +54,22 @@
     0x037E, 0x0384, 0x0385, 0x0387, 0x1FFD, 0x1FFE,
   ]);
 
+  /** @param {string} ch */
   function formatCodePoint(ch) {
     const cp = ch.codePointAt(0) || 0;
     return "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
   }
 
+  /** @param {string} str */
   function findInvalidMediaChar(str) {
     for (const ch of Array.from(str)) {
-      const cp = ch.codePointAt(0);
+      const cp = ch.codePointAt(0) || 0;
       if (cp < 0x21 || cp > 0x7E) return ch;
     }
     return null;
   }
 
+  /** @param {string} str */
   function findInvalidTagChar(str) {
     for (const ch of Array.from(str)) {
       if (!TAG_CHAR_RE.test(ch)) return ch;
@@ -66,9 +77,10 @@
     return null;
   }
 
+  /** @param {string} ch */
   function isAllowedProseChar(ch) {
     if (ch === " " || ch === "\n" || ch === "\r" || ch === "\t") return true;
-    const cp = ch.codePointAt(0);
+    const cp = ch.codePointAt(0) || 0;
     if (cp >= 0x21 && cp <= 0x7E) return true;
     if (PROSE_LETTER_RE.test(ch)) return true;
     if (ALLOWED_TYPO_SET.has(cp)) return true;
@@ -79,6 +91,7 @@
     return false;
   }
 
+  /** @param {string} str */
   function findInvalidProseChar(str) {
     for (const ch of Array.from(str)) {
       if (!isAllowedProseChar(ch)) return ch;
@@ -98,6 +111,7 @@
   let isTagsValid = true;
   let isBodyValid = false;
 
+  /** @param {string} str */
   function toTitleCase(str) {
     const trimmed = str.trim();
     if (!trimmed) return "";
@@ -105,6 +119,7 @@
     return chars[0].toUpperCase() + chars.slice(1).join("").toLowerCase();
   }
 
+  /** @param {string} rawVal */
   function autoCapitalizeInputValue(rawVal) {
     return rawVal
       .split(",")
@@ -189,6 +204,7 @@
     syncSubmitButton();
   }
 
+  /** @param {string} selectedTag */
   function applySuggestion(selectedTag) {
     const segments = tagsInput.value.split(",");
     segments[segments.length - 1] = (segments.length > 1 ? " " : "") + selectedTag;
@@ -268,6 +284,7 @@
 
     const seen = new Set();
     let firstDuplicate = "";
+    /** @type {string | null} */
     let badTagChar = null;
     chips.forEach((t) => {
       if (badTagChar === null) {
@@ -301,6 +318,7 @@
 
     // Never preview illegal characters in tag chips
     const seenInRender = new Set();
+    /** @type {HTMLElement[]} */
     const previewChipNodes = [];
     chips.forEach((tag) => {
       const cleanTag = toTitleCase(Array.from(tag).filter((ch) => TAG_CHAR_RE.test(ch)).join(""));
@@ -357,7 +375,7 @@
       const firstPill = tagSuggestions.querySelector(".tag-suggestion-pill");
       if (activeToken && firstPill) {
         e.preventDefault();
-        applySuggestion(firstPill.textContent);
+        applySuggestion(firstPill.textContent || "");
       }
     }
   });

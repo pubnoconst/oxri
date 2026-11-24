@@ -1,0 +1,11 @@
+{
+  "name": "oxri-js-typecheck",
+  "private": true,
+  "description": "Development only: type-checks assets/js with TypeScript (no build step, nothing shipped).",
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "typescript": "5.6.3"
+  }
+}
