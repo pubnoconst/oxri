@@ -453,8 +453,10 @@
   margin-bottom: 0.75rem;
 }
 
-/* Compact 280-char Excerpt in Collage */
+/* Compact 280-char Excerpt in Collage: the entry's own words, so its face
+   (HIG §2), not the UI's. */
 .journal-entry-excerpt {
+  font-family: var(--font-entry);
   flex: 1;
   margin: 0;
   font-size: 0.98rem;
@@ -766,6 +768,7 @@
 }
 
 .vacate-entry-excerpt {
+  font-family: var(--font-entry);
   margin: 0;
   font-size: 0.94rem;
   line-height: 1.48;
