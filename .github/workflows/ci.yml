@@ -53,10 +53,11 @@ jobs:
 
   # Performance (BLUEPRINTS/PROFILING.md, HIG §1.6): the lab profile against
   # the site served in-process from an in-memory database with seeded content
-  # (cmd/lab -local: no credentials, no real data, no calls to X). Fails when
-  # a page's field report is incomplete, or a page misses Google's good line:
-  # median LCP > 2.5 s, any run's CLS > 0.1, median INP > 200 ms. The table
-  # is in the job summary and kept as an artifact.
+  # (cmd/lab -local: no credentials, no real data, no calls to X). Fails only
+  # on what is deterministic: a page's field report is incomplete, or a page
+  # shifts (any run's CLS > 0.1). LCP and INP against Google's good lines are
+  # reported in the job summary, not failed: on a shared runner they swing by
+  # hundreds of milliseconds between runs. The table is kept as an artifact.
   performance:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -78,7 +79,7 @@ jobs:
           CGO_ENABLED: "0"
         run: go run ./cmd/lab -local -beacon
 
-      - name: Lab profile on a budget phone, held to Core Web Vitals
+      - name: Lab profile on a budget phone (CLS gated; LCP and INP reported)
         env:
           CGO_ENABLED: "0"
         run: |

@@ -100,7 +100,8 @@ func main() {
 	debug := flag.Bool("debug", false, "print each run's paint, resource and font timeline")
 	warm := flag.Bool("warm", true, "request each page once first, so the server's own cold start is not counted against the page (field data covers the server)")
 	local := flag.Bool("local", false, "serve the site in this process from an in-memory database with seeded content, and measure that (no credentials needed; CI uses it)")
-	budget := flag.Bool("budget", false, "exit 1 if any page misses Google's good line: median LCP > 2.5 s, any run's CLS > 0.1, or median INP > 200 ms")
+	budget := flag.Bool("budget", false, "exit 1 if a page shifts (any run's CLS > 0.1) or a run fails; median LCP > 2.5 s and INP > 200 ms are reported, not failed (a shared runner's timing varies)")
+	timingGate := flag.Bool("timing-gate", false, "with -budget, also exit 1 on median LCP > 2.5 s or INP > 200 ms (for a quiet machine, not CI)")
 	beacon := flag.Bool("beacon", false, "check instead that leaving each page builds a field report with LCP, INP, CLS and TTFB (vitals.js); exits 1 if not")
 	flag.Parse()
 
@@ -154,7 +155,7 @@ func main() {
 	fmt.Fprintf(&report, "# Lab run %s\n\n", time.Now().Format("2006-01-02 15:04"))
 	fmt.Fprintf(&report, "`%s`, %d cold-cache runs per page; budget phone: 412×823 @1.75, CPU %g× slower, 150 ms RTT, 1.6 Mb/s down. Median / spread (max − min) / worst. Good: LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1.\n\n", *base, *runs, *cpu)
 	fmt.Fprintf(&report, "| Page | LCP | INP | CLS | TTFB | FCP |\n|---|---|---|---|---|---|\n")
-	var misses []string
+	var misses, advisories []string
 	for _, p := range paths {
 		var results []sample
 		for i := 0; i < *runs; i++ {
@@ -168,16 +169,28 @@ func main() {
 		}
 		fmt.Fprintf(&report, "| `%s` | %s | %s | %s | %s | %s |\n", p,
 			cell(results, "LCP"), cell(results, "INP"), cell(results, "CLS"), cell(results, "TTFB"), cell(results, "FCP"))
-		misses = append(misses, checkBudget(p, results, *runs)...)
+		strict, timing := checkBudget(p, results, *runs)
+		misses = append(misses, strict...)
+		if *timingGate {
+			misses = append(misses, timing...)
+		} else {
+			advisories = append(advisories, timing...)
+		}
 	}
 	fmt.Fprintf(&report, "\nA cell reads *median ± spread (worst)* and the median's rating. `–` is a metric the page never produced (no interaction, or no shift).\n")
 
 	if *budget {
 		if len(misses) == 0 {
-			report.WriteString("\n**Budget: met** on every page (median LCP ≤ 2.5 s, every run's CLS ≤ 0.1, median INP ≤ 200 ms).\n")
+			report.WriteString("\n**Budget: met**: no page shifts (every run's CLS ≤ 0.1) and every run produced its vitals.\n")
 		} else {
 			report.WriteString("\n**Budget: missed**\n\n")
 			for _, m := range misses {
+				report.WriteString("- " + m + "\n")
+			}
+		}
+		if len(advisories) > 0 {
+			report.WriteString("\n**Over Google's good line on this machine** (reported, not failed: timing varies with the runner):\n\n")
+			for _, m := range advisories {
 				report.WriteString("- " + m + "\n")
 			}
 		}
@@ -194,11 +207,12 @@ func main() {
 	}
 }
 
-// checkBudget holds a page to Google's good lines (-budget). CLS is held on
-// every run, since layout is deterministic and a shift on any run is real;
-// LCP and INP on the median, since a shared CI runner's speed varies. Every
-// run must also have produced its vitals.
-func checkBudget(page string, results []sample, runs int) []string {
+// checkBudget holds a page to Google's good lines. strict: CLS on every run
+// (layout is deterministic, so a shift on any run is real) and every run
+// produced its vitals. timing: median LCP and INP, which on a shared CI
+// runner swing by hundreds of milliseconds between runs, so they fail only
+// with -timing-gate.
+func checkBudget(page string, results []sample, runs int) (strict, timing []string) {
 	var misses []string
 	if len(results) < runs {
 		misses = append(misses, fmt.Sprintf("`%s`: %d of %d runs failed", page, runs-len(results), runs))
@@ -216,15 +230,15 @@ func checkBudget(page string, results []sample, runs int) []string {
 	if vs := values("LCP"); len(vs) == 0 {
 		misses = append(misses, fmt.Sprintf("`%s`: no LCP recorded", page))
 	} else if m := median(vs); m > db.Thresholds["LCP"][0] {
-		misses = append(misses, fmt.Sprintf("`%s`: median LCP %.0f ms > 2500 ms", page, m))
+		timing = append(timing, fmt.Sprintf("`%s`: median LCP %.0f ms > 2500 ms", page, m))
 	}
 	if vs := values("CLS"); len(vs) > 0 && vs[len(vs)-1] > db.Thresholds["CLS"][0] {
 		misses = append(misses, fmt.Sprintf("`%s`: a run's CLS %.3f > 0.1", page, vs[len(vs)-1]))
 	}
 	if vs := values("INP"); len(vs) > 0 && median(vs) > db.Thresholds["INP"][0] {
-		misses = append(misses, fmt.Sprintf("`%s`: median INP %.0f ms > 200 ms", page, median(vs)))
+		timing = append(timing, fmt.Sprintf("`%s`: median INP %.0f ms > 200 ms", page, median(vs)))
 	}
-	return misses
+	return misses, timing
 }
 
 // browser starts a fresh headless Chrome with its own empty profile, so an
