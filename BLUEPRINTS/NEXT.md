@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `55ab59b` (PR #74 — performance: fonts, field vitals, lab, CI gate)
-- **Active Branch**: `benchmark` (PR #75): `/journals` renders its catalog in the page (LCP 2274 → 1498 ms); `mage benchmark` (RATIONALE 076).
+- **Base Commit on `main`**: `e75d41a` (PR #75 — `/journals` catalog in the page; `mage benchmark`)
+- **Active Branch**: `short-stack` (PR #76): quotes in Short Stack; entry cards frozen (RATIONALE 077).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
