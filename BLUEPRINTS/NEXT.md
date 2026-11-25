@@ -28,8 +28,8 @@ The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG
 - **Stable beats peak (HIG §1.6, owner 2026-11-25)**: performance work in this order, each judged by the variance it removes:
   1. Cold starts on Render's free plan (owner's billing decision).
   2. ~~Self-hosted fonts with size-matched fallbacks~~ (PR #74; no preload: it held text back).
-  3. **Next**: the catalog's first page rendered into `/journals` itself; htmx kept for search, tags and paging. `/journals` LCP sits at the CI budget line (median 2,472 ms on the runner), so the CI gate is at risk until this lands. Also fixes the blank catalog without JavaScript.
-  4. Then: a boot log (each cold boot's phases: database connected, caches warm, first request served) in Settings against history and Google's TTFB line, beside the field data.
+  3. **Next**: `mage benchmark` against real data and Google's lines; find `/journals`' bottleneck (LCP about 2.4 to 2.5 s on the emulated budget phone, against 1.2 to 1.5 s elsewhere), then brainstorm the fix. The likely suspect is the catalog arriving in a second request after the shell.
+  Dropped (owner, 2026-11-25): APM, tracing, synthetics, a boot log. Field data plus the lab is enough for a site this size.
   Ruled out: Speculation Rules prerendering, `content-visibility: auto`. Kept on purpose: the 220 ms page fade-in.
 - **Local test server**: `DEV_AUTO_LOGIN=1 bin/server.exe` (real Turso from db.env, signed in). Saves change real data; a branch with a schema migration migrates the real database on start.
 - **Typefaces (PR #69)**: look at entries, quotes and a long passage on the S9+. Possible next: self-host the fonts and route all Greek to Didact Gothic with `unicode-range`, so a Greek phrase in an entry no longer switches face midway (and no third-party font request).
