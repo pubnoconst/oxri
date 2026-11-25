@@ -19,12 +19,19 @@ func TestFontFacesAreRegularAndHashed(t *testing.T) {
 			t.Errorf("%s: not a hashed woff2 URL in the stylesheet", f.file.Path())
 		}
 	}
-	// Every face, the fallbacks included, swaps: a face without font-display
-	// defaults to "auto", which Chrome treats as block and hides text for up
-	// to 3 s (it held /login's first text back to 4.6 s).
+	// Every face states its font-display: without one it defaults to "auto",
+	// which Chrome treats as block and hides text for up to 3 s (it held
+	// /login's first text back to 4.6 s). The web faces are "optional": used
+	// only if ready almost at once (cached), never swapped in later, so a page
+	// is laid out once and nothing re-wraps (HIG §2, §1.7). The local
+	// fallbacks, which resolve at once, are "swap".
 	for _, f := range faces {
-		if !strings.Contains(f, "font-display:swap") {
-			t.Errorf("face without font-display:swap: %.80s", f)
+		web := strings.Contains(f, "url(")
+		switch {
+		case web && !strings.Contains(f, "font-display:optional"):
+			t.Errorf("web face not font-display:optional: %.80s", f)
+		case !web && !strings.Contains(f, "font-display:swap"):
+			t.Errorf("fallback face not font-display:swap: %.80s", f)
 		}
 	}
 	if strings.Contains(css, "font-weight:") && regexp.MustCompile(`font-weight:(?:[^4]|4[^0]|40[^0])`).MatchString(css) {
