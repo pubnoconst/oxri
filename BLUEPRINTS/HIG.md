@@ -20,15 +20,19 @@ The reference reader's device is a **budget Android phone (Samsung Galaxy A02s)*
 
 | Role | Face | Token |
 |---|---|---|
-| Everything readable (headings, body, buttons, labels) | EB Garamond, fallback Georgia, serif | `--font-serif` (`--font-sans` aliases it) |
+| The books: book pages, the landing's title and book links | EB Garamond, fallback Georgia, serif | `--font-serif` |
+| The site's own UI: journals, login, settings, editor, buttons, labels | Figtree, Greek from Didact Gothic | `--font-ui` (`--font-sans` aliases it) |
+| An entry's own words (catalog and editor preview) | Playpen Sans, polytonic Greek from Didact Gothic | `--font-entry` |
+| Quoted matter: tweet clippings, Bible passages, blockquotes in entries | Happy Monkey, Greek from Didact Gothic | `--font-quote` |
 | Counters, byte figures, codes | system monospace | `--font-mono` |
 
-- **One family.** There is no sans-serif. Hierarchy comes from size, not from switching faces.
+- **The face says who wrote it.** The books are set like a book; the site speaks in a plain sans; the author's entries in a casual hand; other people's words in a different hand. Within a role, hierarchy still comes from size, not from switching faces.
+- **Greek.** Figtree and Happy Monkey have no Greek, and Playpen Sans has no polytonic Greek, so each stack names Didact Gothic after them and the browser takes those letters from it. A phrase in an entry that mixes plain and accented Greek can change face midway (Playpen for λόγος, Didact Gothic for ἀρχῇ); routing all Greek to one face needs self-hosted fonts.
 - **No bold. Bold is not the answer; bigger text is.**
   - Everything is set in weight 400. It's the only weight loaded (with its true italic), and `font-synthesis-weight: none` stops the browser faking a heavier one, so a default bold (`strong`, `b`, `th`, a heading) stays regular. `TestNoBold` fails on any other weight.
   - **To make something stand out, make it larger** (the space-to-free figure on Make Room is 1.2× its sentence), or give it full ink beside dimmer text (a clipping's author name beside the handle).
   - **Strong emphasis in prose is small capitals:** `**Causal Succession**` reads in small caps, the book way to stress a phrase. Lighter emphasis is italic (`*…*`).
-- **Quoted matter is smaller and softer.** A post clipping's text is 0.93rem in ink mixed 84% toward the slip, against the author's own words at 1rem and up. EB Garamond has no weight below 400, so "lighter" always means size and ink, never a thinner face or opacity.
+- **Quoted matter is smaller and softer.** A post clipping's text is 0.93rem in ink mixed 84% toward the slip, against the author's own words at 1rem and up. It is also set in its own face (`--font-quote`). Only weight 400 is loaded, so "lighter" always means size and ink, never a thinner face or opacity.
 - **Buttons** are set at 0.95rem with a 0.02em letter-spacing; small buttons at 0.8rem.
 - **Monospace is for figures that line up**, such as `0 / 3`, `167 / 2000` and `1.7 KB`. Use tabular numbers wherever digits change in place.
 

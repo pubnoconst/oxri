@@ -149,7 +149,7 @@
 }
 
 .tag-filter-label {
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   font-size: 0.72rem;
   opacity: 0.55;
   margin-right: 0.15rem;
@@ -162,7 +162,7 @@
   border: 1px solid var(--border-input);
   border-radius: var(--radius-pill);
   color: inherit;
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   font-size: 0.74rem;
   letter-spacing: 0.02em;
   text-decoration: none;
@@ -189,7 +189,7 @@
   align-items: center;
   gap: 0.3rem;
   padding: 0.16rem 0.2rem;
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   font-size: 0.74rem;
 }
 
@@ -394,7 +394,7 @@
   align-items: center;
   padding: 0.12rem 0.5rem;
   border-radius: var(--radius-pill);
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   font-size: 0.72rem;
   letter-spacing: 0.03em;
   border: 1px solid var(--border-card);
@@ -465,9 +465,15 @@
 
 /* Full Reading Prose content */
 .journal-entry-body {
+  font-family: var(--font-entry);
   font-size: 1.15rem;
   line-height: 1.7;
   overflow-wrap: anywhere;
+}
+
+.journal-entry-body blockquote,
+.journal-rendered-content blockquote {
+  font-family: var(--font-quote);
 }
 
 .journal-entry-body h1,
@@ -589,7 +595,7 @@
 }
 
 .vacate-metric-label {
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   font-size: 0.74rem;
   opacity: 0.6;
   letter-spacing: 0.03em;
@@ -615,7 +621,7 @@
 }
 
 .vacate-progress-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   font-size: 0.82rem;
   opacity: 0.75;
 }
