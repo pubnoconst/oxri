@@ -44,7 +44,7 @@ const MaxExcerptRunes = 280
 var (
 	blockEndRe   = regexp.MustCompile(`(?i)</(?:p|h[1-6]|li|blockquote|pre|div)>`)
 	lineBreakRe  = regexp.MustCompile(`(?i)<br\s*/?>`)
-	blankRunRe   = regexp.MustCompile(`\n{3,}`)
+	blankRunRe   = regexp.MustCompile(`\n{2,}`)
 	htmlTagRe    = regexp.MustCompile(`<[^>]+>`)
 	attrSchemeRe = regexp.MustCompile(`(?i)\b(href|src)\s*=\s*"([^"]*)"`)
 )
@@ -224,9 +224,10 @@ func RenderMarkdown(src string) string {
 
 // Excerpt280 extracts plain text from Markdown-rendered HTML and caps it at
 // 280 characters. It keeps the author's line breaks (owner, 2026-11-26): a
-// block (paragraph, heading, item) ends with a blank line, a line break with
-// a newline, and never more than one blank line in a row; spaces within a
-// line collapse. The card shows them (white-space: pre-line).
+// block (paragraph, heading, item) and a line break each end the line, and
+// a blank line, Markdown's paragraph break, is one newline (owner,
+// 2026-11-26), so the preview has no empty lines; spaces within a line
+// collapse. The card shows them (white-space: pre-line).
 func Excerpt280(renderedHTML string) string {
 	spaced := blockEndRe.ReplaceAllString(renderedHTML, "\n\n")
 	spaced = lineBreakRe.ReplaceAllString(spaced, "\n")
@@ -236,7 +237,7 @@ func Excerpt280(renderedHTML string) string {
 	for i, line := range lines {
 		lines[i] = strings.Join(strings.Fields(line), " ")
 	}
-	collapsed := strings.TrimSpace(blankRunRe.ReplaceAllString(strings.Join(lines, "\n"), "\n\n"))
+	collapsed := strings.TrimSpace(blankRunRe.ReplaceAllString(strings.Join(lines, "\n"), "\n"))
 
 	if utf8.RuneCountInString(collapsed) <= MaxExcerptRunes {
 		return collapsed
