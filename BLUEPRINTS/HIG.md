@@ -9,10 +9,14 @@ The reference reader's device is a **budget Android phone (Samsung Galaxy A02s)*
 ## 1. Principles
 
 1. **Subtlety is the key.** Nothing shouts. Emphasis comes from weight, position and space, never from bright colour or size jumps.
-2. **Depth, not decoration.** Every surface sits at one depth, and its height is shown by a surface colour with the shadow that goes with it, never by texture or a translucent tint (§4).
+2. **Depth, not decoration.** Every surface sits at one depth, and its height is shown by a surface colour with the shadow that goes with it, never by texture. The one translucent tint is an overlay's frosted glass (§4).
 3. **Waiting is a dot matrix.** One quiet 3×3 grid, in three motions that each mean something (§6). Nothing else animates to fill time.
 4. **Plain words.** Say what is happening in the reader's terms ("Confirming, please wait.", "Make Room"), never in the system's ("POST failed", "quota exceeded").
 5. **Cheap to draw.** Animate only `opacity` and `transform`. No SVG filters over content and no animated layout properties (`height`, `top`, `width`). Bound every list (pagination).
+6. **Stable beats peak.** A steady frame rate is worth more than a higher best case; a predictable wait is worth more than a sometimes-faster one. Judge every performance change by the variance it adds or removes, on the A02s, before its best-case speed.
+   - **Prefer:** fixed, cheap costs every time (the page's 220 ms opacity fade-in; the shell's instant first paint); work done once, up front, off the scroll (pagination, server-rendered snapshots); anything that removes a jump (fonts served from the site with size-matched fallbacks, so text never reflows when a font arrives; content in the first response instead of popped in later).
+   - **Avoid:** speed that only sometimes happens (speculative prerendering: instant when it guesses right, slower and busier on a budget phone when it doesn't); work moved into scrolling (`content-visibility: auto`, which lays content out as it scrolls in and makes the scrollbar jump); anything whose timing depends on the network once the page is showing.
+   - **The worst variance is the one the reader waits through:** a cold server that is sometimes instant and sometimes a long wake-up outweighs any front-end gain.
 
 ---
 
