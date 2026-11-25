@@ -13,7 +13,7 @@
   border-radius: var(--radius-card);
   background: var(--depth-2-surface);
   box-shadow: var(--depth-2-shadow);
-  font-family: var(--font-serif);
+  font-family: var(--font-quote);
   /* A quotation from elsewhere: smaller than the author's own words (0.93rem
      against 1rem and up) and in a slightly softer ink, so the clipping reads
      as quoted matter. EB Garamond has no weight below 400; softness comes

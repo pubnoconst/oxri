@@ -24,7 +24,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: var(--depth-0-surface);
   color: var(--page-ink);
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   animation: 220ms ease-in-out both page-fade-in;
   transition: background-color 200ms ease, color 200ms ease, opacity 160ms ease-in-out;
 }
@@ -46,8 +46,15 @@ p, h1, h2, h3, h4, h5, h6 {
 /* 2. Canonical Design Tokens */
 :root {
   /* Typography */
+  /* Typefaces (HIG §2): the books keep EB Garamond; the site's own UI is a
+     sans, an entry's words a casual hand, quoted matter another hand, so who
+     wrote what reads at a glance. Greek: each stack names a face with Greek
+     after the Latin-only ones, and the browser takes Greek letters from it. */
   --font-serif: "EB Garamond", Georgia, serif;
-  --font-sans: var(--font-serif);
+  --font-ui: "Figtree", "Didact Gothic", system-ui, sans-serif;
+  --font-entry: "Playpen Sans", "Didact Gothic", sans-serif;
+  --font-quote: "Happy Monkey", "Didact Gothic", sans-serif;
+  --font-sans: var(--font-ui);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Color Scheme & Palette (Default: Light Warm Neutral) */
@@ -226,7 +233,7 @@ h1, h2, h3, h4, h5, h6, th, b, strong, summary {
 }
 
 h1, h2, h3, h4 {
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   color: var(--page-ink);
 }
 
@@ -336,7 +343,7 @@ summary.link-quiet::-webkit-details-marker {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   font-size: 0.95rem;
   font-weight: 400;
   letter-spacing: 0.02em;
@@ -472,7 +479,7 @@ summary.link-quiet::-webkit-details-marker {
   align-items: center;
   gap: 0.55rem;
   color: inherit;
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   font-size: 1rem;
   line-height: 1.6;
 }
@@ -506,7 +513,7 @@ summary.link-quiet::-webkit-details-marker {
   padding: 0.14rem 0.52rem;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-pill);
-  font-family: var(--font-serif);
+  font-family: var(--font-ui);
   font-size: 0.78rem;
   letter-spacing: 0.02em;
   opacity: 0.85;

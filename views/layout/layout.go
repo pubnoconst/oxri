@@ -27,7 +27,7 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 		// EB Garamond Typeface
 		h.Link(h.Rel("preconnect"), h.Href("https://fonts.googleapis.com")),
 		h.Link(h.Rel("preconnect"), h.Href("https://fonts.gstatic.com"), g.Attr("crossorigin", "")),
-		h.Link(h.Rel("stylesheet"), h.Href("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;1,400&display=swap")),
+		h.Link(h.Rel("stylesheet"), h.Href("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;1,400&family=Figtree:ital,wght@0,400;1,400&family=Didact+Gothic&family=Playpen+Sans:wght@400&family=Happy+Monkey&display=swap")),
 
 		h.Link(h.Rel("stylesheet"), h.Href(assets.SiteCSS.URL())),
 
