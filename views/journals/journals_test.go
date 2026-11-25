@@ -2,6 +2,7 @@ package journals
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -132,5 +133,22 @@ func TestCatalogSwapsInPlaceOnlyFromFilterAndPager(t *testing.T) {
 	feed = feed[:strings.Index(feed, `class="journals-pagination"`)]
 	if strings.Contains(feed, "hx-boost") {
 		t.Error("the cards must not be boosted: their actions are ordinary forms")
+	}
+}
+
+// The card's stretched link (on the date) covers the whole card: the date
+// must not be dimmed by opacity, which would seal the overlay inside it and
+// leave the blank space under an excerpt dead (a click there did nothing).
+func TestCardLinkCoversTheWholeCard(t *testing.T) {
+	var b strings.Builder
+	_ = EntryCard(false, RenderedEntry{Entry: db.Journal{ID: 3, MediaURL: "https://example.org/a.png", Body: "x", Published: true}, Excerpt: "x"}, true).Render(&b)
+	if !strings.Contains(b.String(), `class="entry-date entry-card-link"`) {
+		t.Errorf("the card's date link changed: %s", b.String())
+	}
+	rule := regexp.MustCompile(`(?s)\.entry-date\s*\{[^}]*\}|\.entry-card-link\s*\{[^}]*\}`)
+	for _, r := range rule.FindAllString(StyleCSS, -1) {
+		if strings.Contains(r, "opacity") {
+			t.Errorf("the card link is dimmed by opacity, which traps its overlay: %s", r)
+		}
 	}
 }
