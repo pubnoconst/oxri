@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `74ad925` (PR #77 — pages arrive whole and still)
-- **Active Branch**: `font-display-optional` (PR #78): web fonts `font-display: optional` (RATIONALE 079).
+- **Base Commit on `main`**: `03c15a4` (PR #78 — fonts optional)
+- **Active Branch**: `perf-round` (PR #79): compression, Server-Timing, stale-while-revalidate caches, deferred loader, 100 ms fade-in, theme switch (RATIONALE 080).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
@@ -25,6 +25,7 @@ The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG
 
 ## Next on Mind
 
+- **Hosting** (owner, 2026-11-25): leave Render for a $2/month domain, served from the laptop if need be. Before the laptop goes live, harden `DEV_AUTO_LOGIN` (a per-request loopback Host check) and set `APP_ENV=prod`. With the domain on Cloudflare, cache `/assets/*` at the edge (immutable hashed URLs).
 - **Stable beats peak (HIG §1.6, owner 2026-11-25)**: performance work in this order, each judged by the variance it removes:
   1. Cold starts on Render's free plan (owner's billing decision).
   2. ~~Self-hosted fonts with size-matched fallbacks~~ (PR #74; no preload: it held text back).
