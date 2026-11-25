@@ -20,7 +20,7 @@ import (
 const (
 	MaxMediaURLLength    = domain.MaxJournalMediaURLLength
 	MaxTagLength         = domain.MaxJournalTagLength
-	CurrentSchemaVersion = 9
+	CurrentSchemaVersion = 10
 	readCacheTTL         = 2 * time.Minute
 )
 
@@ -56,6 +56,7 @@ type Store struct {
 	booksRefreshing sync.Map // slug -> struct{}: a background refresh is running
 
 	tweets tweetCache
+	thumbs thumbCache
 }
 
 // Open connects to a remote Turso/libSQL URL (libsql:// or https://), verifies

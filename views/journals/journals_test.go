@@ -15,8 +15,15 @@ import (
 func TestExcerpt280(t *testing.T) {
 	shortHTML := RenderMarkdown("# Title\n\nShort paragraph with **bold** text.")
 	gotShort := Excerpt280(shortHTML)
-	if gotShort != "Title Short paragraph with bold text." {
+	if gotShort != "Title\n\nShort paragraph with bold text." {
 		t.Errorf("unexpected short excerpt: %q", gotShort)
+	}
+
+	// The author's line breaks are kept; more than one blank line is not,
+	// and spaces within a line collapse.
+	lines := Excerpt280(RenderMarkdown("one  line\nnext line\n\n\n\n\nafter a gap<br>\n\n- item a\n- item b"))
+	if want := "one line\nnext line\n\nafter a gap\n\nitem a\n\nitem b"; lines != want {
+		t.Errorf("line breaks: got %q, want %q", lines, want)
 	}
 
 	longProse := strings.Repeat("Res Imperii journal prose word ", 25)

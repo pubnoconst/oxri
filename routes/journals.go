@@ -15,6 +15,7 @@ import (
 	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/internal/paging"
+	"github.com/oxri/oxri-go/internal/thumb"
 	"github.com/oxri/oxri-go/internal/tweet"
 	"github.com/oxri/oxri-go/internal/verse"
 	"github.com/oxri/oxri-go/serverfns"
@@ -39,7 +40,7 @@ func renderInternalError(w http.ResponseWriter, r *http.Request, status int, cau
 // scripts had run, held the first entry back about 0.9 s (PROFILING.md). The
 // entries come from the in-memory snapshot, so the page costs the server
 // little more than the frame did, and the catalog works without JavaScript.
-func handleJournalsCatalog(store *db.Store, authSvc *auth.Service, tweets *tweet.Filler) http.HandlerFunc {
+func handleJournalsCatalog(store *db.Store, authSvc *auth.Service, tweets *tweet.Filler, thumbs *thumb.Filler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, authErr := serverfns.RequireAuth(authSvc, r)
 		isAuth := (authErr == nil)
@@ -80,6 +81,9 @@ func handleJournalsCatalog(store *db.Store, authSvc *auth.Service, tweets *tweet
 		doneTweets := timed(r.Context(), "tweets")
 		attachTweets(r.Context(), store, tweets, rendered)
 		doneTweets()
+		doneThumbs := timed(r.Context(), "thumbs")
+		attachThumbs(r.Context(), store, thumbs, rendered)
+		doneThumbs()
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = journals.CatalogPage(isAuth, journals.CatalogView{
@@ -112,7 +116,7 @@ func handleJournalNew(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 	}
 }
 
-func handleJournalEntry(store *db.Store, authSvc *auth.Service, tweets *tweet.Filler) http.HandlerFunc {
+func handleJournalEntry(store *db.Store, authSvc *auth.Service, tweets *tweet.Filler, thumbs *thumb.Filler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, ok := parseEntryID(r)
 		if !ok {
@@ -143,11 +147,14 @@ func handleJournalEntry(store *db.Store, authSvc *auth.Service, tweets *tweet.Fi
 		doneTweets := timed(r.Context(), "tweets")
 		attachTweets(r.Context(), store, tweets, rendered)
 		doneTweets()
+		doneThumbs := timed(r.Context(), "thumbs")
+		attachThumbs(r.Context(), store, thumbs, rendered)
+		doneThumbs()
 		_ = journals.EntryPage(isAuth, rendered[0]).Render(w)
 	}
 }
 
-func handleJournalCreate(store *db.Store, authSvc *auth.Service, passages *verse.Source, tweets *tweet.Filler) http.HandlerFunc {
+func handleJournalCreate(store *db.Store, authSvc *auth.Service, passages *verse.Source, tweets *tweet.Filler, thumbs *thumb.Filler) http.HandlerFunc {
 	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		if store == nil {
 			errorpage.Render(w, http.StatusServiceUnavailable, "")
@@ -185,6 +192,7 @@ func handleJournalCreate(store *db.Store, authSvc *auth.Service, passages *verse
 			return
 		}
 		tweets.Now(r.Context(), validated.MediaURL())
+		thumbs.Now(r.Context(), validated.MediaURL())
 		http.Redirect(w, r, "/journals", http.StatusSeeOther)
 	})
 }
@@ -229,7 +237,7 @@ func handleJournalEditForm(store *db.Store, authSvc *auth.Service) http.HandlerF
 	})
 }
 
-func handleJournalUpdate(store *db.Store, authSvc *auth.Service, passages *verse.Source, tweets *tweet.Filler) http.HandlerFunc {
+func handleJournalUpdate(store *db.Store, authSvc *auth.Service, passages *verse.Source, tweets *tweet.Filler, thumbs *thumb.Filler) http.HandlerFunc {
 	return adminOnly(authSvc, func(w http.ResponseWriter, r *http.Request, cap domain.AdminCap) {
 		id, ok := parseEntryID(r)
 		if !ok {
@@ -283,6 +291,7 @@ func handleJournalUpdate(store *db.Store, authSvc *auth.Service, passages *verse
 			return
 		}
 		tweets.Now(r.Context(), validated.MediaURL())
+		thumbs.Now(r.Context(), validated.MediaURL())
 		http.Redirect(w, r, "/journals", http.StatusSeeOther)
 	})
 }

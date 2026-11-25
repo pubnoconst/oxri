@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/oxri/oxri-go/internal/auth"
 	"github.com/oxri/oxri-go/internal/db"
+	"github.com/oxri/oxri-go/internal/thumb"
 	"github.com/oxri/oxri-go/internal/tweet"
 	"github.com/oxri/oxri-go/internal/verse"
 	"github.com/oxri/oxri-go/serverfns"
@@ -38,6 +39,9 @@ type Config struct {
 	// Tweets fetches tweet snapshots in the background (NewTweetFiller). Nil
 	// (tests) never touches the network: tweets keep X's embed.
 	Tweets *tweet.Filler
+	// Thumbs makes the stills of linked images, GIFs and videos in the
+	// background (NewThumbFiller). Nil in tests.
+	Thumbs *thumb.Filler
 	// Passages checks the Bible passages an entry quotes against their
 	// provider on save (verse.NewSource). Nil (tests) never touches the network.
 	Passages *verse.Source
@@ -103,18 +107,19 @@ func NewRouter(cfg Config) http.Handler {
 	}
 
 	// 6. Journals & Editor Routes
-	r.Get("/journals", handleJournalsCatalog(cfg.Store, cfg.AuthService, cfg.Tweets))
+	r.Get("/thumb/{key}.jpg", handleThumb(cfg.Store))
+	r.Get("/journals", handleJournalsCatalog(cfg.Store, cfg.AuthService, cfg.Tweets, cfg.Thumbs))
 	r.Get("/journals/new", handleJournalNew(cfg.Store, cfg.AuthService))
-	r.Post("/journals", handleJournalCreate(cfg.Store, cfg.AuthService, cfg.Passages, cfg.Tweets))
+	r.Post("/journals", handleJournalCreate(cfg.Store, cfg.AuthService, cfg.Passages, cfg.Tweets, cfg.Thumbs))
 	r.Post("/journals/batch", handleJournalBatch(cfg.Store, cfg.AuthService))
 	r.Get("/journals/batch/confirm", handleJournalBatchConfirm(cfg.AuthService))
 	r.Get("/journals/vacate-space", handleJournalVacateSpacePage(cfg.Store, cfg.AuthService))
 	r.Get("/journals/vacate-space/", handleJournalVacateSpacePage(cfg.Store, cfg.AuthService))
 	r.Post("/journals/vacate-space", handleJournalVacateSpaceSubmit(cfg.Store, cfg.AuthService))
 	r.Post("/journals/vacate-space/", handleJournalVacateSpaceSubmit(cfg.Store, cfg.AuthService))
-	r.Get("/journals/{id}", handleJournalEntry(cfg.Store, cfg.AuthService, cfg.Tweets))
+	r.Get("/journals/{id}", handleJournalEntry(cfg.Store, cfg.AuthService, cfg.Tweets, cfg.Thumbs))
 	r.Get("/journals/{id}/edit", handleJournalEditForm(cfg.Store, cfg.AuthService))
-	r.Post("/journals/{id}", handleJournalUpdate(cfg.Store, cfg.AuthService, cfg.Passages, cfg.Tweets))
+	r.Post("/journals/{id}", handleJournalUpdate(cfg.Store, cfg.AuthService, cfg.Passages, cfg.Tweets, cfg.Thumbs))
 	r.Get("/journals/{id}/delete", handleJournalDeleteConfirm(cfg.AuthService))
 	r.Post("/journals/{id}/delete", handleJournalDelete(cfg.Store, cfg.AuthService))
 	r.Post("/journals/{id}/publish", handleJournalPublish(cfg.Store, cfg.AuthService, true))

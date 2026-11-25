@@ -1,10 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	"image/color"
+	"image/jpeg"
+	"math/rand"
+	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/oxri/oxri-go/internal/auth"
@@ -19,7 +26,7 @@ import (
 // no database credentials and never touches the real database, X or the
 // Bible provider: tweets are stored snapshots without images, passages are
 // stored text. Readers are signed out (the admin session only seeds).
-func startLocal(ctx context.Context) (base string, stop func(), err error) {
+func startLocal(ctx context.Context, entries int) (base string, stop func(), err error) {
 	store, err := db.Open(ctx, ":memory:", "")
 	if err != nil {
 		return "", nil, err
@@ -40,10 +47,13 @@ func startLocal(ctx context.Context) (base string, stop func(), err error) {
 	if !ok {
 		return "", nil, fmt.Errorf("lab: no admin capability for seeding")
 	}
-	if err := seed(ctx, store, cap); err != nil {
+	if err := seed(ctx, store, cap, entries); err != nil {
 		return "", nil, err
 	}
-	srv := httptest.NewServer(routes.NewRouter(routes.Config{Store: store, AuthService: svc}))
+	mux := http.NewServeMux()
+	mux.HandleFunc(labImagePath, serveLabImage)
+	mux.Handle("/", routes.NewRouter(routes.Config{Store: store, AuthService: svc}))
+	srv := httptest.NewServer(mux)
 	return srv.URL, func() { srv.Close(); _ = svc.Close(); _ = store.Close() }, nil
 }
 
@@ -86,7 +96,7 @@ Will is the capacity of a Substance to select among the effects available to it.
 // seed fills one catalog page and a book chapter: text entries quoting
 // stored tweets and Bible passages, with tags, Greek and Markdown, and a
 // long-form Book I.
-func seed(ctx context.Context, store *db.Store, cap domain.AdminCap) error {
+func seed(ctx context.Context, store *db.Store, cap domain.AdminCap, entries int) error {
 	if _, err := store.SaveBook(ctx, cap, "book-i", seedBook); err != nil {
 		return fmt.Errorf("lab seed: book: %w", err)
 	}
@@ -97,7 +107,7 @@ func seed(ctx context.Context, store *db.Store, cap domain.AdminCap) error {
 		{Translation: "eng_ylt", Book: "GEN", Chapter: 12, From: 3, To: 3, Reference: "Genesis 12:3", Version: "YLT",
 			Text: "and I bless those blessing thee, and him who is disesteeming thee I curse, and blessed in thee have been all families of the ground."},
 	}
-	for i := 0; i < 14; i++ {
+	for i := 0; i < entries; i++ {
 		body := seedProse
 		if i%3 == 1 {
 			body = strings.SplitN(seedProse, "\n\n## On order", 2)[0]
@@ -105,7 +115,7 @@ func seed(ctx context.Context, store *db.Store, cap domain.AdminCap) error {
 		var entry domain.ValidatedJournalEntry
 		var err error
 		if i%2 == 0 {
-			id := fmt.Sprintf("10000000000000000%02d", i)
+			id := fmt.Sprintf("1000000000000%06d", i)
 			entry, err = domain.ParseJournalEntry("https://x.com/res_lab/status/"+id, tags[i%len(tags)], body, i%5 == 0, true)
 			if err != nil {
 				return fmt.Errorf("lab seed: entry %d: %w", i, err)
@@ -113,6 +123,9 @@ func seed(ctx context.Context, store *db.Store, cap domain.AdminCap) error {
 			snap, err := tweet.Snapshot{
 				ID: id, Name: "Res Lab", Handle: "res_lab", Created: time.Date(2026, 11, 20, 9, 0, 0, 0, time.UTC),
 				Text: "What is good? A question older than the Republic, and no closer to an answer for being asked online.",
+				// A photo on every clipping, as on most real ones; the lab
+				// serves it (labImagePath) in place of X.
+				Media: []tweet.Media{{Kind: tweet.Photo, URL: fmt.Sprintf("https://pbs.twimg.com/media/lab%06d.jpg", i), Width: 1200, Height: 900}},
 			}.Encode()
 			if err != nil {
 				return err
@@ -135,4 +148,51 @@ func seed(ctx context.Context, store *db.Store, cap domain.AdminCap) error {
 		}
 	}
 	return nil
+}
+
+// labImagePath serves the photos on seeded clippings. The lab sends the
+// page's requests for X's images (pbs.twimg.com) here instead, through the
+// emulated phone network, so image bytes cost what they would (emulate).
+// "?name=small" gets X's small size (680 px wide), anything else the large
+// one (1200 px), as X serves them.
+const labImagePath = "/__lab/image"
+
+var labImages = map[string][]byte{}
+
+func init() {
+	for name, w := range map[string]int{"large": 1200, "small": 680} {
+		labImages[name] = labJPEG(w, w*3/4)
+	}
+}
+
+// labJPEG is a photo-like image: smooth colour fields with fine grain, which
+// compresses about as a real photo does.
+func labJPEG(w, h int) []byte {
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	r := rand.New(rand.NewSource(int64(w)))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			n := uint8(r.Intn(28))
+			img.Set(x, y, color.RGBA{uint8(60 + x*120/w + int(n)), uint8(70 + y*100/h + int(n)), uint8(90 + (x+y)*60/(w+h)), 255})
+		}
+	}
+	var buf bytes.Buffer
+	_ = jpeg.Encode(&buf, img, &jpeg.Options{Quality: 82})
+	return buf.Bytes()
+}
+
+// labImageBytes counts the image bytes served (a page's images are
+// cross-origin to it, so the browser reports their size as 0).
+var labImageBytes, labImageCount atomic.Int64
+
+func serveLabImage(w http.ResponseWriter, r *http.Request) {
+	size := "large"
+	if r.URL.Query().Get("name") == "small" {
+		size = "small"
+	}
+	labImageBytes.Add(int64(len(labImages[size])))
+	labImageCount.Add(1)
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	_, _ = w.Write(labImages[size])
 }

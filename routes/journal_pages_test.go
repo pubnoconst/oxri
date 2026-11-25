@@ -42,9 +42,11 @@ func TestJournalCatalogIsPaginated(t *testing.T) {
 		return rec
 	}
 
-	// 30 published entries, created oldest first: "Entry 30" is newest. The
-	// even ones are tagged Dev so a filter spans pages too.
-	const n = 30
+	// Three pages of published entries (two full, six on the last), created
+	// oldest first: "Entry n" is newest. The even ones are tagged Dev so a
+	// filter spans pages too. Follows journals.CatalogPageSize.
+	size := journals.CatalogPageSize
+	n := 2*size + 6
 	for i := 1; i <= n; i++ {
 		tags := "Log"
 		if i%2 == 0 {
@@ -64,18 +66,17 @@ func TestJournalCatalogIsPaginated(t *testing.T) {
 		return html.UnescapeString(rec.Body.String())
 	}
 	cards := func(body string) int { return strings.Count(body, "<article class=\"journal-card") }
-	size := journals.CatalogPageSize
 
 	p1 := page("/journals")
 	if got := cards(p1); got != size {
 		t.Fatalf("page 1 shows %d cards, want %d", got, size)
 	}
-	for _, want := range []string{"Entry 30 marker.", "Page 1 of 3", `href="/journals?page=2"`, "Select all on this page"} {
+	for _, want := range []string{fmt.Sprintf("Entry %d marker.", n), "Page 1 of 3", `href="/journals?page=2"`, "Select all on this page"} {
 		if !strings.Contains(p1, want) {
 			t.Errorf("page 1: missing %q", want)
 		}
 	}
-	if strings.Contains(p1, "Entry 18 marker.") {
+	if strings.Contains(p1, fmt.Sprintf("Entry %d marker.", n-size)) {
 		t.Errorf("page 1 must not include page 2's entries")
 	}
 
@@ -95,10 +96,10 @@ func TestJournalCatalogIsPaginated(t *testing.T) {
 		t.Errorf("out-of-range or junk page numbers must clamp")
 	}
 
-	// Filters carry across pages: 15 Dev entries -> 2 pages.
+	// Filters carry across pages: n/2 Dev entries -> 2 pages.
 	dev := page("/journals?tag=Dev&page=2")
-	if !strings.Contains(dev, "Page 2 of 2") || !strings.Contains(dev, `href="/journals?tag=Dev"`) || cards(dev) != 15-size {
-		t.Errorf("filtered page 2: want Page 2 of 2, a Newer link keeping tag=Dev, and %d cards (got %d)", 15-size, cards(dev))
+	if !strings.Contains(dev, "Page 2 of 2") || !strings.Contains(dev, `href="/journals?tag=Dev"`) || cards(dev) != n/2-size {
+		t.Errorf("filtered page 2: want Page 2 of 2, a Newer link keeping tag=Dev, and %d cards (got %d)", n/2-size, cards(dev))
 	}
 
 	// One page: no pagination, plain "Select all".
