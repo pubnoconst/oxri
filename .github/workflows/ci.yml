@@ -6,6 +6,12 @@ on:
   push:
     branches: [main]
 
+# A newer push to the same pull request (or branch) cancels the run it
+# supersedes: a PR usually gets its code, then its rationale, a minute apart.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
@@ -59,6 +65,9 @@ jobs:
   # reported in the job summary, not failed: on a shared runner they swing by
   # hundreds of milliseconds between runs. The table is kept as an artifact.
   performance:
+    # Pull requests only: after a merge, main holds the tree the PR already
+    # measured.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -77,14 +86,14 @@ jobs:
       - name: Field report is complete on leaving each page (vitals.js)
         env:
           CGO_ENABLED: "0"
-        run: go run ./cmd/lab -local -beacon
+        run: go run ./cmd/lab -local -beacon -parallel 4
 
       - name: Lab profile on a budget phone (CLS gated; LCP and INP reported)
         env:
           CGO_ENABLED: "0"
         run: |
           mkdir -p bin
-          go run ./cmd/lab -local -runs 5 -budget -out bin/lab.md
+          go run ./cmd/lab -local -runs 3 -parallel 4 -budget -out bin/lab.md
 
       - name: Lab table in the job summary
         if: always()

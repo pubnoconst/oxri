@@ -75,8 +75,13 @@ go run ./cmd/lab -beacon                        # leaving each page builds a com
 The `performance` job in `.github/workflows/ci.yml` runs the lab on GitHub's Ubuntu runner, which has Chrome:
 
 - `go run ./cmd/lab -local -beacon`: leaving each page must build a field report holding LCP, INP, CLS and TTFB.
-- `go run ./cmd/lab -local -runs 5 -budget`: no page may shift (CLS ≤ 0.1 on every run; layout is deterministic, so a shift on any run is real), and every run must produce its vitals. Median LCP and INP against Google's lines are reported in the summary but do not fail the build: on GitHub's shared runners they swing by hundreds of milliseconds between runs (one run saw 1.1 s TTFB spikes), so a timing gate would fail pull requests at random. `-timing-gate` adds them on a quiet machine.
+- `go run ./cmd/lab -local -runs 3 -parallel 4 -budget`: no page may shift (CLS ≤ 0.1 on every run; layout is deterministic, so a shift on any run is real), and every run must produce its vitals. Median LCP and INP against Google's lines are reported in the summary but do not fail the build: on GitHub's shared runners they swing by hundreds of milliseconds between runs (one run saw 1.1 s TTFB spikes), so a timing gate would fail pull requests at random. `-timing-gate` adds them on a quiet machine.
 - The table goes into the job summary and is kept as the `lab-report` artifact.
+
+**Cost** (owner, 2026-11-25: "these CIs are getting time-expensive"):
+- **Parallel pages:** the four pages are measured at once (`-parallel 4`), 3 runs each. Layout shift, the only gate, is the same on every run, and timings are only reported. Measured locally, the job's lab steps dropped from 264 s to 74 s, with the same result.
+- **Pull requests only:** the job runs on pull requests, not again on `main` after the merge.
+- **Superseded runs are cancelled:** a newer push to the same PR cancels the older run (`concurrency`).
 
 `-local` serves the site inside the lab process from an in-memory database seeded with content like the real thing (`cmd/lab/local.go`):
 - 14 entries quoting stored tweet snapshots and Bible passages, with tags, Markdown and Greek;
