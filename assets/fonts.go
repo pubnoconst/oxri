@@ -15,7 +15,7 @@ import (
 //	Res Book   EB Garamond, Latin and Greek (it has its own polytonic Greek)
 //	Res UI     Figtree for Latin, Didact Gothic for all Greek
 //	Res Entry  Playpen Sans for Latin, Didact Gothic for all Greek
-//	Res Quote  Happy Monkey for Latin, Didact Gothic for all Greek
+//	Res Quote  Short Stack for Latin, Didact Gothic for all Greek
 //
 // Only weight 400 is served (HIG §2: no bold), with a true italic for the
 // book and UI faces. Each role also has a metric-matched fallback (a local
@@ -51,8 +51,9 @@ var (
 	playpenLatin    = file("fonts/playpen-sans-latin-400.woff2")
 	playpenLatinExt = file("fonts/playpen-sans-latin-ext-400.woff2")
 
-	happyMonkeyLatin    = file("fonts/happy-monkey-latin-400.woff2")
-	happyMonkeyLatinExt = file("fonts/happy-monkey-latin-ext-400.woff2")
+	// Short Stack has a Latin subset only: extended Latin in a quote falls to
+	// the measured system fallback; Greek comes from Didact Gothic.
+	shortStackLatin = file("fonts/short-stack-latin-400.woff2")
 
 	didactGreek    = file("fonts/didact-gothic-greek-400.woff2")
 	didactGreekExt = file("fonts/didact-gothic-greek-ext-400.woff2")
@@ -63,7 +64,7 @@ var FontLicences = []Asset{
 	file("fonts/eb-garamond-OFL.txt"),
 	file("fonts/figtree-OFL.txt"),
 	file("fonts/playpen-sans-OFL.txt"),
-	file("fonts/happy-monkey-OFL.txt"),
+	file("fonts/short-stack-OFL.txt"),
 	file("fonts/didact-gothic-OFL.txt"),
 }
 
@@ -99,8 +100,7 @@ func fontFaces() []fontFace {
 		{"Res Entry", "normal", rangeLatin, playpenLatin},
 		{"Res Entry", "normal", rangeLatinExt, playpenLatinExt},
 
-		{"Res Quote", "normal", rangeLatin, happyMonkeyLatin},
-		{"Res Quote", "normal", rangeLatinExt, happyMonkeyLatinExt},
+		{"Res Quote", "normal", rangeLatin, shortStackLatin},
 	}
 	faces = append(faces, greekFor("Res UI")...)
 	faces = append(faces, greekFor("Res Entry")...)
@@ -152,8 +152,8 @@ var roleFallbacks = map[string][]fallbackFace{
 		{"Res Entry Roboto", sansRoboto, 110.1, 106.2, 30.9},
 	},
 	"Res Quote": {
-		{"Res Quote Arial", sansArial, 110.3, 86.1, 23.6},
-		{"Res Quote Roboto", sansRoboto, 112.0, 84.8, 23.2},
+		{"Res Quote Arial", sansArial, 126.8, 73.4, 23.7},   // Short Stack
+		{"Res Quote Roboto", sansRoboto, 128.7, 72.3, 23.3}, // Short Stack
 	},
 }
 

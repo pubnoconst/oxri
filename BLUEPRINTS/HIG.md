@@ -28,7 +28,7 @@ The reference reader's device is a **budget Android phone (Samsung Galaxy A02s)*
 | The books: book pages, the landing's title and book links | EB Garamond, Latin and its own Greek (family `Res Book`) | `--font-serif` |
 | The site's own UI: journals, login, settings, editor, buttons, labels | Figtree; all Greek from Didact Gothic (`Res UI`) | `--font-ui` (`--font-sans` aliases it) |
 | An entry's own words, wherever they appear: the full entry, catalog excerpts, Make Room's list, the editor preview | Playpen Sans; all Greek from Didact Gothic (`Res Entry`) | `--font-entry` |
-| Quoted matter: tweet clippings, Bible passages, blockquotes in entries | Happy Monkey; all Greek from Didact Gothic (`Res Quote`) | `--font-quote` |
+| Quoted matter: tweet clippings, Bible passages, blockquotes in entries | Short Stack; all Greek from Didact Gothic (`Res Quote`) | `--font-quote` |
 | Counters, byte figures, codes | system monospace | `--font-mono` |
 
 - **The face says who wrote it.** The books are set like a book; the site speaks in a plain sans; the author's entries in a casual hand; other people's words in a different hand. Within a role, hierarchy still comes from size, not from switching faces.
@@ -92,6 +92,7 @@ The palette is a warm neutral page and ink, plus three accents used only for sta
   - **The shadow carries the height.** Depth 1's is long and soft (the card floats); depth 2's is short and close (laid on the card).
   - **Borders are for edges, not depth.** A hairline `--border-*` may outline a surface, but height comes only from the pair.
   - *History:* surfaces were once woven linen (SVG noise), introduced so the water ripple would read as real without an artificial shadow. The ripple was retired (RATIONALE 047), so the linen went too (RATIONALE 059).
+- **Entry cards are frozen (owner, 2026-11-25).** Signed in, every card in the catalog carries the author's actions in its footer: **Edit**, **Bookmark/Unbookmark**, **Publish/Unpublish**, **Delete** (its prompt opens in place). An entry is managed from the catalog without opening it, and every action but Edit returns to the same catalog page, with its search, tags and page kept. Readers see none of these. Change the card's look freely within this guide, but not this set of actions or where they return. `TestCatalogCardsKeepTheirActions` fails if any is lost.
 - **Posts from other sites are clippings** (`views/tweet`): a paper slip laid on the card, the site and date in small capitals along the top, the author signed under a dashed rule with "View on … ↗". Sites are named in text, never with their logos. A direct link to an image, video or audio file is not a clipping: it stays plain framed media.
 - **Radii:** cards `--radius-card` (0.5rem), controls `--radius-control` (0.35rem), chips and pills `--radius-pill`.
   - **Everything laid on a card** (depth 2: a post clipping, a raw image, video or iframe, a link card) uses `--radius-card`, the same as the card, so a clipping and a raw media item beside it read as the same kind of object.
