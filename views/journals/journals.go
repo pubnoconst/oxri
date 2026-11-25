@@ -42,7 +42,9 @@ var Style = assets.Component(StylePath, StyleCSS+"\n"+tweetview.StyleCSS+"\n"+pa
 const MaxExcerptRunes = 280
 
 var (
-	blockEndRe   = regexp.MustCompile(`(?i)</(?:p|h[1-6]|li|blockquote|pre|div)>|<br\s*/?>`)
+	blockEndRe   = regexp.MustCompile(`(?i)</(?:p|h[1-6]|li|blockquote|pre|div)>`)
+	lineBreakRe  = regexp.MustCompile(`(?i)<br\s*/?>`)
+	blankRunRe   = regexp.MustCompile(`\n{3,}`)
 	htmlTagRe    = regexp.MustCompile(`<[^>]+>`)
 	attrSchemeRe = regexp.MustCompile(`(?i)\b(href|src)\s*=\s*"([^"]*)"`)
 )
@@ -62,12 +64,25 @@ type RenderedEntry struct {
 	// Passage is the Bible passage the entry quotes, drawn by the server
 	// (views/passage); nil for any other link.
 	Passage *domain.Passage
+	// Thumb is the server-made still of the entry's linked image, GIF or
+	// video (internal/thumb); nil until it is made.
+	Thumb *Thumb
 }
 
-// CatalogPageSize is how many entries one catalog page shows. Most entries
-// embed a tweet (a cross-origin iframe each), so a page is kept small enough
-// for budget phones; 12 fills 1, 2 or 3 grid columns evenly.
-const CatalogPageSize = 12
+// Thumb is a still the server made for an entry's media (routes/thumbs.go).
+type Thumb struct {
+	URL           string // /thumb/{key}.jpg?v=…
+	Kind          string // "image", "gif" or "video" (thumb.Source)
+	Width, Height int
+}
+
+// CatalogPageSize is how many entries one catalog page shows: 24, which fills
+// 1, 2, 3 or 4 grid columns evenly. It was 12 while every tweet was X's own
+// iframe (045); since tweets are server-drawn clippings, the lab measured
+// 12 to 150 cards at LCP 1.10 to 1.26 s with no shift and no long frames
+// while scrolling (RATIONALE 084). A variable only so the lab can compare
+// sizes (cmd/lab -page-size); nothing else sets it.
+var CatalogPageSize = 24
 
 // CatalogView holds one page of rendered entries alongside search query and
 // active tag filters.
@@ -207,12 +222,21 @@ func RenderMarkdown(src string) string {
 	})
 }
 
-// Excerpt280 extracts plain text from Markdown-rendered HTML and caps it at 280 characters.
+// Excerpt280 extracts plain text from Markdown-rendered HTML and caps it at
+// 280 characters. It keeps the author's line breaks (owner, 2026-11-26): a
+// block (paragraph, heading, item) ends with a blank line, a line break with
+// a newline, and never more than one blank line in a row; spaces within a
+// line collapse. The card shows them (white-space: pre-line).
 func Excerpt280(renderedHTML string) string {
-	spaced := blockEndRe.ReplaceAllString(renderedHTML, " ")
+	spaced := blockEndRe.ReplaceAllString(renderedHTML, "\n\n")
+	spaced = lineBreakRe.ReplaceAllString(spaced, "\n")
 	stripped := htmlTagRe.ReplaceAllString(spaced, "")
-	unescaped := html.UnescapeString(stripped)
-	collapsed := strings.Join(strings.Fields(unescaped), " ")
+	unescaped := html.UnescapeString(strings.ReplaceAll(stripped, "\r", ""))
+	lines := strings.Split(unescaped, "\n")
+	for i, line := range lines {
+		lines[i] = strings.Join(strings.Fields(line), " ")
+	}
+	collapsed := strings.TrimSpace(blankRunRe.ReplaceAllString(strings.Join(lines, "\n"), "\n\n"))
 
 	if utf8.RuneCountInString(collapsed) <= MaxExcerptRunes {
 		return collapsed
@@ -484,7 +508,13 @@ func EntryPage(isAuth bool, item RenderedEntry) g.Node {
 // mediaSlot holds the entry's media. A tweet with a snapshot is drawn here by
 // the server (views/tweet) and marked mounted, so journal-media.js leaves it;
 // anything else is filled in the browser from data-media-url.
-func mediaSlot(item RenderedEntry) g.Node {
+func mediaSlot(item RenderedEntry, isCollage bool) g.Node {
+	// A card in the catalog asks X for its small images; an entry's own page
+	// for medium (views/tweet).
+	imageSize := tweetview.Medium
+	if isCollage {
+		imageSize = tweetview.Small
+	}
 	if item.Passage != nil {
 		return h.Div(h.Class("journal-media-slot journal-preview-media"),
 			g.Attr("data-media-url", item.Entry.MediaURL), g.Attr("data-media-mounted", item.Entry.MediaURL),
@@ -494,13 +524,44 @@ func mediaSlot(item RenderedEntry) g.Node {
 	if item.Tweet != nil {
 		return h.Div(h.Class("journal-media-slot journal-preview-media"),
 			g.Attr("data-media-url", item.Entry.MediaURL), g.Attr("data-media-mounted", item.Entry.MediaURL),
-			tweetview.Box(*item.Tweet),
+			tweetview.Box(*item.Tweet, imageSize),
 		)
 	}
 	// Everything else is built in the browser (journal-media.js); its slot is
 	// given the right space now, so nothing below moves when it arrives (HIG
 	// §1.7). A plain link needs no script: its card is drawn here.
-	switch kind := classifyMedia(item.Entry.MediaURL); kind {
+	kind := classifyMedia(item.Entry.MediaURL)
+	if t := item.Thumb; t != nil {
+		// A linked image in a card is the server's still, drawn here (a
+		// third of the bytes, and no request to its host). A GIF or video
+		// keeps its tap tile, showing the still (data-media-still).
+		if t.Kind == "image" && isCollage {
+			return h.Div(h.Class("journal-media-slot journal-preview-media is-"+string(kind)),
+				g.Attr("data-media-url", item.Entry.MediaURL), g.Attr("data-media-mounted", item.Entry.MediaURL),
+				h.Img(h.Src(t.URL), h.Alt(""), h.Width(strconv.Itoa(t.Width)), h.Height(strconv.Itoa(t.Height)),
+					h.Class("journal-still"), h.Style(fmt.Sprintf("--still-ratio: %d / %d", t.Width, t.Height)),
+					g.Attr("loading", "lazy"), g.Attr("decoding", "async")),
+			)
+		}
+		if t.Kind == "gif" || t.Kind == "video" {
+			// The tap tile is drawn here, its still in the page, so the
+			// browser fetches it as it reads the HTML (it is often the
+			// largest paint); journal-media.js only starts the player on tap.
+			label := "Play video"
+			if t.Kind == "gif" {
+				label = "Play GIF"
+			}
+			return h.Div(h.Class("journal-media-slot journal-preview-media is-"+string(kind)),
+				g.Attr("data-media-url", item.Entry.MediaURL), g.Attr("data-media-mounted", item.Entry.MediaURL),
+				g.Attr("data-media-still", t.URL),
+				h.Button(h.Type("button"), h.Class("media-facade"), g.Attr("data-media-play", ""), g.Attr("aria-label", label),
+					h.Img(h.Src(t.URL), h.Alt(""), h.Width(strconv.Itoa(t.Width)), h.Height(strconv.Itoa(t.Height)), g.Attr("decoding", "async")),
+					h.Span(h.Class("tweet-play-mark"), g.Attr("aria-hidden", "true")),
+				),
+			)
+		}
+	}
+	switch kind {
 	case mediaLink:
 		return h.Div(h.Class("journal-media-slot journal-preview-media is-link"),
 			g.Attr("data-media-url", item.Entry.MediaURL), g.Attr("data-media-mounted", item.Entry.MediaURL),
@@ -595,17 +656,20 @@ func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 	}
 
 	return h.Article(h.Class(cls),
+		// The select box on the left; the date and its badges on the right.
 		h.Header(h.Class("journal-card-meta"),
 			h.Div(h.Class("journal-meta-left"),
 				selectCb,
-				dateNode,
 			),
-			h.Div(h.Class("journal-meta-badges"),
-				draftBadge,
-				bookmarkBadge,
+			h.Div(h.Class("journal-meta-right"),
+				dateNode,
+				h.Div(h.Class("journal-meta-badges"),
+					draftBadge,
+					bookmarkBadge,
+				),
 			),
 		),
-		mediaSlot(item),
+		mediaSlot(item, isCollage),
 		tagsBlock,
 		contentBlock,
 		adminFooter,

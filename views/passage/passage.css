@@ -10,6 +10,11 @@
   color: var(--page-ink);
 }
 
+/* The reference sits centred under the verses (owner, 2026-11-26). */
+.passage-byline {
+  justify-content: center;
+}
+
 /* The editor's preview while the verses load, or when there is none
    (scripture-picker.js). */
 .passage-status {

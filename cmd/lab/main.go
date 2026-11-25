@@ -29,6 +29,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -36,11 +37,13 @@ import (
 	"time"
 
 	"github.com/chromedp/cdproto/emulation"
+	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 
 	"github.com/oxri/oxri-go/internal/db"
+	"github.com/oxri/oxri-go/views/journals"
 )
 
 const userAgent = "Mozilla/5.0 (Linux; Android 11; SM-A025F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36"
@@ -68,7 +71,7 @@ const collector = `
   window.__labShifts = []; window.__labFrames = [];
   try {
     window.__labShiftSources = [];
-    const describe = (n) => n && n.nodeType === 1 ? n.tagName.toLowerCase() + (n.className && typeof n.className === "string" ? "." + n.className.trim().split(/\s+/).join(".") : "") : String(n && n.nodeName);
+    const describe = (n) => n && n.nodeType === 1 ? n.tagName.toLowerCase() + (n.className && typeof n.className === "string" ? "." + n.className.trim().split(/\s+/).join(".") : "") + (n.tagName === "IMG" ? " [" + (n.getAttribute("src") || "").slice(0, 60) + " in " + ((n.parentElement && n.parentElement.className) || "") + "]" : "") : String(n && n.nodeName);
     new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) {
       window.__labShifts.push([e.startTime, e.value]);
       for (const s of e.sources || []) window.__labShiftSources.push(Math.round(e.startTime) + "ms " + e.value.toFixed(4) + " " + describe(s.node) + " y " + Math.round(s.previousRect.y) + "→" + Math.round(s.currentRect.y) + " h " + Math.round(s.previousRect.height) + "→" + Math.round(s.currentRect.height));
@@ -115,6 +118,7 @@ const timelineJS = `[
   String.fromCharCode(10) + "long frames: " + (window.__labFrameSources || []).join(String.fromCharCode(10) + "  ")`
 
 type config struct {
+	local    bool // the in-process site: its X images are served by the lab
 	base     string
 	vitalsJS string
 	cpu      float64
@@ -131,6 +135,8 @@ func main() {
 	out := flag.String("out", "", "also write the report (Markdown) to this file")
 	debug := flag.Bool("debug", false, "print each run's paint, resource and font timeline")
 	warm := flag.Bool("warm", true, "request each page once first, so the server's own cold start is not counted against the page (field data covers the server)")
+	seedN := flag.Int("seed", 14, "with -local: how many entries to seed (every other one a tweet clipping with a photo)")
+	pageSize := flag.Int("page-size", 0, "with -local: entries per catalog page, to compare sizes (0 = the site's own)")
 	local := flag.Bool("local", false, "serve the site in this process from an in-memory database with seeded content, and measure that (no credentials needed; CI uses it)")
 	budget := flag.Bool("budget", false, "exit 1 if a page shifts (any run's CLS > 0.1) or a run fails; median LCP > 2.5 s and INP > 200 ms are reported, not failed (a shared runner's timing varies)")
 	breakdown := flag.Bool("breakdown", false, "also report each page's LCP split into its parts (server, resource wait, resource load, render) and its network shape")
@@ -143,7 +149,10 @@ func main() {
 		fail("read web-vitals (run from the repository root): %v", err)
 	}
 	if *local {
-		url, stop, err := startLocal(context.Background())
+		if *pageSize > 0 {
+			journals.CatalogPageSize = *pageSize
+		}
+		url, stop, err := startLocal(context.Background(), *seedN)
 		if err != nil {
 			fail("local server: %v", err)
 		}
@@ -152,7 +161,7 @@ func main() {
 		*base = url
 		fmt.Fprintln(os.Stderr, "lab: serving the seeded site at", url)
 	}
-	cfg := config{base: *base, vitalsJS: string(vitalsJS), cpu: *cpu, debug: *debug}
+	cfg := config{base: *base, vitalsJS: string(vitalsJS), cpu: *cpu, debug: *debug, local: *local}
 	paths := sortedKeys(pages)
 	if *only != "" {
 		paths = strings.Split(*only, ",")
@@ -244,6 +253,11 @@ func main() {
 				report.WriteString("- " + m + "\n")
 			}
 		}
+	}
+
+	if *local && labImageCount.Load() > 0 {
+		fmt.Fprintf(&report, "\nImages served by the lab (as from X): %d, %.0f kB in all, %.0f kB each on average (over all runs).\n",
+			labImageCount.Load(), float64(labImageBytes.Load())/1024, float64(labImageBytes.Load())/1024/float64(labImageCount.Load()))
 	}
 
 	fmt.Print(report.String())
@@ -343,6 +357,29 @@ func emulate(cfg config) chromedp.Action[chromedp.Void] {
 			_, e := chromedp.Call(ctx, emulation.SetCPUThrottlingRate, emulation.SetCPUThrottlingRateParams{Rate: cfg.cpu})
 			return e
 		})
+		if cfg.local {
+			// X's images go to the lab's server instead, still over the
+			// emulated network (the request is redirected, not answered here).
+			_ = chromedp.Listen(ctx, func(ev any) {
+				if e, ok := ev.(*fetch.EventRequestPaused); ok {
+					// One URL per image (its X path), so each is fetched as on
+					// X: a shared URL would let the cache serve them all after
+					// the first.
+					name := "large"
+					if strings.Contains(e.Request.URL, "name=small") {
+						name = "small"
+					}
+					dest := cfg.base + labImagePath + "?name=" + name + "&src=" + url.QueryEscape(e.Request.URL)
+					go func() {
+						_, _ = chromedp.Call(ctx, fetch.ContinueRequest, fetch.ContinueRequestParams{RequestID: e.RequestID, URL: dest})
+					}()
+				}
+			})
+			try(func() error {
+				_, e := chromedp.Call(ctx, fetch.Enable, fetch.EnableParams{Patterns: []*fetch.RequestPattern{{URLPattern: "https://pbs.twimg.com/*"}}})
+				return e
+			})
+		}
 		try(func() error {
 			_, e := chromedp.Call(ctx, page.AddScriptToEvaluateOnNewDocument, page.AddScriptToEvaluateOnNewDocumentParams{Source: cfg.vitalsJS + "\n" + collector})
 			return e

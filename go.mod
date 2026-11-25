@@ -13,6 +13,7 @@ require (
 	github.com/tursodatabase/libsql-client-go v0.0.0-20260528064733-9d5d30a29a60
 	github.com/yuin/goldmark v1.8.7
 	golang.org/x/crypto v0.59.0
+	golang.org/x/image v0.48.0
 	maragu.dev/gomponents v1.0.0
 	modernc.org/sqlite v1.62.0
 )

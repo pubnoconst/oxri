@@ -216,6 +216,32 @@ The real-data run still had one TTFB spike per page, from the cache expiry, befo
 
 **What is left of the render delay** (`/`): `site.css` arrives last at about 530 ms; first paint follows at about 600 ms. Then come the page fade-in (220 ms then; 100 ms since PR #79) and about 100 ms in which `font-display: optional` holds text invisible while it decides whether the web font is ready (the price of never swapping).
 
+### 2026-11-26: catalog page size, image sizes, tap-to-play
+
+The seeded lab gained `-seed N` (entries; every tweet clipping carries a 1200×900 photo) and `-page-size`. X's image requests are redirected to the lab's own server, still over the emulated network, one URL per image: a shared URL let the cache serve 11 of 12 images, and would have hidden the very cost being measured. The lab counts the image bytes it serves, since browsers report cross-origin sizes as 0.
+
+`/journals`, 160 seeded entries, 3 cold runs per size (today's cards, full-size images):
+
+| Cards per page | 12 | 24 | 48 | 96 | 150 |
+|---|---|---|---|---|---|
+| LCP (median) | 1104 | 1104 | 1136 | 1172 | 1256 ms |
+
+No layout shift and no long frames while scrolling at any size. Images load lazily near the screen, and the cards are server-drawn HTML. The page holds **24** (it was 12 while every tweet was X's iframe; 24 fills 1, 2, 3 or 4 columns evenly).
+
+**Clipping images** on the 24-card page: full size 206 kB each, about 2.5 MB per page view; X's small size **68 kB** each, **about 0.8 MB**. LCP and scrolling are unchanged, since the main content is text.
+
+**Tap-to-play:** a YouTube or Vimeo player, a GIF or a video file loads nothing heavy until tapped. YouTube shows only its thumbnail, a small image.
+
+**Server stills** (internal/thumb, table `media_thumbs`, schema v10): the server fetches a linked image, GIF, or YouTube or Vimeo poster once in the background, keeps it as a JPEG at most 680 px wide, and serves it from `/thumb/{key}.jpg` (cached for good). The fetch reaches public addresses only, checked on the address actually dialled, and downloads and decoded size are capped. On the real catalog (24 cards):
+
+| | LCP | CLS | Note |
+|---|---|---|---|
+| Still made by the script | 1.65 s | 0.039 | the still waited 780 ms for the script before it was even requested; a lazily loaded still grew in place while scrolling |
+| Still sized to its slot | 1.65 s | **0** | container query units: the largest box of its shape the slot holds, before it loads |
+| Tile drawn by the server | **1.26 s** | **0** | the still is in the HTML and requested at 51 ms; the script only starts the player on tap |
+
+The lab's shift report now names an image's source and its parent, which found this.
+
 ## In any Chrome tab, without tooling
 
 Paste into the console after the page has loaded:

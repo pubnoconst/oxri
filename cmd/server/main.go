@@ -81,6 +81,7 @@ func main() {
 		AuthService: authSvc,
 		Store:       store,
 		Tweets:      routes.NewTweetFiller(store, &http.Client{Timeout: 10 * time.Second}),
+		Thumbs:      routes.NewThumbFiller(store),
 		Passages:    verse.NewSource(&http.Client{Timeout: 10 * time.Second}),
 	})
 	if os.Getenv(devAutoLoginEnv) == "1" {

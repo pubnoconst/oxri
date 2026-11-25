@@ -196,6 +196,12 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 		return fmt.Errorf("failed to create vitals index: %w", err)
 	}
 
+	// Migration v10: media thumbnails (stills for linked images, GIFs and
+	// videos, made by the server)
+	if _, err := tx.ExecContext(ctx, mediaThumbsTableDDL); err != nil {
+		return fmt.Errorf("failed to create media_thumbs table: %w", err)
+	}
+
 	if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO schema_migrations (version) VALUES (?);`, CurrentSchemaVersion); err != nil {
 		return fmt.Errorf("failed to record schema version %d: %w", CurrentSchemaVersion, err)
 	}

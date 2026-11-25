@@ -373,9 +373,12 @@
 
   /**
    * @param {URL} url
+   * @param {string | null} [still] the server's still for a GIF or video
+   *   (/thumb/…, internal/thumb), shown on its tap tile; the media's own host
+   *   is asked for nothing until the tap.
    * @returns {HTMLElement | null}
    */
-  function createMedia(url) {
+  function createMedia(url, still = null) {
     const host = url.hostname.toLowerCase().replace(/^www\./, "");
     const path = url.pathname.toLowerCase();
 
@@ -390,19 +393,64 @@
       return iframe;
     };
 
+    // Nothing plays, or even loads its player, until it is tapped (owner,
+    // 2026-11-26): a video, a GIF or an embed is first a still tile in its
+    // reserved space (mediakind.go), and the tap that starts it is the
+    // reader's choice. The tap also lets it play at once (autoplay after a
+    // gesture).
+    /**
+     * @param {string} label what it is, e.g. "YouTube video"
+     * @param {string | null} thumb a still to show, if one is free to get
+     * @param {() => HTMLElement} start builds the real thing
+     */
+    const tapToPlay = (label, thumb, start) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "media-facade";
+      button.setAttribute("aria-label", `Play ${label}`);
+      if (thumb) {
+        const still = document.createElement("img");
+        still.src = thumb;
+        still.alt = "";
+        still.loading = "lazy";
+        still.decoding = "async";
+        still.referrerPolicy = "no-referrer";
+        bindMediaFadeIn(still);
+        button.append(still);
+      } else {
+        const name = document.createElement("span");
+        name.className = "media-facade-label";
+        name.textContent = label;
+        button.append(name);
+      }
+      const mark = document.createElement("span");
+      mark.className = "tweet-play-mark";
+      mark.setAttribute("aria-hidden", "true");
+      button.append(mark);
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        const real = start();
+        button.replaceWith(real);
+        if (real instanceof HTMLMediaElement) real.play().catch(() => {});
+      }, { once: true });
+      return button;
+    };
+
     if (host === "youtu.be" || host === "youtube.com" || host === "m.youtube.com") {
       const id = host === "youtu.be"
         ? url.pathname.slice(1)
         : (url.pathname === "/watch" ? url.searchParams.get("v") : url.pathname.split("/").filter(Boolean).at(-1));
       if (id && /^[\w-]{6,}$/.test(id)) {
-        return frame(`https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`, "YouTube video");
+        const safe = encodeURIComponent(id);
+        return tapToPlay("YouTube video", still || `https://i.ytimg.com/vi/${safe}/hqdefault.jpg`,
+          () => frame(`https://www.youtube-nocookie.com/embed/${safe}?autoplay=1`, "YouTube video"));
       }
     }
 
     if (host === "vimeo.com" || host === "player.vimeo.com") {
       const id = url.pathname.split("/").filter(Boolean).at(-1);
       if (id && /^\d+$/.test(id)) {
-        return frame(`https://player.vimeo.com/video/${id}`, "Vimeo video");
+        return tapToPlay("Vimeo video", still, () => frame(`https://player.vimeo.com/video/${id}?autoplay=1`, "Vimeo video"));
       }
     }
 
@@ -425,22 +473,37 @@
     }
 
     if (/\.(mp4|webm|ogg|mov)(?:$)/i.test(path)) {
-      const video = document.createElement("video");
-      video.src = url.href;
-      video.controls = true;
-      video.preload = "metadata";
-      return fallBackOnError(video, url, "Video");
+      return tapToPlay("Video", null, () => {
+        const video = document.createElement("video");
+        video.src = url.href;
+        video.controls = true;
+        video.preload = "auto";
+        return fallBackOnError(video, url, "Video");
+      });
     }
 
     if (/\.(mp3|wav|m4a|aac|flac)(?:$)/i.test(path)) {
+      // The player is its own tap-to-play; nothing is fetched until then.
       const audio = document.createElement("audio");
       audio.src = url.href;
       audio.controls = true;
-      audio.preload = "metadata";
+      audio.preload = "none";
       return fallBackOnError(audio, url, "Audio");
     }
 
-    if (/\.(avif|gif|jpe?g|png|webp|svg)(?:$)/i.test(path)) {
+    // A GIF animates as soon as it loads, and has no still to show without
+    // loading it all: it waits behind a tile.
+    if (/\.gif$/i.test(path)) {
+      return tapToPlay("GIF", still, () => {
+        const gif = document.createElement("img");
+        gif.src = url.href;
+        gif.alt = "Journal media (GIF)";
+        bindMediaFadeIn(gif);
+        return fallBackOnError(gif, url, "Image");
+      });
+    }
+
+    if (/\.(avif|jpe?g|png|webp|svg)(?:$)/i.test(path)) {
       const image = document.createElement("img");
       image.src = url.href;
       image.alt = "Journal media";
@@ -534,6 +597,12 @@
     return el;
   }
 
+  // A still the server made is served from this site only (/thumb/…).
+  /** @param {string | null} raw */
+  function safeStill(raw) {
+    return raw && /^\/thumb\/[0-9a-f]{24}\.jpg\?v=\d+$/.test(raw) ? raw : null;
+  }
+
   function mountCatalogSlots() {
     const slots = document.querySelectorAll("[data-media-url]");
     slots.forEach((slot) => {
@@ -544,11 +613,26 @@
       const url = safeUrl(raw);
       slot.replaceChildren();
       if (!url) return;
-      const media = createMedia(url) || createLinkFallback(url);
+      const media = createMedia(url, safeStill(slot.getAttribute("data-media-still"))) || createLinkFallback(url);
       slot.append(media);
       slot.setAttribute("data-media-mounted", raw);
     });
   }
+
+  // A tap tile the server drew (views/journals mediaSlot): the tap builds the
+  // player as a script-made tile would, in the same place.
+  document.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const tile = target && target.closest("[data-media-play]");
+    const slot = tile && tile.closest("[data-media-url]");
+    const url = slot && safeUrl(slot.getAttribute("data-media-url") || "");
+    if (!tile || !url) return;
+    event.preventDefault();
+    const media = createMedia(url, safeStill(slot.getAttribute("data-media-still")));
+    if (!media) return;
+    tile.replaceWith(media);
+    if (media.classList.contains("media-facade")) media.click();
+  });
 
   // The journal editor's live preview reuses these two.
   window.ResImperiiMedia = { safeUrl, createMedia };

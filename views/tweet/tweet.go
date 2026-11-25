@@ -14,6 +14,7 @@ package tweet
 import (
 	_ "embed"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/oxri/oxri-go/internal/tweet"
@@ -27,8 +28,31 @@ import (
 //go:embed tweet.css
 var StyleCSS string
 
-// Box is the tweet box for s.
-func Box(s tweet.Snapshot) g.Node {
+// ImageSize is which of X's sizes a clipping's images are fetched at.
+type ImageSize string
+
+const (
+	// Small (680 px wide) for the catalog's cards: a fraction of the bytes
+	// and decoding work, and sharp at a card's size.
+	Small ImageSize = "small"
+	// Medium (1200 px wide) for an entry on its own page.
+	Medium ImageSize = "medium"
+)
+
+// sized asks X's image server for one of its sizes (its "name" parameter).
+func sized(raw string, size ImageSize) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	q := u.Query()
+	q.Set("name", string(size))
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+// Box is the tweet box for s, its images fetched at size.
+func Box(s tweet.Snapshot, size ImageSize) g.Node {
 	post := s.PostURL()
 	return h.Figure(h.Class("tweet-box"), g.Attr("data-tweet-id", s.ID), g.Attr("data-tweet-user", s.Handle),
 		// The source and date, like the head of a newspaper cutting.
@@ -38,7 +62,7 @@ func Box(s tweet.Snapshot) g.Node {
 		),
 		g.If(s.Text != "", h.BlockQuote(h.Class("tweet-text"), g.Attr("cite", post), paragraphs(s.Text))),
 		quoted(s.Quoted),
-		media(s),
+		media(s, size),
 		// Signed at the bottom: the author, and the way to the original.
 		h.FigCaption(h.Class("tweet-byline"),
 			g.If(s.AvatarURL != "", h.Img(h.Class("tweet-avatar"), h.Src(s.AvatarURL), h.Alt(""),
@@ -85,13 +109,13 @@ func quoted(q *tweet.Quoted) g.Node {
 
 // media lays out 1–4 attachments. Every image carries its size so the box
 // never jumps when it arrives.
-func media(s tweet.Snapshot) g.Node {
+func media(s tweet.Snapshot, size ImageSize) g.Node {
 	if len(s.Media) == 0 {
 		return nil
 	}
 	items := make([]g.Node, 0, len(s.Media))
 	for i, m := range s.Media {
-		img := h.Img(h.Src(m.URL), h.Alt(mediaAlt(m, i, len(s.Media))),
+		img := h.Img(h.Src(sized(m.URL, size)), h.Alt(mediaAlt(m, i, len(s.Media))),
 			h.Width(fmt.Sprint(m.Width)), h.Height(fmt.Sprint(m.Height)),
 			g.Attr("loading", "lazy"), g.Attr("decoding", "async"), g.Attr("referrerpolicy", "no-referrer"))
 		if m.Kind == tweet.Video {

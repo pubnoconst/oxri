@@ -284,12 +284,36 @@
   gap: 2.5rem;
 }
 
+/* Every catalog card has the same width (owner, 2026-11-26): the columns
+   that fit at 18.5rem or wider, 1 to 4, share the row. A short last row, or a
+   lone search result, keeps that width and sits centred. */
 .journals-feed.is-collage-grid {
+  --catalog-gap: 1.35rem;
+  --catalog-cols: 1;
+  container-type: inline-size;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 1.35rem;
+  justify-content: center;
+  gap: var(--catalog-gap);
   align-items: stretch;
+}
+
+@container (min-width: 38.35rem) {
+  .journals-feed.is-collage-grid > .journal-card { --catalog-cols: 2; }
+}
+
+@container (min-width: 58.2rem) {
+  .journals-feed.is-collage-grid > .journal-card { --catalog-cols: 3; }
+}
+
+@container (min-width: 78.05rem) {
+  .journals-feed.is-collage-grid > .journal-card { --catalog-cols: 4; }
+}
+
+.journals-feed.is-collage-grid > .journal-card.is-collage {
+  flex: 0 0 calc((100cqw - (var(--catalog-cols) - 1) * var(--catalog-gap)) / var(--catalog-cols));
+  min-width: 0;
 }
 
 .journals-single {
@@ -315,6 +339,24 @@
   padding: var(--space-card-pad-sm);
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+/* A catalog card's contents are centred left to right (owner, 2026-11-26):
+   the date and its badges, the tags, the preview text and the actions. A
+   clipping or a quoted passage keeps its own left-aligned text inside its
+   box, as a quotation reads; the box itself is centred by the media slot. */
+.journal-card.is-collage {
+  text-align: center;
+}
+
+.journal-card.is-collage .journal-entry-tags,
+.journal-card.is-collage .journal-card-actions {
+  justify-content: center;
+}
+
+.journal-card.is-collage .tweet-box,
+.journal-card.is-collage .passage-box {
+  text-align: left;
 }
 
 /* A whole card is a link: its edge darkens on hover. It does not lift. */
@@ -393,6 +435,13 @@
 .entry-date:focus-visible {
   color: var(--page-ink);
   text-decoration-line: underline;
+}
+
+.journal-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
 }
 
 .journal-meta-badges {
@@ -495,6 +544,29 @@
   max-height: 100%;
 }
 
+/* A server still (routes/thumbs.go) knows its shape before it loads: it is
+   given the largest size of that shape the slot holds, at once, so a still
+   loading as the reader scrolls never grows in place. (Its width and height
+   attributes alone do not do it: the shared rule's width/height auto
+   overrides them until the image arrives.) */
+.journal-card.is-collage .journal-media-slot.is-image:has(> img.journal-still) {
+  container-type: size;
+}
+
+.journal-card.is-collage .journal-media-slot.is-image > img.journal-still {
+  box-sizing: border-box;
+  width: min(100cqw, calc(100cqh * var(--still-ratio)));
+  height: auto;
+  max-height: 100cqh;
+}
+
+/* A tap-to-play tile fills its reserved slot exactly. */
+.journal-media-slot.is-video > .media-facade,
+.journal-media-slot.is-image > .media-facade {
+  height: 100%;
+  aspect-ratio: auto;
+}
+
 /* Tags */
 .journal-entry-tags {
   display: flex;
@@ -513,6 +585,7 @@
   line-height: 1.55;
   opacity: 0.88;
   overflow-wrap: anywhere;
+  white-space: pre-line;
 }
 
 /* Full Reading Prose content */

@@ -580,6 +580,49 @@ summary.link-quiet::-webkit-details-marker {
   box-shadow: var(--depth-2-shadow);
 }
 
+/* A video, GIF or embed waiting for a tap (journal-media.js tapToPlay): its
+   still (YouTube's thumbnail) or its name, under the play mark, filling the
+   space reserved for it, so the tap changes nothing around it. */
+.media-facade {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--depth-sunk-surface);
+  color: var(--page-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* The still fills the tile from the start: as a grid item its 100% height
+   followed the row, which followed the image, so it grew from a sliver to
+   its own height on load and moved (a layout shift inside a fixed box). */
+.media-facade > img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.media-facade > .tweet-play-mark {
+  position: relative;
+}
+
+.media-facade-label {
+  transform: translateY(2.6rem);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
 .journal-preview-media audio {
   width: min(90%, 30rem);
   margin: 0.4rem 0;
