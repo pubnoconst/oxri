@@ -63,6 +63,23 @@ var pages = map[string][]step{
 const collector = `
 (() => {
   window.__lab = {};
+  // Every layout shift and long frame (over 50 ms), for the scroll phase.
+  window.__labShifts = []; window.__labFrames = [];
+  try {
+    window.__labShiftSources = [];
+    const describe = (n) => n && n.nodeType === 1 ? n.tagName.toLowerCase() + (n.className && typeof n.className === "string" ? "." + n.className.trim().split(/\s+/).join(".") : "") : String(n && n.nodeName);
+    new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) {
+      window.__labShifts.push([e.startTime, e.value]);
+      for (const s of e.sources || []) window.__labShiftSources.push(Math.round(e.startTime) + "ms " + e.value.toFixed(4) + " " + describe(s.node) + " y " + Math.round(s.previousRect.y) + "→" + Math.round(s.currentRect.y) + " h " + Math.round(s.previousRect.height) + "→" + Math.round(s.currentRect.height));
+    } }).observe({ type: "layout-shift", buffered: true });
+    window.__labFrameSources = [];
+    new PerformanceObserver((l) => { for (const e of l.getEntries()) {
+      window.__labFrames.push([e.startTime, e.duration]);
+      const style = e.styleAndLayoutStart ? Math.round(e.startTime + e.duration - e.styleAndLayoutStart) : 0;
+      const scripts = (e.scripts || []).map((x) => (x.invoker || x.sourceFunctionName || "?") + " " + Math.round(x.duration) + "ms").join("; ");
+      window.__labFrameSources.push(Math.round(e.startTime) + "ms " + Math.round(e.duration) + "ms (render " + (e.renderStart ? Math.round(e.startTime + e.duration - e.renderStart) : 0) + ", style+layout " + style + ", blocking " + Math.round(e.blockingDuration) + ") " + scripts);
+    } }).observe({ type: "long-animation-frame", buffered: true });
+  } catch (e) {}
   const keep = (m) => {
     window.__lab[m.name] = m.value;
     // LCP in its four parts (web-vitals attribution), and the element.
@@ -92,7 +109,9 @@ const timelineJS = `[
   ...performance.getEntriesByType("paint").map((p) => [Math.round(p.startTime), "paint", p.name]),
   ...performance.getEntriesByType("resource").map((r) => [Math.round(r.startTime), Math.round(r.responseEnd), r.initiatorType + " " + new URL(r.name).pathname]),
 ].sort((a, b) => a[0] - b[0]).map((e) => e.join("  ")).join(String.fromCharCode(10)) + String.fromCharCode(10) + "fonts: " +
-  [...document.fonts].filter((f) => f.status !== "unloaded").map((f) => f.family + " " + f.unicodeRange.slice(0, 8) + " " + f.status).join(", ")`
+  [...document.fonts].filter((f) => f.status !== "unloaded").map((f) => f.family + " " + f.unicodeRange.slice(0, 8) + " " + f.status).join(", ") +
+  String.fromCharCode(10) + "shifts: " + (window.__labShiftSources || []).join(String.fromCharCode(10) + "  ") +
+  String.fromCharCode(10) + "long frames: " + (window.__labFrameSources || []).join(String.fromCharCode(10) + "  ")`
 
 type config struct {
 	base     string
@@ -166,7 +185,7 @@ func main() {
 	var report strings.Builder
 	fmt.Fprintf(&report, "# Lab run %s\n\n", time.Now().Format("2006-01-02 15:04"))
 	fmt.Fprintf(&report, "`%s`, %d cold-cache runs per page; budget phone: 412×823 @1.75, CPU %g× slower, 150 ms RTT, 1.6 Mb/s down. Median / spread (max − min) / worst. Good: LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1.\n\n", *base, *runs, *cpu)
-	fmt.Fprintf(&report, "| Page | LCP | INP | CLS | TTFB | FCP |\n|---|---|---|---|---|---|\n")
+	fmt.Fprintf(&report, "| Page | LCP | INP | CLS | TTFB | FCP | Shift while scrolling | Long frames while scrolling | Worst frame |\n|---|---|---|---|---|---|---|---|---|\n")
 	var misses, advisories []string
 	all := map[string][]sample{}
 	for _, p := range paths {
@@ -178,10 +197,11 @@ func main() {
 				continue
 			}
 			results = append(results, s)
-			fmt.Fprintf(os.Stderr, "%s run %d: LCP %.0f  INP %.0f  CLS %.3f  TTFB %.0f\n", p, i+1, s["LCP"], s["INP"], s["CLS"], s["TTFB"])
+			fmt.Fprintf(os.Stderr, "%s run %d: LCP %.0f  INP %.0f  CLS %.3f  TTFB %.0f  scroll: shift %.3f, %0.f long frames, worst %.0f ms\n", p, i+1, s["LCP"], s["INP"], s["CLS"], s["TTFB"], s["scrollShift"], s["scrollFrames"], s["scrollWorstFrame"])
 		}
-		fmt.Fprintf(&report, "| `%s` | %s | %s | %s | %s | %s |\n", p,
-			cell(results, "LCP"), cell(results, "INP"), cell(results, "CLS"), cell(results, "TTFB"), cell(results, "FCP"))
+		fmt.Fprintf(&report, "| `%s` | %s | %s | %s | %s | %s | %s | %s | %s |\n", p,
+			cell(results, "LCP"), cell(results, "INP"), cell(results, "CLS"), cell(results, "TTFB"), cell(results, "FCP"),
+			plain(results, "scrollShift", "%.3f"), plain(results, "scrollFrames", "%.0f"), plain(results, "scrollWorstFrame", "%.0f ms"))
 		all[p] = results
 		strict, timing := checkBudget(p, results, *runs)
 		misses = append(misses, strict...)
@@ -346,8 +366,38 @@ func visit(ctx context.Context, cfg config, path string) error {
 			return fmt.Errorf("tap %q: %w (is the element on the page? an empty database has no catalog)", s.tap, err)
 		}
 	}
-	return chromedp.Do(ctx, chromedp.Sleep(time.Second))
+	if err := chromedp.Do(ctx, chromedp.Sleep(time.Second)); err != nil {
+		return err
+	}
+	// Then read to the end as a reader would: a screen at a time, with a
+	// pause to look, so lazy media loads and lays out as it comes into view.
+	// What moves and which frames run long during this is the stability a
+	// load-time metric misses.
+	_, err := chromedp.Run(ctx, chromedp.Evaluate[bool](scrollJS, chromedp.EvalAwaitPromise))
+	return err
 }
+
+// scrollJS scrolls to the bottom in steps of 80 % of the screen every
+// 300 ms (at most 40 steps), waits for the page to settle, and records in
+// window.__lab: scrollShift (layout shift during the scroll), scrollFrames
+// (frames over 50 ms) and scrollWorstFrame (ms).
+const scrollJS = `(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const start = performance.now();
+  for (let i = 0; i < 40; i++) {
+    const before = scrollY;
+    scrollBy(0, Math.round(innerHeight * 0.8));
+    await wait(300);
+    if (scrollY === before) break;
+  }
+  await wait(1200);
+  const shifts = (window.__labShifts || []).filter((e) => e[0] >= start);
+  const frames = (window.__labFrames || []).filter((e) => e[0] >= start);
+  window.__lab.scrollShift = shifts.reduce((a, e) => a + e[1], 0);
+  window.__lab.scrollFrames = frames.length;
+  window.__lab.scrollWorstFrame = frames.reduce((a, e) => Math.max(a, e[1]), 0);
+  return true;
+})()`
 
 // measure is one cold run: the page visited, then its vitals.
 func measure(cfg config, path string) (sample, error) {
@@ -513,6 +563,22 @@ func cell(results []sample, metric string) string {
 		unit = ""
 	}
 	return fmt.Sprintf("%s%s ± %s (%s) %s", f(med), unit, f(spread), f(vs[len(vs)-1]), rating)
+}
+
+// plain is a metric's median ± spread (worst), with no rating.
+func plain(results []sample, metric, format string) string {
+	var vs []float64
+	for _, r := range results {
+		if v, ok := r[metric]; ok {
+			vs = append(vs, v)
+		}
+	}
+	if len(vs) == 0 {
+		return "–"
+	}
+	sort.Float64s(vs)
+	f := func(v float64) string { return fmt.Sprintf(format, v) }
+	return f(median(vs)) + " ± " + strings.TrimSuffix(f(vs[len(vs)-1]-vs[0]), " ms") + " (" + f(vs[len(vs)-1]) + ")"
 }
 
 func median(sorted []float64) float64 {

@@ -303,9 +303,11 @@ func CatalogContentFragment(isAuth bool, view CatalogView) g.Node {
 		}
 
 		filterBar = h.Section(h.Class("journals-filter-bar"), g.Attr("aria-label", "Search and filter journals"),
+			catalogSwap("none"),
 			h.Form(h.Class("journals-search-form"), h.Method("GET"), h.Action("/journals"),
 				g.Group(hiddenTagInputs),
 				h.Input(
+					h.ID("journals-search"), // htmx gives focus back to this id after a swap
 					h.Type("search"),
 					h.Name("q"),
 					h.Class("journals-search-input"),
@@ -373,6 +375,27 @@ func selectAllLabel(p paging.Page) string {
 	return "Select all"
 }
 
+// catalogSwap makes the links and forms inside an element (the filter bar,
+// the pager) replace only the catalog, in place, rather than load a new page
+// (HIG §6). The response is the same /journals page; htmx takes its
+// #journals-catalog-stage and swaps it for the current one in a single
+// frame, and puts the URL in the address bar (Back and shared links work as
+// before). The header, the search box (focus and cursor, by its id) and the
+// scroll position stay where they are; the current results stay visible
+// until the new ones replace them (journals.css dims them only if the
+// response is slow). show is where to scroll after the swap: "none" for
+// search and tags, the top of the results for paging. Without JavaScript
+// the links and form load the page as before.
+func catalogSwap(show string) g.Node {
+	return g.Group([]g.Node{
+		g.Attr("hx-boost", "true"),
+		g.Attr("hx-target", "#journals-catalog-stage"),
+		g.Attr("hx-select", "#journals-catalog-stage"),
+		g.Attr("hx-swap", "outerHTML show:"+show),
+		g.Attr("hx-indicator", "#journals-catalog-stage"),
+	})
+}
+
 // paginationNav renders Newer / Page n of m / Older below the feed, only when
 // there is more than one page. Entries are newest first, so the previous page
 // is "Newer".
@@ -388,6 +411,7 @@ func paginationNav(view CatalogView) g.Node {
 		return h.A(h.Href(view.PageURL(n)), h.Rel(rel), h.Class("btn btn-neutral btn-sm journals-page-link"), g.Text(label))
 	}
 	return h.Nav(h.Class("journals-pagination"), g.Attr("aria-label", "Journal pages"),
+		catalogSwap("#journals-catalog-stage:top"),
 		link(p.HasPrev(), p.Number-1, "prev", "← Newer"),
 		h.Span(h.Class("journals-page-status"), g.Attr("aria-current", "page"),
 			g.Textf("Page %d of %d", p.Number, p.Count)),
@@ -473,7 +497,18 @@ func mediaSlot(item RenderedEntry) g.Node {
 			tweetview.Box(*item.Tweet),
 		)
 	}
-	return h.Div(h.Class("journal-media-slot journal-preview-media"), g.Attr("data-media-url", item.Entry.MediaURL))
+	// Everything else is built in the browser (journal-media.js); its slot is
+	// given the right space now, so nothing below moves when it arrives (HIG
+	// §1.7). A plain link needs no script: its card is drawn here.
+	switch kind := classifyMedia(item.Entry.MediaURL); kind {
+	case mediaLink:
+		return h.Div(h.Class("journal-media-slot journal-preview-media is-link"),
+			g.Attr("data-media-url", item.Entry.MediaURL), g.Attr("data-media-mounted", item.Entry.MediaURL),
+			linkCard(item.Entry.MediaURL),
+		)
+	default:
+		return h.Div(h.Class("journal-media-slot journal-preview-media is-"+string(kind)), g.Attr("data-media-url", item.Entry.MediaURL))
+	}
 }
 
 // EntryCard renders either a compact collage card or a full permalink card.

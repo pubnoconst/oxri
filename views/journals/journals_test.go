@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/oxri/oxri-go/internal/db"
+	"github.com/oxri/oxri-go/internal/paging"
 )
 
 func TestExcerpt280(t *testing.T) {
@@ -94,5 +97,40 @@ func TestCatalogTagGroups(t *testing.T) {
 	_ = CatalogContentFragment(false, small).Render(&b)
 	if strings.Contains(b.String(), "tag-filter-more") {
 		t.Errorf("no disclosure when every tag fits")
+	}
+}
+
+// Search, tags and paging swap only the catalog in place (catalogSwap); the
+// cards' own actions stay ordinary forms and links, so they are never
+// swapped into the catalog by mistake.
+func TestCatalogSwapsInPlaceOnlyFromFilterAndPager(t *testing.T) {
+	var b strings.Builder
+	_ = CatalogPage(true, CatalogView{
+		Entries: RenderEntries([]db.Journal{{ID: 7, MediaURL: "https://example.org/a.png", Body: "An entry", Published: true}}),
+		AllTags: []string{"Good"},
+		Page:    paging.Page{Number: 2, Count: 3, Size: 12, Total: 30},
+	}).Render(&b)
+	out := b.String()
+
+	if n := strings.Count(out, `hx-boost="true"`); n != 2 {
+		t.Fatalf("hx-boost on %d elements, want 2 (the filter bar and the pager)", n)
+	}
+	for _, want := range []string{
+		`class="journals-filter-bar" aria-label="Search and filter journals" hx-boost="true"`,
+		`hx-swap="outerHTML show:none"`,
+		`class="journals-pagination" aria-label="Journal pages" hx-boost="true"`,
+		`hx-swap="outerHTML show:#journals-catalog-stage:top"`,
+		`hx-select="#journals-catalog-stage"`,
+		`id="journals-search"`,
+		`<div id="journals-catalog-stage">`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("catalog lacks %s", want)
+		}
+	}
+	feed := out[strings.Index(out, `class="journals-feed`):]
+	feed = feed[:strings.Index(feed, `class="journals-pagination"`)]
+	if strings.Contains(feed, "hx-boost") {
+		t.Error("the cards must not be boosted: their actions are ordinary forms")
 	}
 }
