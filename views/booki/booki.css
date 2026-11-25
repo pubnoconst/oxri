@@ -1,6 +1,6 @@
 /* Scoped styling for Book I long-form essay reader */
 .article-page {
-  min-height: 100vh;
+  min-height: var(--full-height);
   padding: var(--space-page-y) var(--space-page-x);
   box-sizing: border-box;
 }
@@ -88,7 +88,7 @@
 /* Authenticated Book Markdown Editor */
 .book-editor-page {
   width: min(76rem, 100%);
-  min-height: 100svh;
+  min-height: var(--full-height);
   margin: 0 auto;
   padding: var(--space-page-y) var(--space-page-x) 4rem;
   box-sizing: border-box;

@@ -1,7 +1,7 @@
 /* Minimal shared error page for missing pages, timeouts, and server failures */
 .error-page {
   display: grid;
-  min-height: 100vh;
+  min-height: var(--full-height);
   padding: var(--space-page-y) var(--space-page-x);
   place-items: center;
   box-sizing: border-box;

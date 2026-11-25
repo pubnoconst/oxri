@@ -50,9 +50,14 @@ func NewRouter(cfg Config) http.Handler {
 	// 1. Resilience & Security Hardening Middleware
 	r.Use(safeRecoverer)
 	r.Use(securityHeadersMiddleware)
+	r.Use(serverTimingMiddleware)
 	r.Use(bodySizeCapMiddleware)
 	r.Use(csrfOriginMiddleware)
 	r.Use(middleware.Timeout(30 * time.Second))
+	// Text is sent gzip-compressed (about 3x smaller). In production Cloudflare
+	// compresses too; here it means the server and the lab send what a reader
+	// receives (PROFILING.md). Fonts and images are already compressed.
+	r.Use(middleware.Compress(5, "text/html", "text/css", "text/javascript", "application/javascript", "application/json", "image/svg+xml", "text/plain", "application/manifest+json"))
 
 	// 2. Custom 404 & 405 Handlers
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {

@@ -179,6 +179,38 @@ The other pages were unchanged: CLS 0 (0.001 on `/book-i`), with no long frames 
 - **One heavy frame at load (65–148 ms, nearly all style and layout)** as the web fonts replace the fallbacks. Nothing moves, but the page is laid out again. Only `font-display: optional` avoids it, at the cost of first visits keeping the fallback fonts.
 - **On the seeded site**, a quote's body text can still wrap one line differently once Short Stack arrives (CLS 0.008), for the same reason.
 
+### 2026-11-25: compression, Server-Timing, render-blocking, the cache spike
+
+Seeded lab, 5 cold budget-phone runs, after each step:
+
+| LCP (median) | `/` | `/book-i` | `/journals` | `/login` |
+|---|---|---|---|---|
+| Before | 1224 | 1320 | 1564 | 1160 |
+| + gzip (as production already sends) | 900 | 996 | 1100 | 856 |
+| + `dot-matrix.js` deferred | 884 | 1012 | 1068 | 816 |
+
+What each step changed:
+- **Compression** halved the bytes (e.g. `/journals` 322 → 193 kB). Production already had it through Cloudflare, so mainly the lab now matches what readers receive, and a laptop host without Cloudflare will need it.
+- **Deferring `dot-matrix.js`** gained 16 to 40 ms, near the noise.
+- **Scripts at `fetchpriority="low"`** were tried, measured no better, and were reverted.
+- **Inlining `fonts.css`** was not done: it already arrives before `site.css`, so it is not on the critical path.
+
+**`Server-Timing` named the server spike.** Pages now carry `app`, `db` and `tweets` durations, which the lab reads (`-breakdown`, and per run). Warm, the server takes 0.3 to 2 ms. The occasional ~0.8–1.1 s first byte was the server itself: one run showed `server 1147.3`. The entry and book caches expired every 2 minutes, and the next reader waited for Turso. They are now **stale-while-revalidate**: a stale copy is served at once and one background refresh updates it. Across a cache expiry (15 runs), the worst server time was 2.2 ms.
+
+`mage benchmark`, 10 runs, real data:
+
+| | Before (this morning) | After |
+|---|---|---|
+| `/` LCP | 1208 ms | 898 ms |
+| `/book-i` LCP | 1310 ms | 954 ms |
+| `/journals` LCP | 1642 ms | 1180 ms |
+| `/login` LCP | 1188 ms | 840 ms |
+| CLS, every page | 0 | 0 |
+
+The real-data run still had one TTFB spike per page, from the cache expiry, before stale-while-revalidate was added.
+
+**What is left of the render delay** (`/`): `site.css` arrives last at about 530 ms; first paint follows at about 600 ms. Then come the page fade-in (220 ms then; 100 ms since PR #79) and about 100 ms in which `font-display: optional` holds text invisible while it decides whether the web font is ready (the price of never swapping).
+
 ## In any Chrome tab, without tooling
 
 Paste into the console after the page has loaded:

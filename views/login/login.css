@@ -1,7 +1,7 @@
 /* Quiet, typography-focused authentication view */
 .auth-page {
   width: min(38rem, 100%);
-  min-height: 100svh;
+  min-height: var(--full-height);
   margin: 0 auto;
   padding: var(--space-page-y) var(--space-page-x);
   box-sizing: border-box;

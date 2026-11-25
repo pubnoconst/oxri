@@ -197,7 +197,7 @@ func main() {
 				continue
 			}
 			results = append(results, s)
-			fmt.Fprintf(os.Stderr, "%s run %d: LCP %.0f  INP %.0f  CLS %.3f  TTFB %.0f  scroll: shift %.3f, %0.f long frames, worst %.0f ms\n", p, i+1, s["LCP"], s["INP"], s["CLS"], s["TTFB"], s["scrollShift"], s["scrollFrames"], s["scrollWorstFrame"])
+			fmt.Fprintf(os.Stderr, "%s run %d: LCP %.0f  INP %.0f  CLS %.3f  TTFB %.0f (server %.1f)  scroll: shift %.3f, %0.f long frames, worst %.0f ms\n", p, i+1, s["LCP"], s["INP"], s["CLS"], s["TTFB"], s["st_app"], s["scrollShift"], s["scrollFrames"], s["scrollWorstFrame"])
 		}
 		fmt.Fprintf(&report, "| `%s` | %s | %s | %s | %s | %s | %s | %s | %s |\n", p,
 			cell(results, "LCP"), cell(results, "INP"), cell(results, "CLS"), cell(results, "TTFB"), cell(results, "FCP"),
@@ -216,7 +216,7 @@ func main() {
 	if *breakdown {
 		report.WriteString("\n### Where the LCP time goes (medians, ms)\n\n")
 		report.WriteString("LCP = server (TTFB) + wait before the LCP element's resource is requested + its download + render delay (web-vitals attribution). For a text element there is no resource: the wait for the text to be drawn (its data, fonts, scripts) is all render delay.\n\n")
-		report.WriteString("| Page | LCP | LCP element | TTFB | Resource wait | Resource load | Render delay | Catalog request (start → end) | Last font | kB / requests |\n|---|---|---|---|---|---|---|---|---|---|\n")
+		report.WriteString("| Page | LCP | LCP element | TTFB | Server (app / db / tweets) | Resource wait | Resource load | Render delay | Catalog request (start → end) | Last font | kB / requests |\n|---|---|---|---|---|---|---|---|---|---|---|\n")
 		for _, p := range paths {
 			report.WriteString(breakdownRow(p, all[p]))
 		}
@@ -443,6 +443,8 @@ const resourcesJS = `(() => {
   const nav = performance.getEntriesByType("navigation")[0];
   out.kB = (rs.reduce((a, r) => a + (r.transferSize || 0), 0) + (nav ? nav.transferSize : 0)) / 1024;
   out.requests = rs.length + 1;
+  // Where the server's time went (its Server-Timing header).
+  if (nav && nav.serverTiming) for (const t of nav.serverTiming) out["st_" + t.name] = t.duration;
   return out;
 })()`
 
@@ -482,8 +484,23 @@ func breakdownRow(page string, results []sample) string {
 	if s, e := med("catalogStart"), med("catalogEnd"); s != "–" {
 		catalog = s + " → " + e
 	}
-	return fmt.Sprintf("| `%s` | %s | `%s` | %s | %s | %s | %s | %s | %s | %s / %s |\n", page, med("LCP"), top,
-		med("lcpTTFB"), med("lcpLoadDelay"), med("lcpLoadTime"), med("lcpRenderDelay"), catalog, med("fontsEnd"), med("kB"), med("requests"))
+	// The server's own parts are fractions of a millisecond when warm.
+	fine := func(k string) string {
+		var vs []float64
+		for _, r := range results {
+			if v, ok := r[k]; ok {
+				vs = append(vs, v)
+			}
+		}
+		if len(vs) == 0 {
+			return "–"
+		}
+		sort.Float64s(vs)
+		return fmt.Sprintf("%.1f", median(vs))
+	}
+	server := fine("st_app") + " / " + fine("st_db") + " / " + fine("st_tweets")
+	return fmt.Sprintf("| `%s` | %s | `%s` | %s | %s | %s | %s | %s | %s | %s | %s / %s |\n", page, med("LCP"), top,
+		med("lcpTTFB"), server, med("lcpLoadDelay"), med("lcpLoadTime"), med("lcpRenderDelay"), catalog, med("fontsEnd"), med("kB"), med("requests"))
 }
 
 // checkBeacon visits path, leaves it for another page, and checks the field

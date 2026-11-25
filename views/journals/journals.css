@@ -1,7 +1,7 @@
 /* Keep the catalog aligned with the reading and editor quiet warm-neutral aesthetic. */
 .journals-page {
   width: min(72rem, 100%);
-  min-height: 100svh;
+  min-height: var(--full-height);
   margin: 0 auto;
   padding: var(--space-page-y) var(--space-page-x) 5rem;
   box-sizing: border-box;

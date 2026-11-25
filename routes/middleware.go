@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/oxri/oxri-go/assets"
 	"net"
 	"net/http"
 	"net/netip"
@@ -19,22 +20,24 @@ const (
 	MaxRequestBodyBytes = 1 << 20
 
 	defaultMaxRateLimiterEntries = 4096
-
-	// ContentSecurityPolicy enforces strict origin restrictions with zero 'unsafe-eval'
-	// and zero 'unsafe-inline' scripts.
-	ContentSecurityPolicy = "default-src 'self'; " +
-		"script-src 'self' https://platform.twitter.com; " +
-		"style-src 'self' 'unsafe-inline'; " +
-		"font-src 'self'; " +
-		"img-src 'self' data: https: http:; " +
-		"media-src 'self' https: http:; " +
-		"frame-src https://platform.twitter.com https://syndication.twitter.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; " +
-		"connect-src 'self' https://bible.helloao.org; " +
-		"object-src 'none'; " +
-		"base-uri 'self'; " +
-		"form-action 'self'; " +
-		"frame-ancestors 'none'"
 )
+
+// ContentSecurityPolicy enforces strict origin restrictions with zero
+// 'unsafe-eval' and zero 'unsafe-inline' scripts: the one inline script, the
+// theme initialiser in <head>, is allowed by its exact hash
+// (assets.ThemeInitCSPSource) and nothing else inline can run.
+var ContentSecurityPolicy = "default-src 'self'; " +
+	"script-src 'self' " + assets.ThemeInitCSPSource + " https://platform.twitter.com; " +
+	"style-src 'self' 'unsafe-inline'; " +
+	"font-src 'self'; " +
+	"img-src 'self' data: https: http:; " +
+	"media-src 'self' https: http:; " +
+	"frame-src https://platform.twitter.com https://syndication.twitter.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; " +
+	"connect-src 'self' https://bible.helloao.org; " +
+	"object-src 'none'; " +
+	"base-uri 'self'; " +
+	"form-action 'self'; " +
+	"frame-ancestors 'none'"
 
 var cgnatPrefix = netip.MustParsePrefix("100.64.0.0/10")
 
