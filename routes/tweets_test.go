@@ -56,7 +56,7 @@ func TestTweetsDrawnFromSnapshots(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/journals/content", nil))
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/journals", nil))
 	page := rec.Body.String()
 
 	for _, want := range []string{

@@ -21,7 +21,6 @@ import (
 	"github.com/oxri/oxri-go/internal/paging"
 	"github.com/oxri/oxri-go/internal/tweet"
 	"github.com/oxri/oxri-go/views/layout"
-	"github.com/oxri/oxri-go/views/loading"
 	passageview "github.com/oxri/oxri-go/views/passage"
 	tweetview "github.com/oxri/oxri-go/views/tweet"
 	"github.com/yuin/goldmark"
@@ -267,8 +266,8 @@ func ActionURL(id int64, action string) string {
 	return fmt.Sprintf("/journals/%d/%s", id, action)
 }
 
-// CatalogContentFragment renders the filter bar, batch action toolbar, and collage cards
-// so they can be populated asynchronously via HTMX (/journals/content) after the page shell loads.
+// CatalogContentFragment renders the filter bar, batch action toolbar, and
+// collage cards, inside /journals (CatalogPage).
 func CatalogContentFragment(isAuth bool, view CatalogView) g.Node {
 	var filterBar g.Node
 	if len(view.Entries) > 0 || len(view.AllTags) > 0 || view.HasFilters() {
@@ -421,14 +420,9 @@ func renderJournalsHeader(isAuth bool) g.Node {
 	)
 }
 
-// CatalogShellPage renders the /journals document frame in 0ms independent of the database.
-// Once mounted in the browser, HTMX fetches contentURL (/journals/content) from the remote DB
-// and populates #journals-catalog-stage asynchronously.
-func CatalogShellPage(isAuth bool, contentURL string) g.Node {
-	if contentURL == "" {
-		contentURL = "/journals/content"
-	}
-
+// CatalogPage renders /journals with its catalog in the same document: the
+// header, then the filter bar and this page of cards (CatalogContentFragment).
+func CatalogPage(isAuth bool, view CatalogView) g.Node {
 	var catalogScript g.Node
 	if isAuth {
 		catalogScript = h.Script(h.Src(assets.JournalsCatalogJS.URL()))
@@ -439,15 +433,7 @@ func CatalogShellPage(isAuth bool, contentURL string) g.Node {
 		Style.URL(),
 		h.Main(h.Class("journals-page"),
 			renderJournalsHeader(isAuth),
-			h.Div(
-				h.ID("journals-catalog-stage"),
-				g.Attr("hx-get", contentURL),
-				g.Attr("hx-trigger", "load"),
-				g.Attr("hx-swap", "innerHTML swap:120ms"),
-				// Bottom centre, where a slow navigation's loader stands (site.css
-				// .page-dot-loading); the HTMX swap replaces it with the catalog.
-				h.P(h.Class("page-dot-loading"), g.Attr("role", "status"), g.Attr("aria-live", "polite"), loading.Dots("Loading entries…", loading.Twinkle)),
-			),
+			h.Div(h.ID("journals-catalog-stage"), CatalogContentFragment(isAuth, view)),
 		),
 		h.Script(h.Src(assets.JournalMediaJS.URL())),
 		catalogScript,

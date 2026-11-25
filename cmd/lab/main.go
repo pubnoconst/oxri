@@ -63,7 +63,18 @@ var pages = map[string][]step{
 const collector = `
 (() => {
   window.__lab = {};
-  const keep = (m) => { window.__lab[m.name] = m.value; };
+  const keep = (m) => {
+    window.__lab[m.name] = m.value;
+    // LCP in its four parts (web-vitals attribution), and the element.
+    if (m.name === "LCP" && m.attribution) {
+      const a = m.attribution;
+      window.__lab.lcpTTFB = a.timeToFirstByte;
+      window.__lab.lcpLoadDelay = a.resourceLoadDelay;
+      window.__lab.lcpLoadTime = a.resourceLoadDuration;
+      window.__lab.lcpRenderDelay = a.elementRenderDelay;
+      window.__labTarget = a.target || "";
+    }
+  };
   const opts = { reportAllChanges: true };
   webVitals.onLCP(keep, opts); webVitals.onINP(keep, opts);
   webVitals.onCLS(keep, opts); webVitals.onTTFB(keep, opts); webVitals.onFCP(keep, opts);
@@ -101,6 +112,7 @@ func main() {
 	warm := flag.Bool("warm", true, "request each page once first, so the server's own cold start is not counted against the page (field data covers the server)")
 	local := flag.Bool("local", false, "serve the site in this process from an in-memory database with seeded content, and measure that (no credentials needed; CI uses it)")
 	budget := flag.Bool("budget", false, "exit 1 if a page shifts (any run's CLS > 0.1) or a run fails; median LCP > 2.5 s and INP > 200 ms are reported, not failed (a shared runner's timing varies)")
+	breakdown := flag.Bool("breakdown", false, "also report each page's LCP split into its parts (server, resource wait, resource load, render) and its network shape")
 	timingGate := flag.Bool("timing-gate", false, "with -budget, also exit 1 on median LCP > 2.5 s or INP > 200 ms (for a quiet machine, not CI)")
 	beacon := flag.Bool("beacon", false, "check instead that leaving each page builds a field report with LCP, INP, CLS and TTFB (vitals.js); exits 1 if not")
 	flag.Parse()
@@ -143,7 +155,7 @@ func main() {
 	}
 
 	if *warm {
-		for _, p := range append(paths, "/journals/content") {
+		for _, p := range paths {
 			if res, err := http.Get(*base + p); err == nil {
 				_, _ = io.Copy(io.Discard, res.Body)
 				_ = res.Body.Close()
@@ -156,6 +168,7 @@ func main() {
 	fmt.Fprintf(&report, "`%s`, %d cold-cache runs per page; budget phone: 412×823 @1.75, CPU %g× slower, 150 ms RTT, 1.6 Mb/s down. Median / spread (max − min) / worst. Good: LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1.\n\n", *base, *runs, *cpu)
 	fmt.Fprintf(&report, "| Page | LCP | INP | CLS | TTFB | FCP |\n|---|---|---|---|---|---|\n")
 	var misses, advisories []string
+	all := map[string][]sample{}
 	for _, p := range paths {
 		var results []sample
 		for i := 0; i < *runs; i++ {
@@ -169,6 +182,7 @@ func main() {
 		}
 		fmt.Fprintf(&report, "| `%s` | %s | %s | %s | %s | %s |\n", p,
 			cell(results, "LCP"), cell(results, "INP"), cell(results, "CLS"), cell(results, "TTFB"), cell(results, "FCP"))
+		all[p] = results
 		strict, timing := checkBudget(p, results, *runs)
 		misses = append(misses, strict...)
 		if *timingGate {
@@ -178,6 +192,15 @@ func main() {
 		}
 	}
 	fmt.Fprintf(&report, "\nA cell reads *median ± spread (worst)* and the median's rating. `–` is a metric the page never produced (no interaction, or no shift).\n")
+
+	if *breakdown {
+		report.WriteString("\n### Where the LCP time goes (medians, ms)\n\n")
+		report.WriteString("LCP = server (TTFB) + wait before the LCP element's resource is requested + its download + render delay (web-vitals attribution). For a text element there is no resource: the wait for the text to be drawn (its data, fonts, scripts) is all render delay.\n\n")
+		report.WriteString("| Page | LCP | LCP element | TTFB | Resource wait | Resource load | Render delay | Catalog request (start → end) | Last font | kB / requests |\n|---|---|---|---|---|---|---|---|---|---|\n")
+		for _, p := range paths {
+			report.WriteString(breakdownRow(p, all[p]))
+		}
+	}
 
 	if *budget {
 		if len(misses) == 0 {
@@ -340,7 +363,7 @@ func measure(cfg config, path string) (sample, error) {
 		}
 		fmt.Fprintln(os.Stderr, timeline)
 	}
-	raw, err := chromedp.Run(ctx, chromedp.Evaluate[string](`JSON.stringify(window.__lab || {})`))
+	raw, err := chromedp.Run(ctx, chromedp.Evaluate[string](`JSON.stringify(Object.assign({}, window.__lab || {}, `+resourcesJS+`))`))
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +374,66 @@ func measure(cfg config, path string) (sample, error) {
 	if len(s) == 0 {
 		return nil, errors.New("no vitals recorded")
 	}
+	if target, err := chromedp.Run(ctx, chromedp.Evaluate[string](`String(window.__labTarget || "")`)); err == nil {
+		lcpTargets[path] = append(lcpTargets[path], target)
+	}
 	return s, nil
+}
+
+// resourcesJS summarises the page's requests: when the catalog fragment
+// (/journals/content) was requested and arrived, when the last font
+// arrived, and the bytes the page transferred (kB).
+const resourcesJS = `(() => {
+  const rs = performance.getEntriesByType("resource");
+  const out = {};
+  const cat = rs.find((r) => r.name.includes("/journals/content"));
+  if (cat) { out.catalogStart = cat.startTime; out.catalogEnd = cat.responseEnd; }
+  const fonts = rs.filter((r) => r.name.includes(".woff2"));
+  if (fonts.length) out.fontsEnd = Math.max(...fonts.map((r) => r.responseEnd));
+  const nav = performance.getEntriesByType("navigation")[0];
+  out.kB = (rs.reduce((a, r) => a + (r.transferSize || 0), 0) + (nav ? nav.transferSize : 0)) / 1024;
+  out.requests = rs.length + 1;
+  return out;
+})()`
+
+// lcpTargets are the LCP elements seen per page, for the breakdown.
+var lcpTargets = map[string][]string{}
+
+// breakdownRow is a page's LCP split into its parts and the page's network
+// shape, as medians (-breakdown).
+func breakdownRow(page string, results []sample) string {
+	med := func(k string) string {
+		var vs []float64
+		for _, r := range results {
+			if v, ok := r[k]; ok {
+				vs = append(vs, v)
+			}
+		}
+		if len(vs) == 0 {
+			return "–"
+		}
+		sort.Float64s(vs)
+		return fmt.Sprintf("%.0f", median(vs))
+	}
+	counts := map[string]int{}
+	top := ""
+	for _, t := range lcpTargets[page] {
+		counts[t]++
+		if counts[t] > counts[top] {
+			top = t
+		}
+	}
+	if top == "" {
+		top = "–"
+	} else if i := strings.LastIndex(top, ">"); i >= 0 {
+		top = "…" + top[i:]
+	}
+	catalog := "–"
+	if s, e := med("catalogStart"), med("catalogEnd"); s != "–" {
+		catalog = s + " → " + e
+	}
+	return fmt.Sprintf("| `%s` | %s | `%s` | %s | %s | %s | %s | %s | %s | %s / %s |\n", page, med("LCP"), top,
+		med("lcpTTFB"), med("lcpLoadDelay"), med("lcpLoadTime"), med("lcpRenderDelay"), catalog, med("fontsEnd"), med("kB"), med("requests"))
 }
 
 // checkBeacon visits path, leaves it for another page, and checks the field

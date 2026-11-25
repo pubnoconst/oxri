@@ -32,26 +32,14 @@ func renderInternalError(w http.ResponseWriter, r *http.Request, status int, cau
 	errorpage.RenderWithReference(w, status, "", ref)
 }
 
-// handleJournalsCatalog renders the /journals page frame immediately (0ms, independent of DB).
-// The browser then fetches /journals/content asynchronously via HTMX to populate the catalog.
-func handleJournalsCatalog(authSvc *auth.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_, authErr := serverfns.RequireAuth(authSvc, r)
-		isAuth := (authErr == nil)
-
-		contentURL := "/journals/content"
-		if r.URL.RawQuery != "" {
-			contentURL += "?" + r.URL.RawQuery
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = journals.CatalogShellPage(isAuth, contentURL).Render(w)
-	}
-}
-
-// handleJournalsCatalogContent queries the remote Turso DB and renders the catalog fragment
-// swapped into #journals-catalog-stage by HTMX.
-func handleJournalsCatalogContent(store *db.Store, authSvc *auth.Service, tweets *tweet.Filler) http.HandlerFunc {
+// handleJournalsCatalog renders /journals with its entries in the one
+// response: the page, the filter bar and this page of cards. It once sent an
+// empty frame and fetched the catalog afterwards (/journals/content); on a
+// budget phone that second request, started only once the frame and its
+// scripts had run, held the first entry back about 0.9 s (PROFILING.md). The
+// entries come from the in-memory snapshot, so the page costs the server
+// little more than the frame did, and the catalog works without JavaScript.
+func handleJournalsCatalog(store *db.Store, authSvc *auth.Service, tweets *tweet.Filler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, authErr := serverfns.RequireAuth(authSvc, r)
 		isAuth := (authErr == nil)
@@ -90,7 +78,7 @@ func handleJournalsCatalogContent(store *db.Store, authSvc *auth.Service, tweets
 		attachTweets(r.Context(), store, tweets, rendered)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = journals.CatalogContentFragment(isAuth, journals.CatalogView{
+		_ = journals.CatalogPage(isAuth, journals.CatalogView{
 			Entries:      rendered,
 			AllTags:      allTags,
 			Query:        q,

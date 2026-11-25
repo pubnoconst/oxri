@@ -46,7 +46,7 @@ func TestDestructiveActionsAskFirst(t *testing.T) {
 		return rec
 	}
 	count := func() int {
-		body := html.UnescapeString(do(http.MethodGet, "/journals/content", nil, false, true).Body.String())
+		body := html.UnescapeString(do(http.MethodGet, "/journals", nil, false, true).Body.String())
 		return strings.Count(body, `<article class="journal-card`)
 	}
 	for i := 1; i <= 3; i++ {
@@ -63,7 +63,7 @@ func TestDestructiveActionsAskFirst(t *testing.T) {
 	two, three := fmt.Sprint(list[1].ID), fmt.Sprint(list[2].ID)
 
 	// The catalog never relies on the browser's dialog.
-	catalog := do(http.MethodGet, "/journals/content", nil, false, true).Body.String()
+	catalog := do(http.MethodGet, "/journals", nil, false, true).Body.String()
 	if strings.Contains(catalog, "data-confirm=") {
 		t.Errorf("catalog still uses data-confirm (browser confirm())")
 	}

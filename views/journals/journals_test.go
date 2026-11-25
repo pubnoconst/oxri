@@ -53,7 +53,7 @@ func TestRenderMarkdownSanitizesRunesAndSchemes(t *testing.T) {
 func TestNewEntryLinkOnlyForAuthor(t *testing.T) {
 	render := func(isAuth bool) string {
 		var b strings.Builder
-		_ = CatalogShellPage(isAuth, "").Render(&b)
+		_ = CatalogPage(isAuth, CatalogView{}).Render(&b)
 		return b.String()
 	}
 	if out := render(false); strings.Contains(out, "Add new entry") || strings.Contains(out, `href="/journals/new"`) {
