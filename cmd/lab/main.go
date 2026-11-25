@@ -459,8 +459,9 @@ func checkBeacon(cfg config, path string) (string, error) {
 	}
 	var rep struct {
 		Samples []struct {
-			Name  string  `json:"name"`
-			Value float64 `json:"value"`
+			Name   string  `json:"name"`
+			Value  float64 `json:"value"`
+			Target string  `json:"target"`
 		} `json:"samples"`
 	}
 	if raw == "" || json.Unmarshal([]byte(raw), &rep) != nil {
@@ -470,7 +471,11 @@ func checkBeacon(cfg config, path string) (string, error) {
 	var parts []string
 	for _, s := range rep.Samples {
 		have[s.Name] = true
-		parts = append(parts, fmt.Sprintf("%s %g", s.Name, s.Value))
+		part := fmt.Sprintf("%s %g", s.Name, s.Value)
+		if s.Target != "" && s.Value > 0 {
+			part += " (" + s.Target + ")"
+		}
+		parts = append(parts, part)
 	}
 	for _, m := range []string{"LCP", "INP", "CLS", "TTFB"} {
 		if !have[m] {
