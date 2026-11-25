@@ -1,8 +1,8 @@
 # Next
 
-- **Base Commit on `main`**: `f8d9d43` (PR #81 — fonts back to swap)
-- **Active Branch**: `card-click-area` (PR #82): the whole catalog card opens its entry (RATIONALE 083).
-- **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
+- **Base Commit on `main`**: `4eb0b24` (PR #82: the whole catalog card opens its entry)
+- **Active Branch**: `larger-catalog` (PR #83): a 24-card catalog of equal widths, server stills for linked media, nothing plays until tapped (RATIONALE 084; schema v10 `media_thumbs`).
+- **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's Pixel 10 (owner, 2026-11-25: the S9+ holds other bootstrapping and is not to be disturbed).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
 
@@ -35,6 +35,7 @@ The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG
      - Compress locally so the lab matches production (Cloudflare serves Brotli).
      - Load htmx only for the signed-in author.
      - Edge caching of hashed assets (`cf-cache-status: DYNAMIC`).
+  5. **Scale** (RATIONALE 084 measured 150 cards at LCP 1.26 s): when entries number in the thousands, drop the per-request snapshot copy, pre-lowercase the search text, refresh incrementally, and consider FTS5. A resizing proxy for linked images on the entry page.
   Dropped (owner, 2026-11-25): APM, tracing, synthetics, a boot log. Field data plus the lab is enough for a site this size.
   Ruled out: Speculation Rules prerendering, `content-visibility: auto`. Kept on purpose: the 220 ms page fade-in.
 - **Local test server**: `DEV_AUTO_LOGIN=1 bin/server.exe` (real Turso from db.env, signed in). Saves change real data; a branch with a schema migration migrates the real database on start.
