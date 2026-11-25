@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `ee9eddd` (PR #69 — a typeface per author)
-- **Active Branch**: `frosted-overlays` (PR #70): every overlay is frosted glass (two standard glasses, HIG §4, guarded by a test); `DEV_AUTO_LOGIN=1` for a signed-in local test server on the real database (RATIONALE 071, `05fb3e7`).
+- **Base Commit on `main`**: `a73699c` (PR #70 — every overlay is frosted glass)
+- **Active Branch**: `warm-glass` (PR #71): warm glass (`--glass-light`, saturation 1.2); lists that open from a field are connected to it (RATIONALE 072, `97b5ec1`).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
