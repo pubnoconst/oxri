@@ -445,6 +445,44 @@
   object-fit: cover;
 }
 
+/* Reserved space (HIG §1.7: no sudden displacement). Media the browser
+   builds after the page arrives (journal-media.js) gets its final size now,
+   from its kind (mediakind.go), so the text below never moves when it
+   lands; it then eases in (opacity, media-fade-in) in place. */
+.journal-media-slot.is-video {
+  aspect-ratio: 16 / 9;
+}
+
+.journal-card.is-collage .journal-media-slot.is-video {
+  aspect-ratio: auto;
+  height: 13.5rem;
+}
+
+.journal-card.is-collage .journal-media-slot.is-video > iframe,
+.journal-card.is-collage .journal-media-slot.is-video > video {
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+}
+
+.journal-media-slot.is-audio {
+  min-height: calc(54px + 0.8rem);
+}
+
+/* An image's shape is unknown until it loads: it gets a fixed frame and is
+   fitted inside it, whole (contain), centred. */
+.journal-media-slot.is-image {
+  height: min(26rem, 80vw);
+}
+
+.journal-card.is-collage .journal-media-slot.is-image {
+  height: 13.5rem;
+}
+
+.journal-media-slot.is-image > img {
+  max-height: 100%;
+}
+
 /* Tags */
 .journal-entry-tags {
   display: flex;
@@ -819,4 +857,22 @@
 .journals-page-link.is-disabled {
   opacity: 0.35;
   pointer-events: none;
+}
+
+/* A catalog swap in flight (catalogSwap, htmx puts .htmx-request on the
+   stage): the current results stay where they are, and only if the answer is
+   slow (after 200 ms) do they dim, opacity only (HIG §1.5). The new stage
+   replaces this one in a single frame, at full opacity: no fade out, no fade
+   in. */
+#journals-catalog-stage.htmx-request .journals-feed,
+#journals-catalog-stage.htmx-request .journals-pagination {
+  opacity: 0.55;
+  transition: opacity 160ms ease 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #journals-catalog-stage.htmx-request .journals-feed,
+  #journals-catalog-stage.htmx-request .journals-pagination {
+    transition: none;
+  }
 }

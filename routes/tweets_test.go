@@ -69,7 +69,7 @@ func TestTweetsDrawnFromSnapshots(t *testing.T) {
 		`data-tweet-play`,
 		`referrerpolicy="no-referrer"`,
 		`href="https://x.com/a_writer/status/111"`,
-		`<div class="journal-media-slot journal-preview-media" data-media-url="` + without + `"></div>`,
+		`<div class="journal-media-slot journal-preview-media is-tweet" data-media-url="` + without + `"></div>`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("catalog missing %q", want)

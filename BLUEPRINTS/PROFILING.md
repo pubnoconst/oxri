@@ -153,6 +153,32 @@ The remaining spread is one run whose TTFB was 993 ms, a server-side spike, whic
 
 **Is the font the bottleneck? No.** The excerpt is drawn in the size-matched fallback; Playpen Sans arrives later and swaps in without a shift. Trimming Playpen (80 kB) would save bandwidth and bring the real face in sooner, but would not move LCP.
 
+### 2026-11-25: pages arrive whole and still (HIG §1.7)
+
+The lab now also scrolls each page to the end, a screen at a time, and reports the layout shift and the long frames (over 50 ms) during the scroll. `-debug` lists every shift's elements (position and height before and after) and every long frame's split (render, style and layout, blocking, scripts).
+
+`mage benchmark`, 10 cold budget-phone runs, real data:
+
+| `/journals` | Before | After |
+|---|---|---|
+| CLS | 0.015 on every run | **0.000** on every run |
+| Shift while scrolling | 0 | 0 |
+| Long frames while scrolling | 1 in 5 of 10 runs (51–68 ms) | 0 in 10 runs |
+| LCP (median) | 1608 ms | 1642 ms (within run-to-run spread) |
+
+The other pages were unchanged: CLS 0 (0.001 on `/book-i`), with no long frames while scrolling.
+
+**The 0.015 was not media.** `-debug` named a tweet clipping's signature line (`span.tweet-author`). In the size-matched fallback a name and handle wrapped to two lines (33 px), and they fitted on one once Short Stack arrived at about 1.9 s (17 px), moving the card below up 10 px. The line is now one line by design: no wrap, with the handle and then the name cut by an ellipsis.
+
+**Changed with it:**
+- **Media slots get their space from their kind** (`views/journals/mediakind.go`, which mirrors `journal-media.js`): video 16:9, audio the player's height, images a fixed frame with the image fitted inside. A plain link's card is drawn by the server.
+- **Page dimming is removed.** The tapped control turns pending at once instead, with the dots after 180 ms.
+- **The catalog's search, tags and pages swap the results in place.**
+
+**What remains:**
+- **One heavy frame at load (65–148 ms, nearly all style and layout)** as the web fonts replace the fallbacks. Nothing moves, but the page is laid out again. Only `font-display: optional` avoids it, at the cost of first visits keeping the fallback fonts.
+- **On the seeded site**, a quote's body text can still wrap one line differently once Short Stack arrives (CLS 0.008), for the same reason.
+
 ## In any Chrome tab, without tooling
 
 Paste into the console after the page has loaded:

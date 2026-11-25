@@ -752,28 +752,18 @@ summary.link-quiet::-webkit-details-marker {
   opacity: 0.7;
 }
 
-/* A navigation dims the page at once (a calm "received" cue); if it is slow
-   (navigation-feedback.js, 180 ms), a small fixed matrix appears at the
-   bottom. The loader itself is not dimmed.
-
-   A page that is still fetching its own content (the journals catalog while
-   Turso answers) shows its loader in the same place (.page-dot-loading), so
-   arriving from a link reads as one continuous wait, not a jump to the top. */
-:root.navigation-leaving body > :not(.nav-dot-loading) {
-  opacity: 0.6;
+/* The tapped link or button acknowledges the tap at once, while its page or
+   results are on the way (navigation-feedback.js, HIG §1.7). Opacity only. */
+.is-pending {
+  opacity: 0.55;
+  cursor: progress;
 }
 
-.page-dot-loading {
-  display: inline-flex;
-  margin: 0;
-}
-
+/* A slow navigation (navigation-feedback.js: no answer within 180 ms) shows
+   a small fixed matrix at the bottom centre. The page is not dimmed: the dots
+   are the acknowledgement. */
 .nav-dot-loading {
   display: none;
-}
-
-.nav-dot-loading,
-.page-dot-loading {
   position: fixed;
   left: 50%;
   bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));

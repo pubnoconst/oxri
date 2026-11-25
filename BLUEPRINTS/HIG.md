@@ -19,6 +19,12 @@ The reference reader's device is a **budget Android phone (Samsung Galaxy A02s)*
    - **Measured, not argued.** The yardstick is Google's Core Web Vitals at the 75th percentile of page views, mobile first: LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1. Field data from readers' browsers (Settings → Field Performance) is the evidence; a change that may move them is compared before shipping with the lab profile (`mage lab`), reading the spread and worst run as well as the median (PROFILING.md).
    - **The worst variance is the one the reader waits through:** a cold server that is sometimes instant and sometimes a long wake-up outweighs any front-end gain.
 
+7. **Pages arrive whole and still (owner, 2026-11-25).**
+   - **No sudden displacement.** Nothing moves once it is drawn. Content that arrives after the page gets its final space first: from what it is (a video is 16:9; an image sits in a fixed frame, fitted inside), so the text around it never shifts. CLS stays at 0; the CI performance job fails on any shift over 0.1.
+   - **New pages ease in at once.** One response carries the page and its content (never an empty frame waiting on a second request: RATIONALE 076), and it appears with the short page fade-in.
+   - **Content eases in stably.** Anything that arrives later fades in (opacity) in the space already reserved for it. Never unroll it by animating height: that relays the page out on every frame, which is the stutter §1.6 rules out on a budget phone.
+   - **Every tap is acknowledged at once, by the control itself.** The tapped link or button turns pending (`.is-pending`, opacity) the moment it is pressed; the dots follow only if the wait passes 180 ms. The page is never dimmed.
+
 ---
 
 ## 2. Typography
@@ -186,13 +192,12 @@ Waiting is shown with exactly one thing: a 3×3 matrix of 4 px dots, in `--page-
 | **Comet** | it is your turn | waiting for a passkey or security key | "Waiting for your Passkey…" |
 
 - **Seeded** means each instance differs: a page of cards loading together never flashes in unison. Pass a stable seed when one exists (the tweet ID); otherwise a random seed is used.
-- **In Go,** use `loading.Dots(label, loading.Twinkle)` or `loading.Puzzle`. The type admits no other motion. The comet is only ever started in the browser, by `passkey.js` while a passkey prompt is open, so it has no Go handle; add one only when a server-rendered page needs it.
+- **In Go,** the matrix is drawn by `views/loading` (the Confirming overlay); its `Motion` type admits only the puzzle and the twinkle. The comet is only ever started in the browser, by `passkey.js` while a passkey prompt is open, so it has no Go handle; add one only when a server-rendered page needs it.
 - **In JS,** use `ResImperiiDots.create(label, "twinkle", seed)`.
 - **Where the loader sits:**
   - **Inline**, where the result will appear: the tweet slot's centred "Loading preview" line.
   - **Overlay:** "Confirming, please wait." covers the page for form saves (`data-confirm-loading`).
-  - **Navigation:** the page dims to 60% at once. If the next page hasn't arrived after 180 ms, a small matrix appears at the bottom.
-  - **Page still loading its content** (the journals catalog waiting on the database): the loader stands in that same bottom-centre spot (`.page-dot-loading`), never at the top of the page, so following a link and waiting for the content read as one continuous wait.
+  - **Navigation and in-place results** (the catalog's search, tags and pages): the tapped control turns pending at once (§1.7). If the next page or the new results haven't arrived after 180 ms, a small matrix appears at the bottom centre. The page is not dimmed; in-place results stay visible until replaced, and dim only if the answer is slow.
 - **No box and no shadow around a loader.** A placeholder card is never drawn for content that hasn't arrived.
 - **Reduced motion:** the dots stand still at 60% opacity, and the label carries the meaning.
 
@@ -200,12 +205,14 @@ Waiting is shown with exactly one thing: a 3×3 matrix of 4 px dots, in `--page-
 
 | What | How | Timing |
 |---|---|---|
-| Content arriving (a tweet) | FLIP: the slot opens in one layout, then unrolls (bottom clip) while the content below slides from its old place | 460 ms, `cubic-bezier(0.22, 1, 0.36, 1)` |
+| Media arriving after the page (an image, a video, an audio player) | eases in (opacity) in the space reserved from its kind | 300 ms |
+| A post on X with no stored snapshot (rare: snapshots are taken on save) | X's embed, whose height is unknown: the slot opens in one layout, then unrolls (bottom clip) while the content below slides from its old place (FLIP) | 460 ms, `cubic-bezier(0.22, 1, 0.36, 1)` |
 | Page to page | cross-document view transition: old fades out, new eases in | 160 ms out, 220 ms in |
+| Results swapped in place (search, tags, pages) | replaced in a single frame, no fade | none |
 | Control feedback | colour, opacity, an underline, or a 1 px press (§5 Links and buttons) | 140 ms (`--interact-duration`) |
-| Navigation received | page dims to 60% | immediate |
+| Tap received | the tapped control turns pending (opacity 0.55) | immediate |
 
-- **Arrivals push; they never pop.** Nothing appears at full size over existing content, and no content jumps.
+- **Arrivals never displace (§1.7).** Their space is reserved and they ease in. The one exception is X's own embed, whose height cannot be known: it unrolls rather than popping. Nothing appears at full size over existing content.
 - **Interrupted motion continues from where it visibly is,** never from where the layout says it is (RATIONALE 047).
 - **`prefers-reduced-motion`:** animations collapse to their end state.
 

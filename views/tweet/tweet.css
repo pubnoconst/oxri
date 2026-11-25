@@ -89,11 +89,32 @@
   object-fit: cover;
 }
 
+/* One line, whatever the font (HIG §1.7). It used to wrap: in the size-matched
+   fallback a name and handle could take two lines and fit on one once Short
+   Stack arrived, moving the card below up 10 px (CLS 0.015 on /journals). The
+   handle gives way first, then the name, each cut with an ellipsis. */
 .tweet-author {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0 0.35rem;
   min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.tweet-author > .tweet-name,
+.tweet-author > .tweet-handle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tweet-author > .tweet-name {
+  flex: 0 1 auto;
+}
+
+.tweet-author > .tweet-handle {
+  flex: 0 100 auto;
 }
 
 /* No bold (HIG §2): the name is set apart by full ink beside the dimmed
