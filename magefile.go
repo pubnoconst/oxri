@@ -5,8 +5,12 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"os/exec"
 	"runtime"
+	"strings"
+	"time"
 
 	"github.com/magefile/mage/sh"
 )
@@ -70,6 +74,69 @@ func Lab() error {
 	}
 	fmt.Println("==> Lab: budget-phone profile, 5 cold runs per page against " + base)
 	return sh.RunV("go", "run", "./cmd/lab", "-base", base, "-runs", "5", "-out", "bin/lab.md")
+}
+
+// Benchmark measures the site with its real data against Google's Core Web
+// Vitals (PROFILING.md): it builds the server, starts it signed out on
+// 127.0.0.1:8089 against the database in db.env (reads only: a signed-out
+// reader writes nothing, and local views are not recorded as field data),
+// runs 10 cold budget-phone runs per page with each page's LCP broken into
+// its parts, writes bin/benchmark.md, and stops the server. Needs Chrome.
+func Benchmark() error {
+	if err := os.MkdirAll("bin", 0755); err != nil {
+		return err
+	}
+	bin := "bin/server-bench"
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	fmt.Println("==> Benchmark: building the server...")
+	if err := sh.RunWithV(envWithCgoDisabled(), "go", "build", "-o", bin, "./cmd/server"); err != nil {
+		return err
+	}
+	const addr = "127.0.0.1:8089"
+	server := exec.Command(bin)
+	server.Env = append(withoutEnv(os.Environ(), "DEV_AUTO_LOGIN", "ADDR"), "ADDR="+addr)
+	server.Stdout, server.Stderr = os.Stdout, os.Stderr
+	if err := server.Start(); err != nil {
+		return err
+	}
+	defer func() { _ = server.Process.Kill(); _, _ = server.Process.Wait() }()
+
+	base := "http://" + addr
+	deadline := time.Now().Add(45 * time.Second)
+	for {
+		res, err := http.Get(base + "/healthz")
+		if err == nil {
+			_ = res.Body.Close()
+			if res.StatusCode == http.StatusOK {
+				break
+			}
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("benchmark: the server did not answer at %s", base)
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+	fmt.Println("==> Benchmark: 10 cold budget-phone runs per page against real data at " + base)
+	return sh.RunV("go", "run", "./cmd/lab", "-base", base, "-runs", "10", "-breakdown", "-budget", "-out", "bin/benchmark.md")
+}
+
+// withoutEnv drops the named variables from env.
+func withoutEnv(env []string, names ...string) []string {
+	var out []string
+	for _, kv := range env {
+		keep := true
+		for _, n := range names {
+			if strings.HasPrefix(kv, n+"=") {
+				keep = false
+			}
+		}
+		if keep {
+			out = append(out, kv)
+		}
+	}
+	return out
 }
 
 // Check validates formatting, tests, the JavaScript types, and static builds.

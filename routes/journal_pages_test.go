@@ -66,7 +66,7 @@ func TestJournalCatalogIsPaginated(t *testing.T) {
 	cards := func(body string) int { return strings.Count(body, "<article class=\"journal-card") }
 	size := journals.CatalogPageSize
 
-	p1 := page("/journals/content")
+	p1 := page("/journals")
 	if got := cards(p1); got != size {
 		t.Fatalf("page 1 shows %d cards, want %d", got, size)
 	}
@@ -79,7 +79,7 @@ func TestJournalCatalogIsPaginated(t *testing.T) {
 		t.Errorf("page 1 must not include page 2's entries")
 	}
 
-	p3 := page("/journals/content?page=3")
+	p3 := page("/journals?page=3")
 	if got := cards(p3); got != n-2*size {
 		t.Fatalf("page 3 shows %d cards, want %d", got, n-2*size)
 	}
@@ -91,18 +91,18 @@ func TestJournalCatalogIsPaginated(t *testing.T) {
 	}
 
 	// Untrusted page numbers clamp rather than error.
-	if !strings.Contains(page("/journals/content?page=999"), "Page 3 of 3") || !strings.Contains(page("/journals/content?page=abc"), "Page 1 of 3") {
+	if !strings.Contains(page("/journals?page=999"), "Page 3 of 3") || !strings.Contains(page("/journals?page=abc"), "Page 1 of 3") {
 		t.Errorf("out-of-range or junk page numbers must clamp")
 	}
 
 	// Filters carry across pages: 15 Dev entries -> 2 pages.
-	dev := page("/journals/content?tag=Dev&page=2")
+	dev := page("/journals?tag=Dev&page=2")
 	if !strings.Contains(dev, "Page 2 of 2") || !strings.Contains(dev, `href="/journals?tag=Dev"`) || cards(dev) != 15-size {
 		t.Errorf("filtered page 2: want Page 2 of 2, a Newer link keeping tag=Dev, and %d cards (got %d)", 15-size, cards(dev))
 	}
 
 	// One page: no pagination, plain "Select all".
-	one := page("/journals/content?q=Entry+7+marker")
+	one := page("/journals?q=Entry+7+marker")
 	if strings.Contains(one, "journals-pagination") || !strings.Contains(one, ">Select all<") {
 		t.Errorf("a single page must render no pagination and the plain Select all label")
 	}

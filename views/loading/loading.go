@@ -42,15 +42,6 @@ var (
 	// the browser, by passkey.js while a passkey prompt is open.
 )
 
-// Dots renders the site's loader: a 3x3 dot matrix in the given motion and a
-// label (site.css .dot-loading). The JS twin is ResImperiiDots.create.
-func Dots(label string, m Motion) g.Node {
-	return h.Span(h.Class("dot-loading"),
-		dotMatrix(m),
-		h.Span(h.Class("dot-loading-label"), g.Text(label)),
-	)
-}
-
 // dotMatrix is the 3x3 matrix alone (nine dots). dot-matrix.js starts it with
 // a fresh seed; the Confirming phrase uses it directly, beside the phrase.
 func dotMatrix(m Motion) g.Node {

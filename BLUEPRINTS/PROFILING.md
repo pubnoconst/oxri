@@ -54,6 +54,12 @@ go run ./cmd/lab -beacon                        # leaving each page builds a com
 
 (In Git Bash, prefix with `MSYS_NO_PATHCONV=1` so `/journals` is not rewritten into a Windows path.)
 
+**`mage benchmark`: the site with its real data, against Google's lines.**
+- It builds the server and starts it signed out on `127.0.0.1:8089` against the database in `db.env`. It only reads, and local views are never recorded as field data.
+- It runs 10 cold budget-phone loads per page with `-breakdown`, writes `bin/benchmark.md`, then stops the server.
+- `-breakdown` splits each page's LCP the way `web-vitals` attributes it: server (TTFB), the wait before the LCP element's resource is requested, its download, and the render delay. It also shows the LCP element, when the catalog's request ran, when the last font arrived, and the page's kB and requests.
+- For a text LCP element there is no resource, so the whole wait to draw it is render delay.
+
 - **Device.** `cmd/lab` drives headless Chrome emulating a budget phone, using Lighthouse's mobile defaults:
   - 412×823 CSS px at 1.75 DPR, touch input, an Android Chrome user agent;
   - CPU 4× slower;
@@ -121,6 +127,31 @@ All medians are "good" in both builds. Self-hosting removed the layout shift (a 
 4. **Fallbacks tuned to one platform's fonts.** The first CI run (Ubuntu, no Georgia) measured CLS 0.194 on every `/book-i` run: the book's fallback was tuned to Georgia only, so Linux fell through to its wider default serif and reflowed when EB Garamond arrived. Android, the reference reader's platform, has neither Georgia nor Arial either. Each role now has one measured fallback per system font family (Georgia, Times New Roman / Liberation Serif, Noto Serif; Arial / Helvetica / Liberation Sans, Roboto).
 
 **Server variance** (field data will show it): the first `/journals/content` after the server starts took 788 ms; warm, 17 ms.
+
+### 2026-11-25: `/journals` renders its catalog in the page (PR #75)
+
+`mage benchmark`, 10 cold budget-phone runs, real data, signed out.
+
+**Before:** the page sent an empty frame, then htmx requested `/journals/content` once the frame and its scripts had run. The LCP element is the first entry's excerpt (text), so all of its wait was render delay:
+
+| | Before | After |
+|---|---|---|
+| `/journals` LCP, median ± spread (worst) | 2274 ± 800 ms (2972) | **1498 ± 872 ms** (2320) |
+| Render delay (median) | 2122 ms | 1326 ms |
+| Catalog request | 1382 → 1765 ms | none |
+| Last font | 2961 ms | 2335 ms |
+| Weight | 321 kB / 22 requests | 320 kB / 21 |
+
+**Where the 0.9 s went before:**
+- The catalog was requested only at about 1.38 s, once the frame was drawn and htmx had run.
+- It arrived about 0.38 s later.
+- Then a deliberate 120 ms swap pause and the layout of the cards followed.
+
+**Now** the catalog comes with the page, the dot loader is gone, and the catalog also works without JavaScript.
+
+The remaining spread is one run whose TTFB was 993 ms, a server-side spike, which is field data's to watch. The other pages are about 1.2 to 1.3 s, with about 1 s on every page between first byte and first text (render-blocking CSS and the head script under a 4× slower CPU, plus the kept 220 ms fade-in).
+
+**Is the font the bottleneck? No.** The excerpt is drawn in the size-matched fallback; Playpen Sans arrives later and swaps in without a shift. Trimming Playpen (80 kB) would save bandwidth and bring the real face in sooner, but would not move LCP.
 
 ## In any Chrome tab, without tooling
 

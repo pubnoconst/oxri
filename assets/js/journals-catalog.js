@@ -1,6 +1,6 @@
 /*
  * Selection and confirmation controls for the authenticated journal catalog.
- * Re-binds automatically whenever HTMX swaps in the catalog fragment (/journals/content).
+ * Re-binds whenever HTMX swaps in new content (a batch prompt).
  */
 (() => {
   function initCatalogControls() {
