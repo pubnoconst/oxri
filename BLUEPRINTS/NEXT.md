@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `4eb0b24` (PR #82: the whole catalog card opens its entry)
-- **Active Branch**: `larger-catalog` (PR #83): a 24-card catalog of equal widths, server stills for linked media, nothing plays until tapped (RATIONALE 084; schema v10 `media_thumbs`).
+- **Base Commit on `main`**: `4cc0cf7` (PR #83: a 24-card catalog, server stills, nothing plays until tapped; schema v10 `media_thumbs`)
+- **Active Branch**: `excerpt-single-newlines` (PR #84): a paragraph break is one newline in the card preview (RATIONALE 085).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's Pixel 10 (owner, 2026-11-25: the S9+ holds other bootstrapping and is not to be disturbed).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
