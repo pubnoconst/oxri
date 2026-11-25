@@ -17,16 +17,48 @@ type ListFilter struct {
 	Tags               []string
 }
 
+// allEntriesCached serves the in-memory snapshot of every entry. The
+// snapshot is stale-while-revalidate (HIG §1.6): once older than
+// readCacheTTL it is still served at once, and one background refresh brings
+// it up to date, so no reader waits on the database. (Before, the first
+// reader after it expired waited for the round trip: a 0.7–1.1 s spike
+// about every two minutes, found by Server-Timing.) The TTL keeps entries
+// written by another server (a second host on the same database) from
+// staying stale for long. Only a snapshot that was never loaded, or that a
+// write here discarded, is loaded while the reader waits, so the author's
+// own changes always show at once.
 func (s *Store) allEntriesCached(ctx context.Context) ([]Journal, error) {
 	s.cacheMu.RLock()
-	if s.cacheValid && time.Since(s.cacheLoadedAt) < readCacheTTL {
+	if s.cacheValid {
 		cp := make([]Journal, len(s.cachedEntries))
 		copy(cp, s.cachedEntries)
+		stale := time.Since(s.cacheLoadedAt) >= readCacheTTL
 		s.cacheMu.RUnlock()
+		if stale {
+			s.refreshEntriesInBackground()
+		}
 		return cp, nil
 	}
 	s.cacheMu.RUnlock()
+	return s.loadEntries(ctx)
+}
 
+// refreshEntriesInBackground reloads the snapshot once, however many readers
+// find it stale.
+func (s *Store) refreshEntriesInBackground() {
+	if !s.entriesRefreshing.CompareAndSwap(false, true) {
+		return
+	}
+	go func() {
+		defer s.entriesRefreshing.Store(false)
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		_, _ = s.loadEntries(ctx)
+	}()
+}
+
+// loadEntries reads every entry from the database into the snapshot.
+func (s *Store) loadEntries(ctx context.Context) ([]Journal, error) {
 	const q = `SELECT ` + journalColumns + ` FROM journals ORDER BY created_at DESC, id DESC;`
 	rows, err := s.db.QueryContext(ctx, q)
 	if err != nil {
@@ -132,8 +164,12 @@ func (s *Store) TagsByUse(ctx context.Context, includeUnpublished bool) ([]strin
 // the background).
 func (s *Store) TagsByUseCachedOnly(includeUnpublished bool) []string {
 	s.cacheMu.RLock()
-	valid := s.cacheValid && time.Since(s.cacheLoadedAt) < readCacheTTL
+	valid := s.cacheValid
+	stale := valid && time.Since(s.cacheLoadedAt) >= readCacheTTL
 	var snapshot []Journal
+	if stale {
+		defer s.refreshEntriesInBackground()
+	}
 	if valid {
 		snapshot = make([]Journal, len(s.cachedEntries))
 		copy(snapshot, s.cachedEntries)

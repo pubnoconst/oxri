@@ -18,14 +18,14 @@ html {
 }
 
 body {
-  min-height: 100svh;
+  min-height: var(--full-height);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--depth-0-surface);
   color: var(--page-ink);
   font-family: var(--font-ui);
-  animation: 220ms ease-in-out both page-fade-in;
+  animation: 100ms ease-in-out both page-fade-in;
   transition: background-color 200ms ease, color 200ms ease, opacity 160ms ease-in-out;
 }
 
@@ -124,6 +124,9 @@ p, h1, h2, h3, h4, h5, h6 {
   /* Spacing Scale */
   --space-page-y: clamp(1.75rem, 5vw, 4.25rem);
   --space-page-x: clamp(1.25rem, 3vw, 2rem);
+  /* Space above every page for the theme switch's row (layout.ThemeToggle). */
+  --top-reserve: max(0px, calc(3.5rem + env(safe-area-inset-top, 0px) - var(--space-page-y)));
+  --full-height: calc(100svh - var(--top-reserve));
   --space-header-top: 2rem;
   --space-header-bottom: 2.25rem;
   --space-card-pad: 1.65rem;
@@ -470,7 +473,7 @@ summary.link-quiet::-webkit-details-marker {
 
 .confirm-page {
   display: grid;
-  min-height: 100svh;
+  min-height: var(--full-height);
   padding: var(--space-page-y) var(--space-page-x);
   place-items: center;
   box-sizing: border-box;
@@ -714,7 +717,7 @@ summary.link-quiet::-webkit-details-marker {
 }
 
 ::view-transition-new(root) {
-  animation: 220ms ease-in-out both page-fade-in;
+  animation: 100ms ease-in-out both page-fade-in;
 }
 
 /* ---- Loading: a 3x3 dot matrix ---------------------------------------------
@@ -750,6 +753,62 @@ summary.link-quiet::-webkit-details-marker {
   font-size: 0.95rem;
   letter-spacing: 0.01em;
   opacity: 0.7;
+}
+
+/* The theme switch (layout.ThemeToggle): top right of every page, part of
+   the page (it scrolls away with it, never floats over content). A quiet
+   icon button: ink at reduced opacity, full on hover; a 44 px target. The
+   moon shows in light mode, the sun in dark: the theme a tap switches to. */
+.theme-toggle {
+  position: absolute;
+  top: calc(0.6rem + env(safe-area-inset-top, 0px));
+  right: calc(0.6rem + env(safe-area-inset-right, 0px));
+  z-index: 5;
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--page-ink);
+  opacity: 0.62;
+  cursor: pointer;
+  transition: opacity var(--interact-duration) ease, background-color var(--interact-duration) ease;
+}
+
+/* Its row is reserved, so it never sits on a page's own top controls (the
+   book's Edit, a back link): pages start at least 3.5rem down. Where a
+   page's own top margin is already that large (desktop), nothing changes;
+   on a phone the page starts a little lower. Pages sized to fill the screen
+   subtract it (--top-reserve), so a short page does not start to scroll. */
+body {
+  padding-top: var(--top-reserve);
+}
+
+.theme-toggle:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--page-ink) 8%, transparent);
+}
+
+.theme-icon-sun,
+:root[data-theme="dark"] .theme-icon-moon {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-icon-sun {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-icon-moon {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .theme-icon-sun {
+    display: block;
+  }
 }
 
 /* The tapped link or button acknowledges the tap at once, while its page or

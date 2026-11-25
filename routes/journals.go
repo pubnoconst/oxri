@@ -59,6 +59,7 @@ func handleJournalsCatalog(store *db.Store, authSvc *auth.Service, tweets *tweet
 		var page paging.Page
 		if store != nil {
 			var err error
+			doneDB := timed(r.Context(), "db")
 			entries, err = store.ListFiltered(r.Context(), db.ListFilter{
 				IncludeUnpublished: isAuth,
 				Query:              q,
@@ -69,13 +70,16 @@ func handleJournalsCatalog(store *db.Store, authSvc *auth.Service, tweets *tweet
 				return
 			}
 			allTags, _ = store.TagsByUse(r.Context(), isAuth)
+			doneDB()
 		}
 		// Only this page's entries are rendered (Markdown included): the DOM and
 		// the number of tweet iframes stay bounded however large the archive grows.
 		entries, page = paging.Slice(entries, paging.Parse(r.URL.Query().Get("page")), journals.CatalogPageSize)
 
 		rendered := journals.RenderEntries(entries)
+		doneTweets := timed(r.Context(), "tweets")
 		attachTweets(r.Context(), store, tweets, rendered)
+		doneTweets()
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = journals.CatalogPage(isAuth, journals.CatalogView{
@@ -122,7 +126,9 @@ func handleJournalEntry(store *db.Store, authSvc *auth.Service, tweets *tweet.Fi
 		_, authErr := serverfns.RequireAuth(authSvc, r)
 		isAuth := (authErr == nil)
 
+		doneDB := timed(r.Context(), "db")
 		entry, err := store.Get(r.Context(), id, isAuth)
+		doneDB()
 		if err != nil {
 			if errors.Is(err, db.ErrNotFound) {
 				errorpage.Render(w, http.StatusNotFound, "")
@@ -134,7 +140,9 @@ func handleJournalEntry(store *db.Store, authSvc *auth.Service, tweets *tweet.Fi
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		rendered := []journals.RenderedEntry{journals.RenderSingle(*entry)}
+		doneTweets := timed(r.Context(), "tweets")
 		attachTweets(r.Context(), store, tweets, rendered)
+		doneTweets()
 		_ = journals.EntryPage(isAuth, rendered[0]).Render(w)
 	}
 }

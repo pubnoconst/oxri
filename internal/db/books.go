@@ -76,15 +76,40 @@ func (s *Store) GetBook(ctx context.Context, slug string) (*Book, error) {
 		return nil, errors.New("database store is not initialized")
 	}
 
+	// Stale-while-revalidate, as allEntriesCached: a cached book is served at
+	// once, and once older than readCacheTTL one background read refreshes it.
 	s.bookCacheMu.RLock()
 	if s.cachedBooks != nil {
-		if b, found := s.cachedBooks[slug]; found && time.Since(s.bookCacheAt[slug]) < readCacheTTL {
+		if b, found := s.cachedBooks[slug]; found {
+			stale := time.Since(s.bookCacheAt[slug]) >= readCacheTTL
 			s.bookCacheMu.RUnlock()
+			if stale {
+				s.refreshBookInBackground(slug)
+			}
 			cp := b
 			return &cp, nil
 		}
 	}
 	s.bookCacheMu.RUnlock()
+	return s.loadBook(ctx, slug, title)
+}
+
+// refreshBookInBackground rereads one book once, however many readers find
+// it stale.
+func (s *Store) refreshBookInBackground(slug string) {
+	if _, running := s.booksRefreshing.LoadOrStore(slug, struct{}{}); running {
+		return
+	}
+	go func() {
+		defer s.booksRefreshing.Delete(slug)
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		_, _ = s.loadBook(ctx, slug, canonicalBooks[slug])
+	}()
+}
+
+// loadBook reads one book from the database into the cache.
+func (s *Store) loadBook(ctx context.Context, slug, title string) (*Book, error) {
 
 	var b Book
 	var updatedMs int64

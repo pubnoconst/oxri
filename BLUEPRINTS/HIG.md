@@ -14,7 +14,7 @@ The reference reader's device is a **budget Android phone (Samsung Galaxy A02s)*
 4. **Plain words.** Say what is happening in the reader's terms ("Confirming, please wait.", "Make Room"), never in the system's ("POST failed", "quota exceeded").
 5. **Cheap to draw.** Animate only `opacity` and `transform`. No SVG filters over content and no animated layout properties (`height`, `top`, `width`). Bound every list (pagination).
 6. **Stable beats peak.** A steady frame rate is worth more than a higher best case; a predictable wait is worth more than a sometimes-faster one. Judge every performance change by the variance it adds or removes, on the A02s, before its best-case speed.
-   - **Prefer:** fixed, cheap costs every time (the page's 220 ms opacity fade-in; the shell's instant first paint); work done once, up front, off the scroll (pagination, server-rendered snapshots); anything that removes a jump (fonts served from the site with size-matched fallbacks, so text never reflows when a font arrives; content in the first response instead of popped in later).
+   - **Prefer:** fixed, cheap costs every time (the page's 100 ms opacity fade-in; the shell's instant first paint); work done once, up front, off the scroll (pagination, server-rendered snapshots); anything that removes a jump (fonts served from the site with size-matched fallbacks, so text never reflows when a font arrives; content in the first response instead of popped in later).
    - **Avoid:** speed that only sometimes happens (speculative prerendering: instant when it guesses right, slower and busier on a budget phone when it doesn't); work moved into scrolling (`content-visibility: auto`, which lays content out as it scrolls in and makes the scrollbar jump); anything whose timing depends on the network once the page is showing.
    - **Measured, not argued.** The yardstick is Google's Core Web Vitals at the 75th percentile of page views, mobile first: LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1. Field data from readers' browsers (Settings → Field Performance) is the evidence; a change that may move them is compared before shipping with the lab profile (`mage lab`), reading the spread and worst run as well as the median (PROFILING.md).
    - **The worst variance is the one the reader waits through:** a cold server that is sometimes instant and sometimes a long wake-up outweighs any front-end gain.
@@ -23,6 +23,7 @@ The reference reader's device is a **budget Android phone (Samsung Galaxy A02s)*
    - **No sudden displacement.** Nothing moves once it is drawn. Content that arrives after the page gets its final space first: from what it is (a video is 16:9; an image sits in a fixed frame, fitted inside), so the text around it never shifts. CLS stays at 0; the CI performance job fails on any shift over 0.1.
    - **New pages ease in at once.** One response carries the page and its content (never an empty frame waiting on a second request: RATIONALE 076), and it appears with the short page fade-in.
    - **Content eases in stably.** Anything that arrives later fades in (opacity) in the space already reserved for it. Never unroll it by animating height: that relays the page out on every frame, which is the stutter §1.6 rules out on a budget phone.
+   - **The theme never flashes.** The light/dark switch sits at the top right of every page (`layout.ThemeToggle`: the moon in light mode, the sun in dark, the theme a tap switches to; a 44 px target). Its row is reserved (`--top-reserve`), so it never overlaps a page's own controls on a phone, and pages sized to the screen subtract it (`--full-height`). The first visit follows the device; a tap is remembered (`localStorage`) and applied before the first paint by the one inline script (`assets.ThemeInitJS`, allowed by its hash in the CSP). The double-click on empty background also switches.
    - **Every tap is acknowledged at once, by the control itself.** The tapped link or button turns pending (`.is-pending`, opacity) the moment it is pressed; the dots follow only if the wait passes 180 ms. The page is never dimmed.
 
 ---
@@ -208,7 +209,7 @@ Waiting is shown with exactly one thing: a 3×3 matrix of 4 px dots, in `--page-
 |---|---|---|
 | Media arriving after the page (an image, a video, an audio player) | eases in (opacity) in the space reserved from its kind | 300 ms |
 | A post on X with no stored snapshot (rare: snapshots are taken on save) | X's embed, whose height is unknown: the slot opens in one layout, then unrolls (bottom clip) while the content below slides from its old place (FLIP) | 460 ms, `cubic-bezier(0.22, 1, 0.36, 1)` |
-| Page to page | cross-document view transition: old fades out, new eases in | 160 ms out, 220 ms in |
+| Page to page | cross-document view transition: old fades out, new eases in | 160 ms out, 100 ms in |
 | Results swapped in place (search, tags, pages) | replaced in a single frame, no fade | none |
 | Control feedback | colour, opacity, an underline, or a 1 px press (§5 Links and buttons) | 140 ms (`--interact-duration`) |
 | Tap received | the tapped control turns pending (opacity 0.55) | immediate |

@@ -4,7 +4,7 @@
  */
 
 .landing {
-  min-height: 100vh;
+  min-height: var(--full-height);
   padding: 0 2rem;
   user-select: none;
   -webkit-user-select: none;

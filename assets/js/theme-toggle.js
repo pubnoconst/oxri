@@ -1,21 +1,14 @@
 /*
- * Restore a theme selected in this tab and allow toggling it with a double-click
- * on any empty part of the background site-wide. The system preference is default.
+ * Light and dark. The first visit follows the device's setting; the theme
+ * switch at the top right of every page (layout.ThemeToggle), or a
+ * double-click on any empty part of the background, flips it, and the choice
+ * is remembered across visits. assets.ThemeInitJS (inline, in <head>)
+ * applies a remembered choice before the first paint, so no page flashes the
+ * other theme; this script keeps the browser chrome in step and switches.
  */
 (() => {
   const root = document.documentElement;
   const storageKey = "res-imperii-theme";
-
-  // sessionStorage lasts for this browser tab's session; if storage is blocked,
-  // the visual toggle still works for the current page without being saved.
-  function readSessionTheme() {
-    try {
-      const saved = window.sessionStorage.getItem(storageKey);
-      return saved === "light" || saved === "dark" ? saved : null;
-    } catch {
-      return null;
-    }
-  }
 
   // The browser chrome (status bar, installed-app title bar) follows the page
   // colour of the chosen theme; layout.go sets the system-theme defaults.
@@ -32,35 +25,49 @@
     root.dataset.theme = theme;
     syncThemeColor(theme);
     try {
-      window.sessionStorage.setItem(storageKey, theme);
+      window.localStorage.setItem(storageKey, theme);
     } catch {
-      // Keep the in-memory override even when this browser disallows storage.
+      // Storage blocked: the switch still works for this page.
     }
   }
 
-  const savedTheme = readSessionTheme();
-  if (savedTheme) {
-    root.dataset.theme = savedTheme;
-    syncThemeColor(savedTheme);
+  function toggle() {
+    const systemIsDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const current = root.dataset.theme || (systemIsDark ? "dark" : "light");
+    applyTheme(current === "dark" ? "light" : "dark");
   }
 
-  // Double-clicking on empty background toggles theme site-wide.
-  // Interactions with text selections, links, buttons, form controls, code,
-  // or embedded media do not trigger the toggle.
+  // A choice from before this change lasted only for its tab
+  // (sessionStorage); carry it over once.
+  try {
+    const old = window.sessionStorage.getItem(storageKey);
+    if ((old === "light" || old === "dark") && !window.localStorage.getItem(storageKey)) {
+      window.localStorage.setItem(storageKey, old);
+      root.dataset.theme = old;
+    }
+    window.sessionStorage.removeItem(storageKey);
+  } catch {
+    // Storage blocked: nothing to carry over.
+  }
+
+  const saved = root.dataset.theme;
+  if (saved === "light" || saved === "dark") syncThemeColor(saved);
+
+  document.addEventListener("click", (event) => {
+    const button = event.target instanceof Element ? event.target.closest("[data-theme-toggle]") : null;
+    if (button) toggle();
+  });
+
+  // Double-clicking on empty background toggles too. Interactions with text
+  // selections, links, buttons, form controls, code, or embedded media do not.
   window.addEventListener("dblclick", (event) => {
-    // Ignore interactive elements, form controls, links, code, and embedded media
     if (!(event.target instanceof Element)) return;
     const interactive = event.target.closest(
       "a, button, input, textarea, select, label, code, pre, iframe, video, audio, [contenteditable='true']"
     );
     if (interactive) return;
-
-    // Ignore intentional text selection gestures
     const selection = window.getSelection();
     if (selection && selection.toString().trim().length > 0) return;
-
-    const systemIsDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const currentTheme = root.dataset.theme || (systemIsDark ? "dark" : "light");
-    applyTheme(currentTheme === "dark" ? "light" : "dark");
+    toggle();
   });
 })();

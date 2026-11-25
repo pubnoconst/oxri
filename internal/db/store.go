@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/oxri/oxri-go/internal/domain"
@@ -45,10 +46,14 @@ type Store struct {
 	cachedEntries []Journal
 	cacheValid    bool
 	cacheLoadedAt time.Time
+	// entriesRefreshing: a background refresh of a stale snapshot is running
+	// (stale-while-revalidate, allEntriesCached).
+	entriesRefreshing atomic.Bool
 
-	bookCacheMu sync.RWMutex
-	cachedBooks map[string]Book
-	bookCacheAt map[string]time.Time
+	bookCacheMu     sync.RWMutex
+	cachedBooks     map[string]Book
+	bookCacheAt     map[string]time.Time
+	booksRefreshing sync.Map // slug -> struct{}: a background refresh is running
 
 	tweets tweetCache
 }

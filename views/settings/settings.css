@@ -5,7 +5,7 @@
 
 .settings-page {
   width: min(52rem, 100%);
-  min-height: 100svh;
+  min-height: var(--full-height);
   margin: 0 auto;
   padding: var(--space-page-y) var(--space-page-x) 5rem;
   box-sizing: border-box;

@@ -25,7 +25,9 @@ func handleBookView(store *db.Store, authSvc *auth.Service, slug string) http.Ha
 
 		body := "# " + title + "\n\n*Forthcoming.*"
 		if store != nil {
+			doneDB := timed(r.Context(), "db")
 			b, err := store.GetBook(r.Context(), slug)
+			doneDB()
 			if err != nil {
 				renderInternalError(w, r, http.StatusInternalServerError, err)
 				return
