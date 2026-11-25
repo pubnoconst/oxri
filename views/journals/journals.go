@@ -537,7 +537,7 @@ func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 
 	var dateNode g.Node
 	if isCollage {
-		dateNode = h.A(h.Class("entry-date entry-card-link link-quiet"), h.Href(EntryURL(item.Entry.ID)), g.Text(item.FormattedDate))
+		dateNode = h.A(h.Class("entry-date entry-card-link"), h.Href(EntryURL(item.Entry.ID)), g.Text(item.FormattedDate))
 	} else {
 		dateNode = h.Span(h.Class("entry-date"), g.Text(item.FormattedDate))
 	}
