@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `08f5cd9` (PR #67 — long pasted links stay whole; media that fails to load becomes a link card)
-- **Active Branch**: `tweet-snapshot-on-save` (PR #68): a new entry's tweet snapshot is fetched before the save redirects, so the catalog shows the site's card without a refresh (RATIONALE 069, `82a7c73`).
+- **Base Commit on `main`**: `e5c0666` (PR #68 — tweet snapshot fetched before the save redirects)
+- **Active Branch**: `typeface-experiment` (PR #69): a typeface per author (Figtree UI, Playpen Sans entries, Happy Monkey quotes, Didact Gothic Greek; books keep EB Garamond) (RATIONALE 070, `6f5e6b9`).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
@@ -25,6 +25,7 @@ The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG
 
 ## Next on Mind
 
+- **Typefaces (PR #69)**: look at entries, quotes and a long passage on the S9+. Possible next: self-host the fonts and route all Greek to Didact Gothic with `unicode-range`, so a Greek phrase in an entry no longer switches face midway (and no third-party font request).
 0. **Scripture media (PR #65)**: on the S9+, tap and scroll the Book list, then save a passage and check the card. Set aside by the owner: highlighting phrases (must not put markup in the database). Possible later: ranges across chapters, other scriptures in the Scripture dropdown.
 1. On the S9+ (and desktop), after PR #46 ships: seeded twinkles on tweet slots, the puzzle on Confirming and sign-in, the comet on passkey prompts, and cards unrolling smoothly (no snap) as tweets arrive.
    - Done in PR #56: tweets are server-drawn clippings (no X script); the remaining embeds (no snapshot yet, or a tapped video) are built only near the screen. Still open: check what the catalog does if `/journals/content` stalls (it now says "offline"/"couldn't reach the server" on a send error, PR #51).
