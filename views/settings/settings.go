@@ -7,6 +7,7 @@ import (
 	"github.com/oxri/oxri-go/assets"
 	"net/url"
 
+	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/views/layout"
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
@@ -36,6 +37,8 @@ type SettingsData struct {
 	PasskeySupported bool
 	FreshAuth        bool
 	Passkeys         []PasskeyItem
+	// Vitals is the field performance summary (FieldVitals).
+	Vitals []db.VitalStat
 }
 
 // SettingsPage renders the administrative security and profile settings view.
@@ -225,6 +228,7 @@ func SettingsPage(data SettingsData) g.Node {
 						),
 					),
 				),
+				FieldVitals(data.Vitals),
 			),
 		),
 		h.Script(h.Src(assets.PasskeyJS.URL())),

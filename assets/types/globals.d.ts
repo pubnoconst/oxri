@@ -52,7 +52,25 @@ interface ResImperiiScriptureAPI {
   quotedLength(): number;
 }
 
+/** A Core Web Vitals sample from the vendored web-vitals attribution build. */
+interface WebVitalsMetric {
+  name: "LCP" | "INP" | "CLS" | "TTFB" | "FCP";
+  value: number;
+  rating: "good" | "needs-improvement" | "poor";
+  attribution?: { target?: string; interactionTarget?: string; largestShiftTarget?: string };
+}
+
+/** Vendored web-vitals (assets/js/web-vitals.min.js). */
+interface WebVitalsAPI {
+  onLCP(callback: (metric: WebVitalsMetric) => void): void;
+  onINP(callback: (metric: WebVitalsMetric) => void): void;
+  onCLS(callback: (metric: WebVitalsMetric) => void): void;
+  onTTFB(callback: (metric: WebVitalsMetric) => void): void;
+}
+
 interface Window {
+  /** Present when web-vitals.min.js loaded (every page, layout.Doc). */
+  webVitals?: WebVitalsAPI;
   ResImperiiDots: ResImperiiDotsAPI;
   ResImperiiMedia: ResImperiiMediaAPI;
   /** Present on the journal editor only. */

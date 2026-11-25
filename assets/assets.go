@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-//go:embed css js icons favicon.png
+//go:embed css js icons fonts favicon.png
 var files embed.FS
 
 // Asset is a static file with a content-hashed URL. Its fields are unexported:
@@ -66,6 +66,9 @@ var (
 	PasskeyJS            = file("js/passkey.js")
 	BookEditorJS         = file("js/book-editor.js")
 	OfflineJS            = file("js/offline.js")
+	WebVitalsJS          = file("js/web-vitals.min.js")
+	WebVitalsLicence     = file("js/web-vitals.LICENSE.txt")
+	VitalsJS             = file("js/vitals.js")
 )
 
 // declared records every embedded-file handle (see TestEveryFileHasAHandle).

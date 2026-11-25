@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `a46a0ba` (PR #71 — warm glass; connected lists)
-- **Active Branch**: `excerpt-entry-face` (PR #72): catalog and Make Room excerpts in the entry face (RATIONALE 073, `6003e08`).
+- **Base Commit on `main`**: `c4397e8` (PR #73 — stable beats peak)
+- **Active Branch**: `self-hosted-fonts` (PR #74): self-hosted fonts with per-platform measured fallbacks; field Core Web Vitals (schema v9, Settings → Field Performance); `cmd/lab` mobile lab; CI `performance` gate (RATIONALE 075).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
@@ -27,8 +27,9 @@ The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG
 
 - **Stable beats peak (HIG §1.6, owner 2026-11-25)**: performance work in this order, each judged by the variance it removes:
   1. Cold starts on Render's free plan (owner's billing decision).
-  2. Self-hosted fonts with size-matched fallbacks, the key one preloaded (also routes all Greek to one face).
-  3. The catalog's first page rendered into `/journals` itself; htmx kept for search, tags and paging. Also fixes the blank catalog without JavaScript.
+  2. ~~Self-hosted fonts with size-matched fallbacks~~ (PR #74; no preload: it held text back).
+  3. **Next**: `mage benchmark` against real data and Google's lines; find `/journals`' bottleneck (LCP about 2.4 to 2.5 s on the emulated budget phone, against 1.2 to 1.5 s elsewhere), then brainstorm the fix. The likely suspect is the catalog arriving in a second request after the shell.
+  Dropped (owner, 2026-11-25): APM, tracing, synthetics, a boot log. Field data plus the lab is enough for a site this size.
   Ruled out: Speculation Rules prerendering, `content-visibility: auto`. Kept on purpose: the 220 ms page fade-in.
 - **Local test server**: `DEV_AUTO_LOGIN=1 bin/server.exe` (real Turso from db.env, signed in). Saves change real data; a branch with a schema migration migrates the real database on start.
 - **Typefaces (PR #69)**: look at entries, quotes and a long passage on the S9+. Possible next: self-host the fonts and route all Greek to Didact Gothic with `unicode-range`, so a Greek phrase in an entry no longer switches face midway (and no third-party font request).

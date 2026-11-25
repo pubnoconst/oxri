@@ -48,12 +48,11 @@ p, h1, h2, h3, h4, h5, h6 {
   /* Typography */
   /* Typefaces (HIG §2): the books keep EB Garamond; the site's own UI is a
      sans, an entry's words a casual hand, quoted matter another hand, so who
-     wrote what reads at a glance. Greek: each stack names a face with Greek
-     after the Latin-only ones, and the browser takes Greek letters from it. */
-  --font-serif: "EB Garamond", Georgia, serif;
-  --font-ui: "Figtree", "Didact Gothic", system-ui, sans-serif;
-  --font-entry: "Playpen Sans", "Didact Gothic", sans-serif;
-  --font-quote: "Happy Monkey", "Didact Gothic", sans-serif;
+     wrote what reads at a glance. Each family is self-hosted and assembled in
+     assets/fonts.go (all Greek in the sans roles from Didact Gothic), with
+     a size-matched local fallback so nothing reflows when it arrives. */
+  /* --font-serif, --font-ui, --font-entry, --font-quote: generated with
+     the faces in fonts.css (assets/fonts.go), linked before this file. */
   --font-sans: var(--font-ui);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
