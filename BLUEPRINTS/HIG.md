@@ -16,6 +16,7 @@ The reference reader's device is a **budget Android phone (Samsung Galaxy A02s)*
 6. **Stable beats peak.** A steady frame rate is worth more than a higher best case; a predictable wait is worth more than a sometimes-faster one. Judge every performance change by the variance it adds or removes, on the A02s, before its best-case speed.
    - **Prefer:** fixed, cheap costs every time (the page's 220 ms opacity fade-in; the shell's instant first paint); work done once, up front, off the scroll (pagination, server-rendered snapshots); anything that removes a jump (fonts served from the site with size-matched fallbacks, so text never reflows when a font arrives; content in the first response instead of popped in later).
    - **Avoid:** speed that only sometimes happens (speculative prerendering: instant when it guesses right, slower and busier on a budget phone when it doesn't); work moved into scrolling (`content-visibility: auto`, which lays content out as it scrolls in and makes the scrollbar jump); anything whose timing depends on the network once the page is showing.
+   - **Measured, not argued.** The yardstick is Google's Core Web Vitals at the 75th percentile of page views, mobile first: LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1. Field data from readers' browsers (Settings → Field Performance) is the evidence; a change that may move them is compared before shipping with the lab profile (`mage lab`), reading the spread and worst run as well as the median (PROFILING.md).
    - **The worst variance is the one the reader waits through:** a cold server that is sometimes instant and sometimes a long wake-up outweighs any front-end gain.
 
 ---
@@ -24,14 +25,16 @@ The reference reader's device is a **budget Android phone (Samsung Galaxy A02s)*
 
 | Role | Face | Token |
 |---|---|---|
-| The books: book pages, the landing's title and book links | EB Garamond, fallback Georgia, serif | `--font-serif` |
-| The site's own UI: journals, login, settings, editor, buttons, labels | Figtree, Greek from Didact Gothic | `--font-ui` (`--font-sans` aliases it) |
-| An entry's own words, wherever they appear: the full entry, catalog excerpts, Make Room's list, the editor preview | Playpen Sans, polytonic Greek from Didact Gothic | `--font-entry` |
-| Quoted matter: tweet clippings, Bible passages, blockquotes in entries | Happy Monkey, Greek from Didact Gothic | `--font-quote` |
+| The books: book pages, the landing's title and book links | EB Garamond, Latin and its own Greek (family `Res Book`) | `--font-serif` |
+| The site's own UI: journals, login, settings, editor, buttons, labels | Figtree; all Greek from Didact Gothic (`Res UI`) | `--font-ui` (`--font-sans` aliases it) |
+| An entry's own words, wherever they appear: the full entry, catalog excerpts, Make Room's list, the editor preview | Playpen Sans; all Greek from Didact Gothic (`Res Entry`) | `--font-entry` |
+| Quoted matter: tweet clippings, Bible passages, blockquotes in entries | Happy Monkey; all Greek from Didact Gothic (`Res Quote`) | `--font-quote` |
 | Counters, byte figures, codes | system monospace | `--font-mono` |
 
 - **The face says who wrote it.** The books are set like a book; the site speaks in a plain sans; the author's entries in a casual hand; other people's words in a different hand. Within a role, hierarchy still comes from size, not from switching faces.
-- **Greek.** Figtree and Happy Monkey have no Greek, and Playpen Sans has no polytonic Greek, so each stack names Didact Gothic after them and the browser takes those letters from it. A phrase in an entry that mixes plain and accented Greek can change face midway (Playpen for λόγος, Didact Gothic for ἀρχῇ); routing all Greek to one face needs self-hosted fonts.
+- **Greek: one face per phrase.** Each role is one family assembled in `assets/fonts.go` by `unicode-range`: in the three sans roles every Greek letter, plain or polytonic, comes from Didact Gothic, so ἐν ἀρχῇ ἦν ὁ λόγος never changes face midway. The book face uses EB Garamond's own Greek.
+- **Self-hosted, never a third party.** The fonts are Google Fonts' own subsets of OFL families (licences beside them in `assets/fonts/`), served from the site with content-hashed URLs cached for a year. `fonts.css` is generated, so no font URL is written by hand. Each face loads only when the page has text that needs it. None is preloaded: in the lab a preloaded face held the text that uses it back to 4.6 s (PROFILING.md). The CSP allows fonts from `'self'` only.
+- **No reflow when a font arrives** (§1.6). Each role has a fallback face: a local system font (Arial, Helvetica, Roboto for the sans roles; Georgia, Times New Roman, Noto Serif for the book) resized with `size-adjust`, `ascent-override` and `descent-override` to the web font's measured width and line metrics. A paragraph set in the fallback takes the same height as in the web font (checked for all four roles), so swapping in the web font moves nothing. Re-measure (method in `assets/fonts.go`) whenever a face changes.
 - **No bold. Bold is not the answer; bigger text is.**
   - Everything is set in weight 400. It's the only weight loaded (with its true italic), and `font-synthesis-weight: none` stops the browser faking a heavier one, so a default bold (`strong`, `b`, `th`, a heading) stays regular. `TestNoBold` fails on any other weight.
   - **To make something stand out, make it larger** (the space-to-free figure on Make Room is 1.2× its sentence), or give it full ink beside dimmer text (a clipping's author name beside the handle).

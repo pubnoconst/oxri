@@ -24,10 +24,9 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 		h.Meta(h.Name("theme-color"), g.Attr("media", "(prefers-color-scheme: dark)"), h.Content("#0f1113")),
 		h.Meta(h.Name("apple-mobile-web-app-title"), h.Content("Res Imperii")),
 
-		// EB Garamond Typeface
-		h.Link(h.Rel("preconnect"), h.Href("https://fonts.googleapis.com")),
-		h.Link(h.Rel("preconnect"), h.Href("https://fonts.gstatic.com"), g.Attr("crossorigin", "")),
-		h.Link(h.Rel("stylesheet"), h.Href("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;1,400&family=Figtree:ital,wght@0,400;1,400&family=Didact+Gothic&family=Playpen+Sans:wght@400&family=Happy+Monkey&display=swap")),
+		// Typefaces, self-hosted (assets/fonts.go), each fetched when the page
+		// has text that needs it. Not preloaded: see assets/fonts.go.
+		h.Link(h.Rel("stylesheet"), h.Href(assets.FontsCSS.URL())),
 
 		h.Link(h.Rel("stylesheet"), h.Href(assets.SiteCSS.URL())),
 
@@ -51,6 +50,10 @@ func Doc(title string, componentCSS string, bodyChildren ...g.Node) g.Node {
 				h.Script(h.Src(assets.ThemeToggleJS.URL())),
 				h.Script(h.Src(assets.NavigationFeedbackJS.URL())),
 				h.Script(h.Src(assets.OfflineJS.URL())),
+				// Field performance: Core Web Vitals from this view, sent as it
+				// is left (vitals.js, PROFILING.md).
+				h.Script(h.Src(assets.WebVitalsJS.URL())),
+				h.Script(h.Src(assets.VitalsJS.URL())),
 			),
 		),
 	)

@@ -60,6 +60,18 @@ func Typecheck() error {
 	return sh.RunV("npx", "--no-install", "tsc", "-p", ".")
 }
 
+// Lab runs the repeatable mobile lab profile (cmd/lab, PROFILING.md) against
+// the server at $LAB_BASE (default http://127.0.0.1:8080, which must be
+// running signed out) and writes the report to bin/lab.md. Needs Chrome.
+func Lab() error {
+	base := os.Getenv("LAB_BASE")
+	if base == "" {
+		base = "http://127.0.0.1:8080"
+	}
+	fmt.Println("==> Lab: budget-phone profile, 5 cold runs per page against " + base)
+	return sh.RunV("go", "run", "./cmd/lab", "-base", base, "-runs", "5", "-out", "bin/lab.md")
+}
+
 // Check validates formatting, tests, the JavaScript types, and static builds.
 func Check() error {
 	if err := Test(); err != nil {

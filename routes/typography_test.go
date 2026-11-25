@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/oxri/oxri-go/assets"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -44,10 +45,11 @@ func TestNoBold(t *testing.T) {
 		t.Error("site.css must stop the browser faking bold (font-synthesis-weight: none)")
 	}
 
-	// Only the regular weight and its italic are requested from Google Fonts.
+	// The fonts are the site's own (assets/fonts.go), and nothing asks a
+	// third party for them.
 	var page strings.Builder
 	_ = landing.Page(false).Render(&page)
-	if !strings.Contains(page.String(), "family=EB+Garamond:ital,wght@0,400;1,400&") {
-		t.Error("the font request must load only weight 400 and its italic")
+	if !strings.Contains(page.String(), assets.FontsCSS.URL()) || strings.Contains(page.String(), "fonts.googleapis.com") {
+		t.Error("pages must link the self-hosted font stylesheet, not Google Fonts")
 	}
 }

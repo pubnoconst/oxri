@@ -188,6 +188,14 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 		}
 	}
 
+	// Migration v9: field performance (Core Web Vitals from readers' browsers)
+	if _, err := tx.ExecContext(ctx, vitalsTableDDL); err != nil {
+		return fmt.Errorf("failed to create vitals table: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, vitalsIndexDDL); err != nil {
+		return fmt.Errorf("failed to create vitals index: %w", err)
+	}
+
 	if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO schema_migrations (version) VALUES (?);`, CurrentSchemaVersion); err != nil {
 		return fmt.Errorf("failed to record schema version %d: %w", CurrentSchemaVersion, err)
 	}

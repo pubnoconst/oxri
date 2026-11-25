@@ -66,6 +66,7 @@ func NewRouter(cfg Config) http.Handler {
 	for _, style := range []assets.Asset{
 		landing.Style, errorpage.Style, booki.Style, login.Style,
 		settings.Style, journals.Style, editor.Style, loading.Style,
+		assets.FontsCSS,
 	} {
 		r.Get(style.Path(), style.Handler())
 	}
@@ -117,6 +118,10 @@ func NewRouter(cfg Config) http.Handler {
 	r.Post("/journals/{id}/bookmark", handleJournalBookmark(cfg.Store, cfg.AuthService))
 
 	// 7. Authentication Routes (with per-IP rate limiters)
+	// Field performance from readers' browsers (vitals.go): a page view
+	// sends one report as it is left.
+	r.Post("/vitals", handleVitals(cfg.Store, cfg.AuthService, newIPRateLimiter(60, 10*time.Minute)))
+
 	loginLimiter := newIPRateLimiter(30, time.Minute)
 	totpSubmitLimiter := newIPRateLimiter(15, 5*time.Minute)
 	r.Get("/login", handleLogin(cfg.Store, cfg.AuthService, loginLimiter))
@@ -342,6 +347,11 @@ func handleSettings(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 			}
 		}
 
+		var vitals []db.VitalStat
+		if store != nil {
+			vitals, _ = store.VitalsSummary(r.Context(), time.Now(), "")
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_ = settings.SettingsPage(settings.SettingsData{
 			MethodLabel:      methodLabel,
@@ -349,6 +359,7 @@ func handleSettings(store *db.Store, authSvc *auth.Service) http.HandlerFunc {
 			PasskeySupported: supported && store != nil,
 			FreshAuth:        freshErr == nil,
 			Passkeys:         items,
+			Vitals:           vitals,
 		}).Render(w)
 	}
 }

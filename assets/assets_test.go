@@ -86,7 +86,7 @@ func TestNoHandWrittenAssetURLs(t *testing.T) {
 			}
 			return nil
 		}
-		if !strings.HasSuffix(rel, ".go") || strings.HasSuffix(rel, "_test.go") || rel == "assets/assets.go" {
+		if !strings.HasSuffix(rel, ".go") || strings.HasSuffix(rel, "_test.go") || rel == "assets/assets.go" || rel == "assets/fonts.go" {
 			return nil
 		}
 		f, perr := parser.ParseFile(fset, path, nil, 0)

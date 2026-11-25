@@ -50,3 +50,50 @@ jobs:
           GOOS: linux
           GOARCH: amd64
         run: go build -trimpath -o bin/server ./cmd/server
+
+  # Performance (BLUEPRINTS/PROFILING.md, HIG §1.6): the lab profile against
+  # the site served in-process from an in-memory database with seeded content
+  # (cmd/lab -local: no credentials, no real data, no calls to X). Fails when
+  # a page's field report is incomplete, or a page misses Google's good line:
+  # median LCP > 2.5 s, any run's CLS > 0.1, median INP > 200 ms. The table
+  # is in the job summary and kept as an artifact.
+  performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Chrome version
+        run: google-chrome --version
+
+      - name: Field report is complete on leaving each page (vitals.js)
+        env:
+          CGO_ENABLED: "0"
+        run: go run ./cmd/lab -local -beacon
+
+      - name: Lab profile on a budget phone, held to Core Web Vitals
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p bin
+          go run ./cmd/lab -local -runs 5 -budget -out bin/lab.md
+
+      - name: Lab table in the job summary
+        if: always()
+        run: |
+          if [ -f bin/lab.md ]; then cat bin/lab.md >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: Keep the lab report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab-report
+          path: bin/lab.md
+          if-no-files-found: ignore
