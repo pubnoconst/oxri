@@ -77,12 +77,20 @@ func main() {
 		fmt.Println("Notice: ADMIN_TOTP_SECRET not configured; running in read-only public mode.")
 	}
 
-	handler := routes.NewRouter(routes.Config{
+	var handler http.Handler = routes.NewRouter(routes.Config{
 		AuthService: authSvc,
 		Store:       store,
 		Tweets:      routes.NewTweetFiller(store, &http.Client{Timeout: 10 * time.Second}),
 		Passages:    verse.NewSource(&http.Client{Timeout: 10 * time.Second}),
 	})
+	if os.Getenv(devAutoLoginEnv) == "1" {
+		if err := checkDevAutoLogin(addr, authSvc); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %s: %v\n", devAutoLoginEnv, err)
+			os.Exit(1)
+		}
+		handler = devAutoLogin(authSvc, handler)
+		fmt.Println("WARNING: DEV_AUTO_LOGIN is on: every request is signed in as the admin; saves change the connected database.")
+	}
 
 	server := &http.Server{
 		Addr:              addr,

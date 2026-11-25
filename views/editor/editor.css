@@ -442,24 +442,108 @@
   cursor: pointer;
 }
 
-/* Book: a search box over the books; the matches list in place below it,
-   a few rows tall, scrolling for more (scripture-picker.js). */
+/* The list a select opens is drawn by the page, not the system (no blue
+   system highlight), where the browser allows it (Chrome 135+); elsewhere
+   the system list stays. It is an overlay: frosted glass (HIG §4). */
+@supports (appearance: base-select) {
+  .editor-field .editor-select,
+  .editor-field .editor-select::picker(select) {
+    appearance: base-select;
+  }
+
+  /* The chevron stays the one drawn above. */
+  .editor-field .editor-select::picker-icon {
+    display: none;
+  }
+
+  .editor-field .editor-select::picker(select) {
+    margin-top: 0.3rem;
+    padding: 0.25rem;
+    border: 1px solid var(--depth-overlay-edge);
+    border-radius: var(--radius-control);
+    background: var(--depth-overlay-solid);
+    box-shadow: var(--depth-overlay-shadow);
+    color: var(--page-ink);
+  }
+
+  @supports (backdrop-filter: blur(1px)) {
+    .editor-field .editor-select::picker(select) {
+      background: var(--depth-overlay-surface);
+      backdrop-filter: var(--depth-overlay-blur);
+    }
+  }
+
+  .editor-select option {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 2.3rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  .editor-select option:hover,
+  .editor-select option:focus-visible {
+    background: color-mix(in srgb, var(--page-ink) 9%, transparent);
+    outline: none;
+  }
+
+  .editor-select option:checked {
+    background: transparent;
+  }
+
+  .editor-select option:checked:hover,
+  .editor-select option:checked:focus-visible {
+    background: color-mix(in srgb, var(--page-ink) 9%, transparent);
+  }
+
+  /* The chosen option is marked by a shape at the end, as in the book list. */
+  .editor-select option::checkmark {
+    order: 1;
+    margin-left: auto;
+    content: "✓";
+    opacity: 0.7;
+  }
+}
+
+/* Book: a search box over the books; the matches float below it as an
+   overlay, a few rows tall, scrolling for more (scripture-picker.js). Like
+   a select's list, it is frosted glass (HIG §4). */
 .book-search {
+  position: relative;
   display: flex;
   flex-direction: column;
 }
 
 .book-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  min-width: 14rem;
   max-height: 12rem;
   overflow-y: auto;
   overscroll-behavior: contain;
   margin: 0.3rem 0 0;
   padding: 0.25rem;
   list-style: none;
-  border: 1px solid var(--border-input);
+  border: 1px solid var(--depth-overlay-edge);
   border-radius: var(--radius-control);
-  background: var(--depth-2-surface);
-  box-shadow: var(--depth-2-shadow);
+  background: var(--depth-overlay-solid);
+  box-shadow: var(--depth-overlay-shadow);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .book-list {
+    background: var(--depth-overlay-surface);
+    backdrop-filter: var(--depth-overlay-blur);
+  }
 }
 
 .book-list[hidden],

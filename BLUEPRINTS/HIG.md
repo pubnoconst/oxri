@@ -62,6 +62,22 @@ The palette is a warm neutral page and ink, plus three accents used only for sta
   | 0 | `--depth-0-surface` | none | the page |
   | 1 | `--depth-1-surface` | `--depth-1-shadow` | cards and panels, lifted off the page; buttons |
   | 2 | `--depth-2-surface` | `--depth-2-shadow` | things laid on a card: post clippings, embedded media |
+  | overlay (float glass) | `--depth-overlay-surface` + `--depth-overlay-blur` | `--depth-overlay-shadow` | things laid over part of the page: a select's list, the Book list |
+  | overlay (veil glass) | `--depth-veil-surface` + `--depth-veil-blur` | none | full-screen overlays: the Confirming screen |
+
+  - **Every overlay is frosted glass. No exceptions.** Anything that floats above the page (a list that opens, a menu, a full-screen wait) is glass; nothing floats solid. Lists open as overlays over the content below, not in place pushing it down.
+  - **There are exactly two glasses, and they are the only blur on the site.** Both are one kind: a Gaussian blur of what lies beneath (`backdrop-filter: blur()`) plus a saturation lift so colour behind stays alive instead of going grey, under a translucent tint. Use them only through their tokens; `TestBlurComesFromGlassTokens` fails on any other `backdrop-filter` (and on `filter: blur`).
+
+    | Glass | For | Tint (intensity) | Blur radius | Saturation | Edge and shadow | Fallback without blur |
+    |---|---|---|---|---|---|---|
+    | **Float** (`--depth-overlay-*`) | things laid over part of the page: a select's list, the Book list, menus | the depth-2 surface lifted 12% toward white, at 45% | 5 px | 1.8 | `--depth-overlay-edge` hairline (14% white into the input border); `--depth-overlay-shadow` with a 10% white top highlight | `--depth-overlay-solid` (the depth-2 surface) |
+    | **Veil** (`--depth-veil-*`) | full-screen overlays: the Confirming screen | the page colour at 62% | 14 px | 1.4 | none: it fills the screen | `--depth-veil-solid` (the page) |
+
+    - **Why these numbers.** Over a plain card, a denser tint or a blur past about 8 px reads as solid, so a float is light enough that the fields beneath show as soft shapes. A veil covers text the reader must not try to read, so it is denser and blurred past legibility.
+    - **Radius of corners** is unchanged by glass: floats take `--radius-control`, like the controls they open from.
+    - **Cost.** Blur only overlays: they are small or short-lived, so the cost on a budget phone is bounded. Never blur a card, the page, or anything that stays on screen while scrolling.
+    - Use the `@supports (backdrop-filter: blur(1px))` guard: the solid fallback first, the glass inside the guard.
+  - **A select's list is drawn by the page** (`appearance: base-select`, Chrome 135+), never left to the system's blue highlight; the chosen option is marked with ✓ at the end, as in the book list. Browsers without it keep the system list.
 
   - **Light comes from above.** In light, each step up is a little nearer white. In dark, each step up is a little lighter (4.5% toward white at depth 1, 8% at depth 2), because dark interfaces show height that way.
   - **The shadow carries the height.** Depth 1's is long and soft (the card floats); depth 2's is short and close (laid on the card).
