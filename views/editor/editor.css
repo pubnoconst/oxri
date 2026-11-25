@@ -456,11 +456,30 @@
     display: none;
   }
 
+  /* Connected: the open list hangs from the field, one outline around both
+     (HIG §4). The field loses its lower corners and its focus ring; the list
+     loses its upper corners and takes the field's border, divided from it by
+     a hairline. It always opens below (no flip, which would detach it), as
+     tall as the room below allows, scrolling for more. */
+  .editor-field .editor-select:open {
+    border-color: var(--border-focus);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    box-shadow: none;
+  }
+
   .editor-field .editor-select::picker(select) {
-    margin-top: 0.3rem;
+    position-try-fallbacks: none;
+    max-height: 100%;
+    margin: 0;
     padding: 0.25rem;
-    border: 1px solid var(--depth-overlay-edge);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--border-focus);
+    border-top-color: var(--border-subtle);
     border-radius: var(--radius-control);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
     background: var(--depth-overlay-solid);
     box-shadow: var(--depth-overlay-shadow);
     color: var(--page-ink);
@@ -526,15 +545,18 @@
   left: 0;
   right: 0;
   z-index: 20;
-  min-width: 14rem;
   max-height: 12rem;
   overflow-y: auto;
   overscroll-behavior: contain;
-  margin: 0.3rem 0 0;
+  margin: 0;
   padding: 0.25rem;
   list-style: none;
-  border: 1px solid var(--depth-overlay-edge);
+  /* Connected to the search box, like a select's list (above). */
+  border: 1px solid var(--border-focus);
+  border-top-color: var(--border-subtle);
   border-radius: var(--radius-control);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
   background: var(--depth-overlay-solid);
   box-shadow: var(--depth-overlay-shadow);
 }
@@ -561,6 +583,13 @@
 .book-list li:hover,
 .book-list li.is-active {
   background: color-mix(in srgb, var(--page-ink) 8%, transparent);
+}
+
+.editor-field .book-search:has(.book-list:not([hidden])) input {
+  border-color: var(--border-focus);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow: none;
 }
 
 /* The chosen book is marked by a shape, not by weight or colour alone. */
