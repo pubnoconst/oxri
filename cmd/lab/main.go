@@ -32,6 +32,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/chromedp/cdproto/emulation"
@@ -123,6 +124,7 @@ type config struct {
 func main() {
 	base := flag.String("base", "http://127.0.0.1:8080", "site to measure")
 	runs := flag.Int("runs", 5, "cold-cache runs per page")
+	parallel := flag.Int("parallel", 1, "pages measured at once, each in its own browser (faster; timings then share the CPU, so compare them only between runs with the same setting: CI uses it, as it gates only on layout shift)")
 	only := flag.String("pages", "", "comma-separated paths (default: all of "+strings.Join(sortedKeys(pages), ", ")+")")
 	cpu := flag.Float64("cpu", 4, "CPU slowdown factor")
 	lib := flag.String("lib", "assets/js/web-vitals.min.js", "the vendored web-vitals build")
@@ -157,15 +159,17 @@ func main() {
 	}
 
 	if *beacon {
+		results := make([]string, len(paths))
+		errs := make([]error, len(paths))
+		eachPage(paths, *parallel, func(i int, p string) { results[i], errs[i] = checkBeacon(cfg, p) })
 		failed := false
-		for _, p := range paths {
-			got, err := checkBeacon(cfg, p)
-			if err != nil {
+		for i, p := range paths {
+			if errs[i] != nil {
 				failed = true
-				fmt.Printf("%s: %v\n", p, err)
+				fmt.Printf("%s: %v\n", p, errs[i])
 				continue
 			}
-			fmt.Printf("%s: %s\n", p, got)
+			fmt.Printf("%s: %s\n", p, results[i])
 		}
 		if failed {
 			exit(1)
@@ -188,17 +192,20 @@ func main() {
 	fmt.Fprintf(&report, "| Page | LCP | INP | CLS | TTFB | FCP | Shift while scrolling | Long frames while scrolling | Worst frame |\n|---|---|---|---|---|---|---|---|---|\n")
 	var misses, advisories []string
 	all := map[string][]sample{}
-	for _, p := range paths {
-		var results []sample
+	perPage := make([][]sample, len(paths))
+	eachPage(paths, *parallel, func(n int, p string) {
 		for i := 0; i < *runs; i++ {
 			s, err := measure(cfg, p)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s run %d: %v\n", p, i+1, err)
 				continue
 			}
-			results = append(results, s)
+			perPage[n] = append(perPage[n], s)
 			fmt.Fprintf(os.Stderr, "%s run %d: LCP %.0f  INP %.0f  CLS %.3f  TTFB %.0f (server %.1f)  scroll: shift %.3f, %0.f long frames, worst %.0f ms\n", p, i+1, s["LCP"], s["INP"], s["CLS"], s["TTFB"], s["st_app"], s["scrollShift"], s["scrollFrames"], s["scrollWorstFrame"])
 		}
+	})
+	for n, p := range paths {
+		results := perPage[n]
 		fmt.Fprintf(&report, "| `%s` | %s | %s | %s | %s | %s | %s | %s | %s |\n", p,
 			cell(results, "LCP"), cell(results, "INP"), cell(results, "CLS"), cell(results, "TTFB"), cell(results, "FCP"),
 			plain(results, "scrollShift", "%.3f"), plain(results, "scrollFrames", "%.0f"), plain(results, "scrollWorstFrame", "%.0f ms"))
@@ -425,7 +432,9 @@ func measure(cfg config, path string) (sample, error) {
 		return nil, errors.New("no vitals recorded")
 	}
 	if target, err := chromedp.Run(ctx, chromedp.Evaluate[string](`String(window.__labTarget || "")`)); err == nil {
+		lcpTargetsMu.Lock()
 		lcpTargets[path] = append(lcpTargets[path], target)
+		lcpTargetsMu.Unlock()
 	}
 	return s, nil
 }
@@ -448,8 +457,12 @@ const resourcesJS = `(() => {
   return out;
 })()`
 
-// lcpTargets are the LCP elements seen per page, for the breakdown.
-var lcpTargets = map[string][]string{}
+// lcpTargets are the LCP elements seen per page, for the breakdown
+// (written by runs that may be in parallel).
+var (
+	lcpTargets   = map[string][]string{}
+	lcpTargetsMu sync.Mutex
+)
 
 // breakdownRow is a page's LCP split into its parts and the page's network
 // shape, as medians (-breakdown).
@@ -613,6 +626,26 @@ func sortedKeys(m map[string][]step) []string {
 	}
 	sort.Strings(ks)
 	return ks
+}
+
+// eachPage runs do for every page, at most parallel at a time, and returns
+// when all are done.
+func eachPage(paths []string, parallel int, do func(i int, path string)) {
+	if parallel < 1 {
+		parallel = 1
+	}
+	slots := make(chan struct{}, parallel)
+	var wg sync.WaitGroup
+	for i, p := range paths {
+		wg.Add(1)
+		slots <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-slots }()
+			do(i, p)
+		}()
+	}
+	wg.Wait()
 }
 
 // cleanups run before the process exits early (the -local server).
