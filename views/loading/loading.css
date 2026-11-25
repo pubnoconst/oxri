@@ -9,10 +9,19 @@
   padding: var(--space-page-y) var(--space-page-x);
   box-sizing: border-box;
   overflow: hidden;
-  background: var(--depth-0-surface);
+  /* An overlay, so frosted glass (HIG §4): the page shows through, blurred
+     past reading, behind the phrase. Solid where blur is not supported. */
+  background: var(--depth-veil-solid);
   opacity: 0;
   pointer-events: none;
   transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .loading-overlay {
+    background: var(--depth-veil-surface);
+    backdrop-filter: var(--depth-veil-blur);
+  }
 }
 
 .loading-overlay[hidden] {
