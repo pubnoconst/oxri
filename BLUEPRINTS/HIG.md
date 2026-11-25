@@ -22,7 +22,7 @@ The reference reader's device is a **budget Android phone (Samsung Galaxy A02s)*
 |---|---|---|
 | The books: book pages, the landing's title and book links | EB Garamond, fallback Georgia, serif | `--font-serif` |
 | The site's own UI: journals, login, settings, editor, buttons, labels | Figtree, Greek from Didact Gothic | `--font-ui` (`--font-sans` aliases it) |
-| An entry's own words (catalog and editor preview) | Playpen Sans, polytonic Greek from Didact Gothic | `--font-entry` |
+| An entry's own words, wherever they appear: the full entry, catalog excerpts, Make Room's list, the editor preview | Playpen Sans, polytonic Greek from Didact Gothic | `--font-entry` |
 | Quoted matter: tweet clippings, Bible passages, blockquotes in entries | Happy Monkey, Greek from Didact Gothic | `--font-quote` |
 | Counters, byte figures, codes | system monospace | `--font-mono` |
 
