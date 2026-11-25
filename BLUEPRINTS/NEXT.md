@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `e75d41a` (PR #75 — `/journals` catalog in the page; `mage benchmark`)
-- **Active Branch**: `short-stack` (PR #76): quotes in Short Stack; entry cards frozen (RATIONALE 077).
+- **Base Commit on `main`**: `9cb25ed` (PR #76 — quotes in Short Stack; entry cards frozen)
+- **Active Branch**: `steady-search` (PR #77): pages arrive whole and still (HIG §1.7): in-place results, no dimming, tap acknowledgement, reserved media space (RATIONALE 078).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's S9+ (set Display → Screen resolution → HD+ to match the A02s pixel count; Developer options → Profile GPU rendering shows jank).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment` , `water-ripple` (archived lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
@@ -25,6 +25,7 @@ The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG
 
 ## Next on Mind
 
+- **Owner's decision**: `font-display: optional`? It would remove the one heavy relayout frame at load and the last font-swap wraps (CLS 0.008 on the seeded site), at the cost of first visits keeping the fallback fonts (RATIONALE 078).
 - **Stable beats peak (HIG §1.6, owner 2026-11-25)**: performance work in this order, each judged by the variance it removes:
   1. Cold starts on Render's free plan (owner's billing decision).
   2. ~~Self-hosted fonts with size-matched fallbacks~~ (PR #74; no preload: it held text back).
