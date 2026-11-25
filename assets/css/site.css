@@ -51,10 +51,8 @@ p, h1, h2, h3, h4, h5, h6 {
      wrote what reads at a glance. Each family is self-hosted and assembled in
      assets/fonts.go (all Greek in the sans roles from Didact Gothic), with
      a size-matched local fallback so nothing reflows when it arrives. */
-  --font-serif: "Res Book", "Res Book Fallback", Georgia, serif;
-  --font-ui: "Res UI", "Res UI Fallback", system-ui, sans-serif;
-  --font-entry: "Res Entry", "Res Entry Fallback", sans-serif;
-  --font-quote: "Res Quote", "Res Quote Fallback", sans-serif;
+  /* --font-serif, --font-ui, --font-entry, --font-quote: generated with
+     the faces in fonts.css (assets/fonts.go), linked before this file. */
   --font-sans: var(--font-ui);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 

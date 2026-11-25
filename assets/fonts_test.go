@@ -11,7 +11,7 @@ import (
 func TestFontFacesAreRegularAndHashed(t *testing.T) {
 	css := fontCSS()
 	faces := regexp.MustCompile(`@font-face\{[^}]*\}`).FindAllString(css, -1)
-	if len(faces) != len(fontFaces())+len(fallbacks) {
+	if len(faces) != len(fontFaces())+len(allFallbacks()) {
 		t.Fatalf("got %d @font-face rules", len(faces))
 	}
 	for _, f := range fontFaces() {

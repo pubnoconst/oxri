@@ -109,32 +109,69 @@ func fontFaces() []fontFace {
 }
 
 // fallbackFace is a local system font resized to match a role's web font,
-// so swapping in the web font moves nothing. The percentages (fbBook …) are
-// measured in Chrome against each web font's Latin face: size-adjust is the
-// web font's width over the local font's for the same sample text; ascent
-// and descent are the web font's own, divided by size-adjust.
+// so swapping in the web font moves nothing. Each role lists one per system
+// font family a reader may have, in order; the browser takes the first it
+// finds. A face measured against one system font is wrong on another (a
+// book fallback tuned to Georgia shifted Linux's wider default serif by
+// 0.194 in CI), so each is measured on its own.
+//
+// Measured 2026-11-25 in Chrome against each web font's Latin face:
+// size-adjust is the web font's width over the system font's for the same
+// sample text; ascent and descent are the web font's own, divided by
+// size-adjust. Liberation Serif and Sans (Linux) share Times New Roman's and
+// Arial's metrics, Helvetica shares Arial's; Roboto and Noto Serif (Android)
+// were measured from Google Fonts' copies of them.
 type fallbackFace struct {
 	family                      string
 	locals                      []string
 	sizeAdjust, ascent, descent float64 // percent
 }
 
-type fbMetrics struct{ size, ascent, descent float64 }
-
-// Measured 2026-11-25 against Arial (sans roles) and Georgia (book); see
-// fallbackFace.
 var (
-	fbBook  = fbMetrics{85.4, 118.2, 35.1}  // EB Garamond over Georgia
-	fbUI    = fbMetrics{99.3, 95.7, 25.2}   // Figtree over Arial
-	fbEntry = fbMetrics{108.5, 107.8, 31.3} // Playpen Sans over Arial
-	fbQuote = fbMetrics{110.3, 86.1, 23.6}  // Happy Monkey over Arial
+	serifGeorgia = []string{"Georgia"}
+	serifTimes   = []string{"Times New Roman", "TimesNewRomanPSMT", "Liberation Serif", "Tinos"}
+	serifNoto    = []string{"Noto Serif", "NotoSerif-Regular", "NotoSerif", "Droid Serif"}
+	sansArial    = []string{"Arial", "ArialMT", "Helvetica", "Liberation Sans", "Arimo"}
+	sansRoboto   = []string{"Roboto", "Roboto-Regular", "Roboto Regular"}
 )
 
-var fallbacks = []fallbackFace{
-	{"Res Book Fallback", []string{"Georgia", "Times New Roman", "Noto Serif", "Droid Serif"}, fbBook.size, fbBook.ascent, fbBook.descent},
-	{"Res UI Fallback", []string{"Arial", "Helvetica", "Roboto", "Liberation Sans"}, fbUI.size, fbUI.ascent, fbUI.descent},
-	{"Res Entry Fallback", []string{"Arial", "Helvetica", "Roboto", "Liberation Sans"}, fbEntry.size, fbEntry.ascent, fbEntry.descent},
-	{"Res Quote Fallback", []string{"Arial", "Helvetica", "Roboto", "Liberation Sans"}, fbQuote.size, fbQuote.ascent, fbQuote.descent},
+// roleFallbacks are each role's fallback faces, in the order its font
+// stack tries them.
+var roleFallbacks = map[string][]fallbackFace{
+	"Res Book": {
+		{"Res Book Georgia", serifGeorgia, 85.4, 118.2, 35.1},
+		{"Res Book Times", serifTimes, 93.2, 108.4, 32.2},
+		{"Res Book Noto", serifNoto, 79.1, 127.7, 37.9},
+	},
+	"Res UI": {
+		{"Res UI Arial", sansArial, 99.3, 95.7, 25.2},
+		{"Res UI Roboto", sansRoboto, 100.8, 94.3, 24.8},
+	},
+	"Res Entry": {
+		{"Res Entry Arial", sansArial, 108.5, 107.8, 31.3},
+		{"Res Entry Roboto", sansRoboto, 110.1, 106.2, 30.9},
+	},
+	"Res Quote": {
+		{"Res Quote Arial", sansArial, 110.3, 86.1, 23.6},
+		{"Res Quote Roboto", sansRoboto, 112.0, 84.8, 23.2},
+	},
+}
+
+// roleTokens are the CSS custom properties the stylesheet sets each role's
+// stack in, with the generic family that ends it.
+var roleTokens = []struct{ token, family, generic string }{
+	{"--font-serif", "Res Book", "serif"},
+	{"--font-ui", "Res UI", "sans-serif"},
+	{"--font-entry", "Res Entry", "sans-serif"},
+	{"--font-quote", "Res Quote", "sans-serif"},
+}
+
+func allFallbacks() []fallbackFace {
+	var out []fallbackFace
+	for _, r := range roleTokens {
+		out = append(out, roleFallbacks[r.family]...)
+	}
+	return out
 }
 
 func fontCSS() string {
@@ -144,7 +181,7 @@ func fontCSS() string {
 		fmt.Fprintf(&b, "@font-face{font-family:%q;font-style:%s;font-weight:400;font-display:swap;src:url(%s) format(\"woff2\");unicode-range:%s}\n",
 			f.family, f.style, f.file.URL(), f.rng)
 	}
-	for _, f := range fallbacks {
+	for _, f := range allFallbacks() {
 		locals := make([]string, len(f.locals))
 		for i, l := range f.locals {
 			locals[i] = fmt.Sprintf("local(%q)", l)
@@ -152,6 +189,17 @@ func fontCSS() string {
 		fmt.Fprintf(&b, "@font-face{font-family:%q;font-display:swap;src:%s;size-adjust:%.1f%%;ascent-override:%.1f%%;descent-override:%.1f%%;line-gap-override:0%%}\n",
 			f.family, strings.Join(locals, ","), f.sizeAdjust, f.ascent, f.descent)
 	}
+	// The role stacks: the web family, its measured fallbacks in order, then
+	// the generic family. Generated here so they cannot drift from the faces.
+	b.WriteString(":root{")
+	for _, r := range roleTokens {
+		names := []string{fmt.Sprintf("%q", r.family)}
+		for _, f := range roleFallbacks[r.family] {
+			names = append(names, fmt.Sprintf("%q", f.family))
+		}
+		fmt.Fprintf(&b, "%s:%s,%s;", r.token, strings.Join(names, ","), r.generic)
+	}
+	b.WriteString("}\n")
 	return b.String()
 }
 

@@ -111,12 +111,14 @@ INP stays under 50 ms on every page in both builds; TTFB is 152 ms (the emulated
 
 All medians are "good" in both builds. Self-hosting removed the layout shift (a cold `/book-i` load reflowed by 0.166 as EB Garamond replaced Georgia), and it narrowed the spread on three of the four pages.
 
-**Three regressions the lab caught before shipping:**
+**Four regressions the lab and CI caught before shipping:**
 
 1. **A preloaded font held text back.** With Figtree's Latin file preloaded, `/login` drew no text until about 4.6 s in every run, although the font had arrived by about 0.7 s. LCP was never recorded, because the scripted tap at 3 s came first. Without the preload, first text came at 1.12 s. The preload was removed.
 2. **Fallback faces without `font-display`.** The size-matched local fallbacks defaulted to `font-display: auto`, which in Chrome hides text while the face resolves. They now use `swap`, and `TestFontFacesAreRegularAndHashed` requires `swap` on every face.
 
 3. **Field reports would have carried TTFB only.** `vitals.js` first sent its beacon on `pagehide` as well as on hidden. When a link is followed, Chrome fires `pagehide` before `visibilitychange`, and `web-vitals` finalises LCP, CLS and INP only on the latter, so every report left with TTFB alone. It now sends on `visibilitychange` to hidden only, as the library recommends. `go run ./cmd/lab -beacon` checks that leaving each page builds a report with all four metrics (`/`, `/book-i` and `/login` pass; `/journals` needs a database with entries for its scripted search).
+
+4. **Fallbacks tuned to one platform's fonts.** The first CI run (Ubuntu, no Georgia) measured CLS 0.194 on every `/book-i` run: the book's fallback was tuned to Georgia only, so Linux fell through to its wider default serif and reflowed when EB Garamond arrived. Android, the reference reader's platform, has neither Georgia nor Arial either. Each role now has one measured fallback per system font family (Georgia, Times New Roman / Liberation Serif, Noto Serif; Arial / Helvetica / Liberation Sans, Roboto).
 
 **Server variance** (field data will show it): the first `/journals/content` after the server starts took 788 ms; warm, 17 ms.
 
