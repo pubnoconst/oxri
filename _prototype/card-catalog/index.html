@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Universal Preview Cards (Real Archive) — Res Imperii Lab</title>
+  <style>
+    /* Exact self-hosted OFL faces + Didact Gothic Greek from oxri/assets/fonts */
+    @font-face {
+      font-family: "Res Book";
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url("/fonts/eb-garamond-latin-400.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Res Book";
+      font-style: italic;
+      font-weight: 400;
+      font-display: swap;
+      src: url("/fonts/eb-garamond-latin-400-italic.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Res UI";
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url("/fonts/figtree-latin-400.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Res UI";
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url("/fonts/didact-gothic-greek-400.woff2") format("woff2");
+      unicode-range: U+0370-03FF, U+1F00-1FFF;
+    }
+    @font-face {
+      font-family: "Res Entry";
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url("/fonts/playpen-sans-latin-400.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Res Entry";
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url("/fonts/didact-gothic-greek-400.woff2") format("woff2");
+      unicode-range: U+0370-03FF, U+1F00-1FFF;
+    }
+    @font-face {
+      font-family: "Res Quote";
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url("/fonts/short-stack-latin-400.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Res Quote";
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url("/fonts/didact-gothic-greek-400.woff2") format("woff2");
+      unicode-range: U+0370-03FF, U+1F00-1FFF;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      font-weight: 400;
+      font-synthesis-weight: none;
+    }
+
+    :root {
+      --font-serif: "Res Book", Georgia, serif;
+      --font-ui: "Res UI", system-ui, sans-serif;
+      --font-entry: "Res Entry", system-ui, sans-serif;
+      --font-quote-active: "Res Quote", system-ui, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+      --page: #f5f4f0;
+      --page-ink: #34332f;
+      --accent-warn: #c98a2c;
+      --accent-active: #3b6e44;
+      --accent-danger: #c74e4a;
+
+      --depth-sunk-surface: color-mix(in srgb, var(--page) 94%, var(--page-ink));
+      --depth-0-surface: var(--page);
+      --depth-1-surface: color-mix(in srgb, var(--page) 45%, #ffffff);
+      --depth-1-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 1px 1px rgba(60, 55, 45, 0.05),
+        0 8px 22px -10px rgba(60, 55, 45, 0.16),
+        0 22px 44px -26px rgba(60, 55, 45, 0.18);
+      --depth-2-surface: color-mix(in srgb, var(--page) 20%, #ffffff);
+      --depth-2-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.04),
+        0 6px 14px -10px rgba(40, 35, 25, 0.35);
+
+      --glass-light: #f5f0e6;
+      --glass-saturate: saturate(1.2);
+      --depth-overlay-blur: blur(5px) var(--glass-saturate);
+
+      --border-subtle: color-mix(in srgb, var(--page-ink) 11%, transparent);
+      --border-card: color-mix(in srgb, var(--page-ink) 15%, transparent);
+      --border-input: color-mix(in srgb, var(--page-ink) 20%, transparent);
+      --border-focus: color-mix(in srgb, var(--page-ink) 45%, transparent);
+
+      --radius-card: 0.5rem;
+      --radius-control: 0.35rem;
+      --radius-pill: 999px;
+
+      --space-card-pad-sm: 1.1rem;
+      --interact-duration: 140ms;
+      --ease-veil: 240ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --page: #0f1113;
+      --page-ink: #d6d6d3;
+      --accent-warn: #e6b450;
+      --accent-active: #87b382;
+      --accent-danger: #e06c68;
+      --depth-1-surface: color-mix(in srgb, var(--page) 95.5%, #ffffff);
+      --depth-1-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.035),
+        0 1px 1px rgba(0, 0, 0, 0.35),
+        0 10px 24px -8px rgba(0, 0, 0, 0.55),
+        0 24px 48px -24px rgba(0, 0, 0, 0.6);
+      --depth-2-surface: color-mix(in srgb, var(--page) 92%, #ffffff);
+      --depth-2-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.3),
+        0 6px 14px -8px rgba(0, 0, 0, 0.6);
+    }
+
+    :root[data-quote-font="ui"] { --font-quote-active: "Res UI", system-ui, sans-serif; }
+    :root[data-quote-font="book"] { --font-quote-active: "Res Book", Georgia, serif; }
+
+    body {
+      background: var(--depth-0-surface);
+      color: var(--page-ink);
+      font-family: var(--font-ui);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      padding: 0 0 5rem;
+      transition: background-color 180ms ease, color 180ms ease;
+    }
+
+    /* Sticky Lab Header */
+    .lab-bar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--depth-1-surface);
+      border-bottom: 1px solid var(--border-card);
+      padding: 0.68rem 1.4rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem 1.15rem;
+    }
+    @supports (backdrop-filter: blur(1px)) {
+      .lab-bar {
+        background: color-mix(in srgb, var(--depth-1-surface) 80%, transparent);
+        backdrop-filter: var(--depth-overlay-blur);
+      }
+    }
+
+    .lab-title-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.65rem;
+    }
+    .lab-title {
+      font-family: var(--font-serif);
+      font-size: 1.18rem;
+      letter-spacing: 0.02em;
+    }
+    .lab-sub {
+      font-size: 0.76rem;
+      color: color-mix(in srgb, var(--page-ink) 60%, transparent);
+    }
+
+    .lab-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .seg-group {
+      display: inline-flex;
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius-control);
+      overflow: hidden;
+      background: var(--depth-0-surface);
+    }
+    .seg-btn {
+      border: 0;
+      background: transparent;
+      padding: 0.26rem 0.58rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: color-mix(in srgb, var(--page-ink) 70%, transparent);
+      border-right: 1px solid var(--border-subtle);
+      transition: background-color var(--interact-duration) ease, color var(--interact-duration) ease;
+    }
+    .seg-btn:last-child { border-right: 0; }
+    .seg-btn:hover {
+      color: var(--page-ink);
+      background: color-mix(in srgb, var(--page-ink) 5%, transparent);
+    }
+    .seg-btn.is-on {
+      background: var(--page-ink);
+      color: var(--page);
+    }
+
+    .shell {
+      width: min(74rem, 100%);
+      margin: 0 auto;
+      padding: 1.75rem 1.5rem 0;
+    }
+    body[data-viewport="mobile"] .shell {
+      width: 400px;
+      max-width: 100%;
+    }
+
+    /* Stats & Filter Strip */
+    .archive-summary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem 1.25rem;
+      padding: 0.85rem 1.05rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-card);
+      background: var(--depth-1-surface);
+      font-size: 0.82rem;
+    }
+    .summary-counts {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem 0.9rem;
+      color: color-mix(in srgb, var(--page-ink) 75%, transparent);
+    }
+    .count-chip {
+      font-family: var(--font-mono);
+      font-size: 0.73rem;
+      padding: 0.1rem 0.45rem;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-subtle);
+      background: var(--depth-sunk-surface);
+    }
+
+    /* Catalog Grid (matches oxri 1–4 col grid; 3-col comfortable preview) */
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.35rem;
+      align-items: start;
+    }
+    body[data-mode="compare"] .catalog-grid {
+      grid-template-columns: 1fr;
+      gap: 1.65rem;
+    }
+    @media (max-width: 980px) {
+      .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .catalog-grid { grid-template-columns: 1fr; }
+    }
+    body[data-viewport="mobile"] .catalog-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .compare-pair {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.35rem;
+      align-items: start;
+      padding-bottom: 1.65rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    @media (max-width: 720px) {
+      .compare-pair { grid-template-columns: 1fr; }
+    }
+    body[data-viewport="mobile"] .compare-pair {
+      grid-template-columns: 1fr;
+    }
+    .compare-col-label {
+      font-family: var(--font-mono);
+      font-size: 0.71rem;
+      color: color-mix(in srgb, var(--page-ink) 56%, transparent);
+      margin-bottom: 0.4rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* =====================================================================
+       UNIVERSAL OUTER JOURNAL CARD (.u-journal-card)
+       ===================================================================== */
+    .u-journal-card {
+      position: relative;
+      padding: var(--space-card-pad-sm);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-card);
+      background: var(--depth-1-surface);
+      box-shadow: var(--depth-1-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      transition: border-color var(--interact-duration) ease;
+    }
+    .u-journal-card:hover,
+    .u-journal-card:focus-within {
+      border-color: var(--border-focus);
+    }
+    .u-journal-card.is-draft {
+      border-style: dashed;
+      border-color: var(--border-input);
+    }
+
+    /* =====================================================================
+       UNIVERSAL TWEET CLIPPING (.u-tweet)
+       ===================================================================== */
+    .u-tweet {
+      width: 100%;
+      padding: 0.88rem 0.98rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      background: var(--depth-2-surface);
+      box-shadow: var(--depth-2-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      text-align: left;
+    }
+
+    /* Universal Top-Left Author Row */
+    .u-tweet-author-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      min-width: 0;
+    }
+    .u-avatar {
+      width: 2.2rem;
+      height: 2.2rem;
+      flex: 0 0 2.2rem;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--depth-sunk-surface);
+      border: 1px solid var(--border-subtle);
+    }
+    .u-avatar-fallback {
+      width: 2.2rem;
+      height: 2.2rem;
+      flex: 0 0 2.2rem;
+      border-radius: 50%;
+      background: var(--depth-sunk-surface);
+      border: 1px solid var(--border-subtle);
+      display: grid;
+      place-items: center;
+      font-size: 0.82rem;
+      color: color-mix(in srgb, var(--page-ink) 65%, transparent);
+    }
+    .u-identity {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      line-height: 1.22;
+    }
+    .u-name {
+      font-family: var(--font-ui);
+      font-size: 0.9rem;
+      color: var(--page-ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .u-handle {
+      font-family: var(--font-ui);
+      font-size: 0.76rem;
+      color: color-mix(in srgb, var(--page-ink) 56%, transparent);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .u-ext {
+      margin-left: auto;
+      align-self: flex-start;
+      font-family: var(--font-ui);
+      font-size: 0.74rem;
+      color: color-mix(in srgb, var(--page-ink) 42%, transparent);
+      text-decoration: none;
+      padding: 0.05rem 0.2rem;
+      transition: color var(--interact-duration) ease;
+    }
+    .u-ext:hover { color: var(--page-ink); }
+
+    /* ---------------------------------------------------------------------
+       TYPE 3: Pure Statement (No Media — Eric Hovind layout)
+       --------------------------------------------------------------------- */
+    .u-statement-body {
+      font-family: var(--font-quote-active);
+      font-size: 0.94rem;
+      line-height: 1.5;
+      color: color-mix(in srgb, var(--page-ink) 92%, var(--depth-2-surface));
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 6;
+      overflow: hidden;
+    }
+
+    /* ---------------------------------------------------------------------
+       TYPE 2: Newspaper Snippet (Media + > 80 chars)
+       Same top-left author row, adding left square thumbnail beside text.
+       --------------------------------------------------------------------- */
+    .u-snippet-row {
+      display: grid;
+      grid-template-columns: 4.85rem minmax(0, 1fr);
+      gap: 0.78rem;
+      align-items: start;
+    }
+    .u-snippet-thumb-wrap {
+      position: relative;
+      width: 4.85rem;
+      height: 4.85rem;
+      border-radius: var(--radius-control);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      background: var(--depth-sunk-surface);
+      flex-shrink: 0;
+    }
+    .u-snippet-thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .u-snippet-count {
+      position: absolute;
+      right: 0.25rem;
+      bottom: 0.25rem;
+      padding: 0.05rem 0.32rem;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      border-radius: var(--radius-control);
+      background: rgba(15, 17, 19, 0.74);
+      color: #f5f4f0;
+    }
+    .u-snippet-row .u-statement-body {
+      font-size: 0.88rem;
+      line-height: 1.46;
+      -webkit-line-clamp: 5;
+    }
+
+    /* Quoted tweet nested inside Type 2 or Type 3 */
+    .u-quoted-box {
+      padding: 0.5rem 0.68rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-control);
+      background: var(--depth-sunk-surface);
+      font-size: 0.8rem;
+      line-height: 1.42;
+    }
+    .u-quoted-head {
+      display: flex;
+      gap: 0.35rem;
+      margin-bottom: 0.2rem;
+      font-family: var(--font-ui);
+      font-size: 0.75rem;
+    }
+    .u-quoted-text {
+      font-family: var(--font-quote-active);
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
+
+    /* ---------------------------------------------------------------------
+       TYPE 1 (1C ENHANCED): Full-Bleed Caption Overlay (Media + <= 80 chars)
+       - At rest: completely clean full-bleed photograph; author & caption
+         are hidden (opacity: 0).
+       - On cursor hover (:hover), keyboard/tap focus (:focus, :focus-within),
+         or touch viewport focus (.is-touch-focused): author pill & caption
+         smoothly ease in, and ease out when unfocused/unhovered.
+       --------------------------------------------------------------------- */
+    .u-tweet.is-caption {
+      padding: 0;
+      gap: 0;
+      overflow: hidden;
+      position: relative;
+      outline: none;
+    }
+    .u-tweet.is-caption:focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+    .u-caption-stage {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      background: var(--depth-sunk-surface);
+    }
+    .u-caption-stage img.u-stage-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .u-tweet.is-caption .u-tweet-author-row {
+      position: absolute;
+      top: 0.58rem;
+      left: 0.58rem;
+      z-index: 3;
+      padding: 0.3rem 0.58rem 0.3rem 0.34rem;
+      border-radius: var(--radius-pill);
+      background: rgba(15, 17, 19, 0.62);
+      border: 1px solid rgba(245, 240, 230, 0.16);
+      backdrop-filter: blur(6px) saturate(1.2);
+      width: fit-content;
+      max-width: calc(100% - 1.16rem);
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: opacity var(--ease-veil), transform var(--ease-veil);
+    }
+    .u-tweet.is-caption .u-avatar,
+    .u-tweet.is-caption .u-avatar-fallback {
+      width: 1.72rem;
+      height: 1.72rem;
+      flex-basis: 1.72rem;
+    }
+    .u-tweet.is-caption .u-name {
+      color: #f5f4f0;
+      font-size: 0.82rem;
+    }
+    .u-tweet.is-caption .u-handle {
+      color: rgba(245, 244, 240, 0.74);
+      font-size: 0.7rem;
+    }
+    .u-tweet.is-caption .u-ext {
+      color: rgba(245, 244, 240, 0.72);
+      margin-left: 0.25rem;
+      align-self: center;
+    }
+    .u-tweet.is-caption .u-ext:hover {
+      color: #ffffff;
+    }
+
+    .u-caption-overlay {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 2;
+      padding: 1.9rem 0.85rem 0.7rem;
+      background: linear-gradient(
+        to top,
+        rgba(12, 13, 15, 0.86) 0%,
+        rgba(12, 13, 15, 0.54) 58%,
+        rgba(12, 13, 15, 0) 100%
+      );
+      color: #f5f4f0;
+      font-family: var(--font-quote-active);
+      font-size: 0.88rem;
+      line-height: 1.4;
+      opacity: 0;
+      transform: translateY(4px);
+      pointer-events: none;
+      transition: opacity var(--ease-veil), transform var(--ease-veil);
+    }
+
+    /* Ease-in triggers:
+       1. Desktop hover on the clipping
+       2. Keyboard or tap focus (:focus / :focus-within)
+       3. Touch display focal band (.is-touch-focused)
+       4. Optional lab "Peek Overlays" toggle */
+    .u-tweet.is-caption:hover .u-tweet-author-row,
+    .u-tweet.is-caption:focus .u-tweet-author-row,
+    .u-tweet.is-caption:focus-within .u-tweet-author-row,
+    .u-tweet.is-caption.is-touch-focused .u-tweet-author-row,
+    body[data-peek="always"] .u-tweet.is-caption .u-tweet-author-row,
+    .u-tweet.is-caption:hover .u-caption-overlay,
+    .u-tweet.is-caption:focus .u-caption-overlay,
+    .u-tweet.is-caption:focus-within .u-caption-overlay,
+    .u-tweet.is-caption.is-touch-focused .u-caption-overlay,
+    body[data-peek="always"] .u-tweet.is-caption .u-caption-overlay {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .u-tweet.is-caption .u-tweet-author-row,
+      .u-tweet.is-caption .u-caption-overlay {
+        transition: none;
+        transform: none;
+      }
+    }
+
+    /* Play mark (Video / GIF) */
+    .u-play-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 50%;
+      background: rgba(15, 17, 19, 0.62);
+      transform: translate(-50%, -50%);
+      display: grid;
+      place-items: center;
+      z-index: 2;
+    }
+    .u-play-badge.is-sm {
+      width: 1.65rem;
+      height: 1.65rem;
+    }
+    .u-play-tri {
+      width: 0;
+      height: 0;
+      border-top: 0.48rem solid transparent;
+      border-bottom: 0.48rem solid transparent;
+      border-left: 0.78rem solid #f5f4f0;
+      margin-left: 0.16rem;
+    }
+    .u-play-badge.is-sm .u-play-tri {
+      border-top-width: 0.32rem;
+      border-bottom-width: 0.32rem;
+      border-left-width: 0.52rem;
+      margin-left: 0.1rem;
+    }
+
+    /* ---------------------------------------------------------------------
+       NON-TWEET MEDIA SLOTS (Universal Alignment)
+       - Scripture Passage: same universal top-left Reference + Version, text below
+       - Server Still (Image / Video / GIF): clean depth-2 framed still
+       - Plain Link: compact quiet link slip
+       --------------------------------------------------------------------- */
+    .u-passage {
+      width: 100%;
+      padding: 0.88rem 0.98rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      background: var(--depth-2-surface);
+      box-shadow: var(--depth-2-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      text-align: left;
+    }
+    .u-passage-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .u-passage-ref {
+      font-family: var(--font-ui);
+      font-size: 0.9rem;
+      color: var(--page-ink);
+    }
+    .u-passage-ver {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: color-mix(in srgb, var(--page-ink) 54%, transparent);
+    }
+
+    .u-still-frame {
+      position: relative;
+      width: 100%;
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      background: var(--depth-2-surface);
+      box-shadow: var(--depth-2-shadow);
+      max-height: 14rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .u-still-frame img {
+      width: 100%;
+      max-height: 14rem;
+      object-fit: cover;
+      display: block;
+    }
+
+    .u-link-slip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.58rem 0.8rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      background: var(--depth-2-surface);
+      font-size: 0.8rem;
+      color: color-mix(in srgb, var(--page-ink) 75%, transparent);
+      text-decoration: none;
+    }
+    .u-link-slip:hover {
+      border-color: var(--border-focus);
+      color: var(--page-ink);
+    }
+
+    /* Excerpt & Quiet Single-Line Footer */
+    .u-entry-excerpt {
+      font-family: var(--font-entry);
+      font-size: 0.95rem;
+      line-height: 1.54;
+      color: color-mix(in srgb, var(--page-ink) 90%, transparent);
+      text-align: left;
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+    }
+
+    .u-card-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding-top: 0.1rem;
+      font-family: var(--font-ui);
+      font-size: 0.75rem;
+      color: color-mix(in srgb, var(--page-ink) 54%, transparent);
+    }
+    .u-foot-left {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.36rem;
+      min-width: 0;
+    }
+    .u-dot-sep::before { content: "·"; }
+    .u-foot-tag {
+      color: color-mix(in srgb, var(--page-ink) 68%, transparent);
+    }
+    .u-foot-right {
+      display: flex;
+      align-items: center;
+      gap: 0.42rem;
+      flex-shrink: 0;
+    }
+    .u-star {
+      color: var(--accent-warn);
+      font-size: 0.82rem;
+    }
+    .u-draft-label {
+      font-size: 0.71rem;
+      color: color-mix(in srgb, var(--page-ink) 56%, transparent);
+    }
+
+    .u-author-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.4rem;
+      padding-top: 0.55rem;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.74rem;
+    }
+    body[data-role="author"] .u-author-bar {
+      display: flex;
+    }
+    .u-author-links {
+      display: flex;
+      gap: 0.65rem;
+      color: color-mix(in srgb, var(--page-ink) 64%, transparent);
+    }
+
+    /* =====================================================================
+       CURRENT PRODUCTION CARD (for Side-by-Side Real Data Comparison)
+       ===================================================================== */
+    .legacy-card {
+      padding: var(--space-card-pad-sm);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-card);
+      background: var(--depth-1-surface);
+      box-shadow: var(--depth-1-shadow);
+      display: flex;
+      flex-direction: column;
+      text-align: center;
+    }
+    .legacy-card.is-draft {
+      border-style: dashed;
+      border-color: var(--border-input);
+    }
+    .legacy-meta {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 0.4rem;
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.85rem;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.86rem;
+      color: color-mix(in srgb, var(--page-ink) 65%, transparent);
+    }
+    .legacy-pill {
+      padding: 0.1rem 0.48rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-card);
+      background: var(--depth-sunk-surface);
+      font-size: 0.7rem;
+    }
+    .legacy-tweet {
+      padding: 0.85rem 0.95rem 0.75rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      background: var(--depth-2-surface);
+      box-shadow: var(--depth-2-shadow);
+      text-align: left;
+      margin-bottom: 0.85rem;
+    }
+    .legacy-tweet-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      opacity: 0.6;
+      margin-bottom: 0.55rem;
+    }
+    .legacy-tweet-text {
+      font-family: var(--font-quote-active);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-bottom: 0.65rem;
+      white-space: pre-line;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 7;
+      overflow: hidden;
+    }
+    .legacy-media {
+      border-radius: var(--radius-control);
+      overflow: hidden;
+      max-height: 13rem;
+      margin-top: 0.5rem;
+    }
+    .legacy-media img {
+      width: 100%;
+      max-height: 13rem;
+      object-fit: cover;
+      display: block;
+    }
+    .legacy-byline {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-top: 0.7rem;
+      padding-top: 0.55rem;
+      border-top: 1px dashed var(--border-card);
+      font-size: 0.78rem;
+    }
+    .legacy-byline img {
+      width: 1.45rem;
+      height: 1.45rem;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .legacy-tags {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.65rem;
+    }
+    .legacy-tag {
+      font-size: 0.72rem;
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      background: var(--depth-sunk-surface);
+      border: 1px solid var(--border-subtle);
+    }
+    .legacy-excerpt {
+      font-family: var(--font-entry);
+      font-size: 0.94rem;
+      opacity: 0.88;
+      white-space: pre-line;
+    }
+
+    .empty-msg {
+      padding: 2rem;
+      text-align: center;
+      color: color-mix(in srgb, var(--page-ink) 60%, transparent);
+    }
+  </style>
+</head>
+<body data-mode="catalog" data-filter="all" data-peek="hover" data-viewport="desktop" data-role="reader">
+
+  <header class="lab-bar">
+    <div class="lab-title-group">
+      <span class="lab-title">Res Imperii · Real Archive Preview</span>
+      <span class="lab-sub">1C Full-Bleed (Hover / Touch-Focus Ease) + Newspaper Snippet + Statement · Read-Only DB</span>
+    </div>
+    <div class="lab-controls">
+      <div class="seg-group" aria-label="View mode">
+        <button class="seg-btn is-on" data-set-mode="catalog">Proposed Catalog</button>
+        <button class="seg-btn" data-set-mode="compare">Before vs. After</button>
+      </div>
+      <div class="seg-group" aria-label="Filter entries">
+        <button class="seg-btn is-on" data-set-filter="all">All</button>
+        <button class="seg-btn" data-set-filter="published">Published</button>
+        <button class="seg-btn" data-set-filter="tweets">Tweets Only</button>
+      </div>
+      <div class="seg-group" aria-label="1C Caption overlay state">
+        <button class="seg-btn is-on" data-set-peek="hover">1C: Hover / Focus</button>
+        <button class="seg-btn" data-set-peek="always">Peek All 1C</button>
+      </div>
+      <div class="seg-group" aria-label="Quote typeface">
+        <button class="seg-btn is-on" data-set-font="quote">Quote Face</button>
+        <button class="seg-btn" data-set-font="ui">Clean Sans</button>
+      </div>
+      <div class="seg-group" aria-label="Role">
+        <button class="seg-btn is-on" data-set-role="reader">Reader</button>
+        <button class="seg-btn" data-set-role="author">Author</button>
+      </div>
+      <div class="seg-group" aria-label="Viewport and touch mode">
+        <button class="seg-btn is-on" data-set-vp="desktop">3-Col (Cursor)</button>
+        <button class="seg-btn" data-set-vp="mobile">Phone (Touch Focus)</button>
+      </div>
+      <div class="seg-group" aria-label="Theme">
+        <button class="seg-btn is-on" data-set-theme="light">Light</button>
+        <button class="seg-btn" data-set-theme="dark">Dark</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="archive-summary" id="summary-bar">
+      <div class="summary-counts" id="summary-counts">Loading real archive from Turso (read-only)…</div>
+      <div style="font-size:0.76rem; color:color-mix(in srgb, var(--page-ink) 58%, transparent);">
+        Hover any full-bleed photo (or tap / scroll into focus in Phone mode) to ease in author &amp; caption.
+      </div>
+    </section>
+
+    <div id="catalog-mount" class="catalog-grid"></div>
+  </main>
+
+  <script>
+    let allEntries = [];
+    let touchObserver = null;
+
+    function esc(s) {
+      const d = document.createElement("div");
+      d.textContent = s == null ? "" : String(s);
+      return d.innerHTML;
+    }
+
+    function clampRatio(w, h) {
+      if (!w || !h || w <= 0 || h <= 0) return "4 / 3";
+      const r = w / h;
+      if (r < 0.85) return "85 / 100";
+      if (r > 1.85) return "185 / 100";
+      return w + " / " + h;
+    }
+
+    function renderAvatar(tw) {
+      if (tw.avatarUrl) {
+        return `<img class="u-avatar" src="${esc(tw.avatarUrl)}" alt="" loading="lazy" decoding="async">`;
+      }
+      const initial = (tw.name || tw.handle || "X").slice(0, 1).toUpperCase();
+      return `<span class="u-avatar-fallback">${esc(initial)}</span>`;
+    }
+
+    function renderAuthorRow(tw) {
+      return `
+        <div class="u-tweet-author-row">
+          ${renderAvatar(tw)}
+          <div class="u-identity">
+            <span class="u-name">${esc(tw.name)}</span>
+            <span class="u-handle">@${esc(tw.handle)}</span>
+          </div>
+          <a class="u-ext" href="${esc(tw.postUrl)}" target="_blank" rel="noopener noreferrer" title="View on X">↗</a>
+        </div>
+      `;
+    }
+
+    function renderQuoted(q) {
+      if (!q || !q.text) return "";
+      return `
+        <div class="u-quoted-box">
+          <div class="u-quoted-head">
+            <span class="u-name" style="font-size:0.75rem">${esc(q.name)}</span>
+            <span class="u-handle" style="font-size:0.72rem">@${esc(q.handle)}</span>
+          </div>
+          <div class="u-quoted-text">${esc(q.text)}</div>
+        </div>
+      `;
+    }
+
+    function renderUniversalTweet(tw) {
+      if (tw.archetype === "caption") {
+        const m = tw.media[0];
+        const ratio = clampRatio(m.w, m.h);
+        const playMark = m.kind === "video"
+          ? `<span class="u-play-badge"><span class="u-play-tri"></span></span>`
+          : "";
+        const multiCount = tw.media.length > 1
+          ? `<span class="u-snippet-count">1/${tw.media.length}</span>`
+          : "";
+        const captionOverlay = tw.text
+          ? `<figcaption class="u-caption-overlay">${esc(tw.text)}</figcaption>`
+          : "";
+        return `
+          <figure class="u-tweet is-caption" tabindex="0" data-archetype="caption">
+            ${renderAuthorRow(tw)}
+            <div class="u-caption-stage" style="aspect-ratio: ${ratio}">
+              <img class="u-stage-photo" src="${esc(m.url)}" alt="" loading="lazy" decoding="async">
+              ${playMark}
+              ${multiCount}
+              ${captionOverlay}
+            </div>
+          </figure>
+        `;
+      }
+
+      if (tw.archetype === "snippet") {
+        const m = tw.media[0];
+        const playMark = m.kind === "video"
+          ? `<span class="u-play-badge is-sm"><span class="u-play-tri"></span></span>`
+          : "";
+        const multiCount = tw.media.length > 1
+          ? `<span class="u-snippet-count">1/${tw.media.length}</span>`
+          : "";
+        return `
+          <figure class="u-tweet is-snippet" data-archetype="snippet">
+            ${renderAuthorRow(tw)}
+            <div class="u-snippet-row">
+              <div class="u-snippet-thumb-wrap">
+                <img src="${esc(m.url)}" alt="" loading="lazy" decoding="async">
+                ${playMark}
+                ${multiCount}
+              </div>
+              <blockquote class="u-statement-body">${esc(tw.text)}</blockquote>
+            </div>
+            ${renderQuoted(tw.quoted)}
+          </figure>
+        `;
+      }
+
+      return `
+        <figure class="u-tweet is-statement" data-archetype="statement">
+          ${renderAuthorRow(tw)}
+          ${tw.text ? `<blockquote class="u-statement-body">${esc(tw.text)}</blockquote>` : ""}
+          ${renderQuoted(tw.quoted)}
+        </figure>
+      `;
+    }
+
+    function renderUniversalMedia(entry) {
+      if (entry.tweet) {
+        return renderUniversalTweet(entry.tweet);
+      }
+      if (entry.passage) {
+        return `
+          <figure class="u-passage">
+            <div class="u-passage-head">
+              <span class="u-passage-ref">${esc(entry.passage.ref)}</span>
+              <span class="u-passage-ver">${esc(entry.passage.ver)}</span>
+            </div>
+            <blockquote class="u-statement-body">${esc(entry.passage.text)}</blockquote>
+          </figure>
+        `;
+      }
+      if (entry.thumb) {
+        const play = (entry.thumb.kind === "video" || entry.thumb.kind === "gif")
+          ? `<span class="u-play-badge"><span class="u-play-tri"></span></span>`
+          : "";
+        return `
+          <div class="u-still-frame">
+            <img src="${esc(entry.thumb.url)}" alt="" loading="lazy" decoding="async">
+            ${play}
+          </div>
+        `;
+      }
+      if (entry.mediaUrl) {
+        const label = entry.mediaHost || entry.mediaUrl;
+        return `
+          <a class="u-link-slip" href="${esc(entry.mediaUrl)}" target="_blank" rel="noopener noreferrer">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(label)}</span>
+            <span>↗</span>
+          </a>
+        `;
+      }
+      return "";
+    }
+
+    function renderProposedCard(entry) {
+      const draftCls = entry.published ? "" : " is-draft";
+      const tagsHTML = (entry.tags || []).map((t) => `<span class="u-dot-sep"></span><span class="u-foot-tag">${esc(t)}</span>`).join("");
+      const rightBadges = [
+        !entry.published ? `<span class="u-draft-label">Draft</span>` : "",
+        entry.bookmarked ? `<span class="u-star" title="Bookmarked">★</span>` : ""
+      ].filter(Boolean).join("");
+
+      return `
+        <article class="u-journal-card${draftCls}">
+          ${renderUniversalMedia(entry)}
+          ${entry.excerpt ? `<p class="u-entry-excerpt">${esc(entry.excerpt)}</p>` : ""}
+          <footer class="u-card-foot">
+            <div class="u-foot-left">
+              <time>${esc(entry.date)}</time>
+              ${tagsHTML}
+            </div>
+            <div class="u-foot-right">${rightBadges}</div>
+          </footer>
+          <div class="u-author-bar">
+            <label style="display:inline-flex;align-items:center;gap:0.35rem;cursor:pointer;">
+              <input type="checkbox"> Select
+            </label>
+            <div class="u-author-links">
+              <span>Edit</span>
+              <span>${entry.published ? "Unpublish" : "Publish"}</span>
+              <span>${entry.bookmarked ? "Unbookmark" : "Bookmark"}</span>
+              <span style="color:var(--accent-danger)">Delete</span>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderLegacyCard(entry) {
+      const draftCls = entry.published ? "" : " is-draft";
+      let mediaHTML = "";
+      if (entry.tweet) {
+        const tw = entry.tweet;
+        const m = tw.media && tw.media[0]
+          ? `<div class="legacy-media"><img src="${esc(tw.media[0].url)}" alt="" loading="lazy"></div>`
+          : "";
+        const av = tw.avatarUrl ? `<img src="${esc(tw.avatarUrl)}" alt="">` : "";
+        mediaHTML = `
+          <div class="legacy-tweet">
+            <div class="legacy-tweet-head">
+              <span>X</span>
+              <span>${esc(tw.createdDate)}</span>
+            </div>
+            ${tw.text ? `<div class="legacy-tweet-text">${esc(tw.text)}</div>` : ""}
+            ${m}
+            <div class="legacy-byline">
+              ${av}
+              <span>${esc(tw.name)}</span>
+              <span style="opacity:0.6">@${esc(tw.handle)}</span>
+              <span style="margin-left:auto; opacity:0.65">View on X ↗</span>
+            </div>
+          </div>
+        `;
+      } else if (entry.passage) {
+        mediaHTML = `
+          <div class="legacy-tweet">
+            <div class="legacy-tweet-head"><span>BIBLE</span><span>${esc(entry.passage.ver)}</span></div>
+            <div class="legacy-tweet-text">${esc(entry.passage.text)}</div>
+            <div class="legacy-byline" style="justify-content:center;"><span>${esc(entry.passage.ref)}</span></div>
+          </div>
+        `;
+      } else if (entry.thumb) {
+        mediaHTML = `<div class="legacy-media" style="margin-bottom:0.85rem;"><img src="${esc(entry.thumb.url)}" alt=""></div>`;
+      }
+
+      const tags = (entry.tags || []).length
+        ? `<div class="legacy-tags">${entry.tags.map((t) => `<span class="legacy-tag">${esc(t)}</span>`).join("")}</div>`
+        : "";
+
+      return `
+        <article class="legacy-card${draftCls}">
+          <div class="legacy-meta">
+            <span>${esc(entry.date)}</span>
+            ${!entry.published ? `<span class="legacy-pill">Unpublished</span>` : ""}
+            ${entry.bookmarked ? `<span class="legacy-pill">★</span>` : ""}
+          </div>
+          ${mediaHTML}
+          ${tags}
+          ${entry.excerpt ? `<p class="legacy-excerpt">${esc(entry.excerpt)}</p>` : ""}
+        </article>
+      `;
+    }
+
+    function archetypeLabel(entry) {
+      if (entry.tweet) {
+        if (entry.tweet.archetype === "caption") return `1C Caption (${entry.tweet.charCount}c + media)`;
+        if (entry.tweet.archetype === "snippet") return `Newspaper Snippet (${entry.tweet.charCount}c + media)`;
+        return `Pure Statement (${entry.tweet.charCount}c · no media)`;
+      }
+      if (entry.passage) return `Scripture (${entry.passage.ver})`;
+      if (entry.thumb) return `Server Still (${entry.thumb.kind})`;
+      return "Link / Note";
+    }
+
+    function wireTouchFocusObserver() {
+      if (touchObserver) {
+        touchObserver.disconnect();
+        touchObserver = null;
+      }
+      const cards = document.querySelectorAll(".u-tweet.is-caption");
+      cards.forEach((el) => el.classList.remove("is-touch-focused"));
+
+      const isTouchSim = document.body.dataset.viewport === "mobile" ||
+                         window.matchMedia("(hover: none), (pointer: coarse)").matches;
+      if (!isTouchSim) return;
+
+      // On touch displays, whichever 1C caption card sits in the active focal band
+      // of the viewport smoothly eases in its author pill and caption.
+      touchObserver = new IntersectionObserver((entries) => {
+        entries.forEach((io) => {
+          io.target.classList.toggle("is-touch-focused", io.isIntersecting);
+        });
+      }, {
+        rootMargin: "-22% 0px -22% 0px",
+        threshold: 0.55
+      });
+
+      cards.forEach((el) => touchObserver.observe(el));
+    }
+
+    function render() {
+      const filter = document.body.dataset.filter;
+      const mode = document.body.dataset.mode;
+
+      const filtered = allEntries.filter((e) => {
+        if (filter === "published" && !e.published) return false;
+        if (filter === "tweets" && !e.tweet) return false;
+        return true;
+      });
+
+      let nCap = 0, nSnip = 0, nStmt = 0, nOther = 0;
+      filtered.forEach((e) => {
+        if (!e.tweet) { nOther++; return; }
+        if (e.tweet.archetype === "caption") nCap++;
+        else if (e.tweet.archetype === "snippet") nSnip++;
+        else nStmt++;
+      });
+
+      document.getElementById("summary-counts").innerHTML = `
+        <span>Showing <strong>${filtered.length}</strong> real entries</span>
+        <span class="count-chip">1C Caption (&le;80c): ${nCap}</span>
+        <span class="count-chip">Snippet (&gt;80c + media): ${nSnip}</span>
+        <span class="count-chip">Statement (no media): ${nStmt}</span>
+        <span class="count-chip">Other media: ${nOther}</span>
+      `;
+
+      const mount = document.getElementById("catalog-mount");
+      if (filtered.length === 0) {
+        mount.innerHTML = `<div class="empty-msg">No matching entries in archive.</div>`;
+        return;
+      }
+
+      if (mode === "compare") {
+        mount.innerHTML = filtered.map((e) => `
+          <div class="compare-pair">
+            <div>
+              <div class="compare-col-label"><span>Current Prod</span><span>#${e.id}</span></div>
+              ${renderLegacyCard(e)}
+            </div>
+            <div>
+              <div class="compare-col-label"><span>Proposed Universal</span><span>${esc(archetypeLabel(e))}</span></div>
+              ${renderProposedCard(e)}
+            </div>
+          </div>
+        `).join("");
+      } else {
+        mount.innerHTML = filtered.map((e) => renderProposedCard(e)).join("");
+      }
+
+      wireTouchFocusObserver();
+    }
+
+    function bindGroup(attr, apply) {
+      const buttons = document.querySelectorAll("[" + attr + "]");
+      buttons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          buttons.forEach((b) => b.classList.remove("is-on"));
+          btn.classList.add("is-on");
+          apply(btn.getAttribute(attr));
+        });
+      });
+    }
+
+    bindGroup("data-set-mode", (v) => { document.body.dataset.mode = v; render(); });
+    bindGroup("data-set-filter", (v) => { document.body.dataset.filter = v; render(); });
+    bindGroup("data-set-peek", (v) => { document.body.dataset.peek = v; });
+    bindGroup("data-set-font", (v) => {
+      if (v === "quote") document.documentElement.removeAttribute("data-quote-font");
+      else document.documentElement.dataset.quoteFont = v;
+    });
+    bindGroup("data-set-role", (v) => { document.body.dataset.role = v; });
+    bindGroup("data-set-vp", (v) => {
+      document.body.dataset.viewport = v;
+      wireTouchFocusObserver();
+    });
+    bindGroup("data-set-theme", (v) => { document.documentElement.dataset.theme = v; });
+
+    document.addEventListener("dblclick", (e) => {
+      if (e.target.closest("button, a, input, figure, article")) return;
+      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      document.querySelectorAll("[data-set-theme]").forEach((b) => {
+        b.classList.toggle("is-on", b.getAttribute("data-set-theme") === next);
+      });
+    });
+
+    fetch("/api/entries")
+      .then((r) => r.json())
+      .then((data) => {
+        allEntries = data.entries || [];
+        render();
+      })
+      .catch((err) => {
+        document.getElementById("summary-counts").textContent = "Error loading archive: " + err.message;
+      });
+  </script>
+</body>
+</html>
