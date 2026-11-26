@@ -3,9 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Universal Preview Cards (Real Archive) — Res Imperii Lab</title>
+  <title>Catalog &amp; Newspaper Entry Reader — Res Imperii Lab</title>
   <style>
-    /* Exact self-hosted OFL faces + Didact Gothic Greek from oxri/assets/fonts */
     @font-face {
       font-family: "Res Book";
       font-style: normal;
@@ -112,6 +111,7 @@
       --radius-control: 0.35rem;
       --radius-pill: 999px;
 
+      --space-card-pad: 1.75rem;
       --space-card-pad-sm: 1.1rem;
       --interact-duration: 140ms;
       --ease-veil: 240ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -137,7 +137,6 @@
     }
 
     :root[data-quote-font="ui"] { --font-quote-active: "Res UI", system-ui, sans-serif; }
-    :root[data-quote-font="book"] { --font-quote-active: "Res Book", Georgia, serif; }
 
     body {
       background: var(--depth-0-surface);
@@ -149,7 +148,6 @@
       transition: background-color 180ms ease, color 180ms ease;
     }
 
-    /* Sticky Lab Header */
     .lab-bar {
       position: sticky;
       top: 0;
@@ -230,14 +228,13 @@
       max-width: 100%;
     }
 
-    /* Stats & Filter Strip */
     .archive-summary {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 0.75rem 1.25rem;
-      padding: 0.85rem 1.05rem;
+      padding: 0.82rem 1.05rem;
       margin-bottom: 1.5rem;
       border: 1px solid var(--border-card);
       border-radius: var(--radius-card);
@@ -248,28 +245,26 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.45rem 0.9rem;
+      gap: 0.45rem 0.85rem;
       color: color-mix(in srgb, var(--page-ink) 75%, transparent);
     }
     .count-chip {
       font-family: var(--font-mono);
-      font-size: 0.73rem;
+      font-size: 0.72rem;
       padding: 0.1rem 0.45rem;
       border-radius: var(--radius-pill);
       border: 1px solid var(--border-subtle);
       background: var(--depth-sunk-surface);
     }
 
-    /* Catalog Grid (matches oxri 1–4 col grid; 3-col comfortable preview) */
+    /* =====================================================================
+       CATALOG GRID & PREVIEW CARDS
+       ===================================================================== */
     .catalog-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 1.35rem;
       align-items: start;
-    }
-    body[data-mode="compare"] .catalog-grid {
-      grid-template-columns: 1fr;
-      gap: 1.65rem;
     }
     @media (max-width: 980px) {
       .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -281,32 +276,6 @@
       grid-template-columns: 1fr;
     }
 
-    .compare-pair {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1.35rem;
-      align-items: start;
-      padding-bottom: 1.65rem;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-    @media (max-width: 720px) {
-      .compare-pair { grid-template-columns: 1fr; }
-    }
-    body[data-viewport="mobile"] .compare-pair {
-      grid-template-columns: 1fr;
-    }
-    .compare-col-label {
-      font-family: var(--font-mono);
-      font-size: 0.71rem;
-      color: color-mix(in srgb, var(--page-ink) 56%, transparent);
-      margin-bottom: 0.4rem;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    /* =====================================================================
-       UNIVERSAL OUTER JOURNAL CARD (.u-journal-card)
-       ===================================================================== */
     .u-journal-card {
       position: relative;
       padding: var(--space-card-pad-sm);
@@ -317,6 +286,7 @@
       display: flex;
       flex-direction: column;
       gap: 0.8rem;
+      cursor: pointer;
       transition: border-color var(--interact-duration) ease;
     }
     .u-journal-card:hover,
@@ -344,7 +314,6 @@
       text-align: left;
     }
 
-    /* Universal Top-Left Author Row */
     .u-tweet-author-row {
       display: flex;
       align-items: center;
@@ -406,9 +375,6 @@
     }
     .u-ext:hover { color: var(--page-ink); }
 
-    /* ---------------------------------------------------------------------
-       TYPE 3: Pure Statement (No Media — Eric Hovind layout)
-       --------------------------------------------------------------------- */
     .u-statement-body {
       font-family: var(--font-quote-active);
       font-size: 0.94rem;
@@ -422,10 +388,6 @@
       overflow: hidden;
     }
 
-    /* ---------------------------------------------------------------------
-       TYPE 2: Newspaper Snippet (Media + > 80 chars)
-       Same top-left author row, adding left square thumbnail beside text.
-       --------------------------------------------------------------------- */
     .u-snippet-row {
       display: grid;
       grid-template-columns: 4.85rem minmax(0, 1fr);
@@ -465,7 +427,6 @@
       -webkit-line-clamp: 5;
     }
 
-    /* Quoted tweet nested inside Type 2 or Type 3 */
     .u-quoted-box {
       padding: 0.5rem 0.68rem;
       border: 1px solid var(--border-subtle);
@@ -483,20 +444,10 @@
     }
     .u-quoted-text {
       font-family: var(--font-quote-active);
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 3;
-      overflow: hidden;
+      white-space: pre-line;
     }
 
-    /* ---------------------------------------------------------------------
-       TYPE 1 (1C ENHANCED): Full-Bleed Caption Overlay (Media + <= 80 chars)
-       - At rest: completely clean full-bleed photograph; author & caption
-         are hidden (opacity: 0).
-       - On cursor hover (:hover), keyboard/tap focus (:focus, :focus-within),
-         or touch viewport focus (.is-touch-focused): author pill & caption
-         smoothly ease in, and ease out when unfocused/unhovered.
-       --------------------------------------------------------------------- */
+    /* 1C Full-Bleed Caption Overlay */
     .u-tweet.is-caption {
       padding: 0;
       gap: 0;
@@ -520,7 +471,6 @@
       object-fit: cover;
       display: block;
     }
-
     .u-tweet.is-caption .u-tweet-author-row {
       position: absolute;
       top: 0.58rem;
@@ -544,22 +494,9 @@
       height: 1.72rem;
       flex-basis: 1.72rem;
     }
-    .u-tweet.is-caption .u-name {
-      color: #f5f4f0;
-      font-size: 0.82rem;
-    }
-    .u-tweet.is-caption .u-handle {
-      color: rgba(245, 244, 240, 0.74);
-      font-size: 0.7rem;
-    }
-    .u-tweet.is-caption .u-ext {
-      color: rgba(245, 244, 240, 0.72);
-      margin-left: 0.25rem;
-      align-self: center;
-    }
-    .u-tweet.is-caption .u-ext:hover {
-      color: #ffffff;
-    }
+    .u-tweet.is-caption .u-name { color: #f5f4f0; font-size: 0.82rem; }
+    .u-tweet.is-caption .u-handle { color: rgba(245, 244, 240, 0.74); font-size: 0.7rem; }
+    .u-tweet.is-caption .u-ext { color: rgba(245, 244, 240, 0.72); margin-left: 0.25rem; align-self: center; }
 
     .u-caption-overlay {
       position: absolute;
@@ -584,35 +521,19 @@
       transition: opacity var(--ease-veil), transform var(--ease-veil);
     }
 
-    /* Ease-in triggers:
-       1. Desktop hover on the clipping
-       2. Keyboard or tap focus (:focus / :focus-within)
-       3. Touch display focal band (.is-touch-focused)
-       4. Optional lab "Peek Overlays" toggle */
     .u-tweet.is-caption:hover .u-tweet-author-row,
     .u-tweet.is-caption:focus .u-tweet-author-row,
     .u-tweet.is-caption:focus-within .u-tweet-author-row,
     .u-tweet.is-caption.is-touch-focused .u-tweet-author-row,
-    body[data-peek="always"] .u-tweet.is-caption .u-tweet-author-row,
     .u-tweet.is-caption:hover .u-caption-overlay,
     .u-tweet.is-caption:focus .u-caption-overlay,
     .u-tweet.is-caption:focus-within .u-caption-overlay,
-    .u-tweet.is-caption.is-touch-focused .u-caption-overlay,
-    body[data-peek="always"] .u-tweet.is-caption .u-caption-overlay {
+    .u-tweet.is-caption.is-touch-focused .u-caption-overlay {
       opacity: 1;
       transform: translateY(0);
       pointer-events: auto;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      .u-tweet.is-caption .u-tweet-author-row,
-      .u-tweet.is-caption .u-caption-overlay {
-        transition: none;
-        transform: none;
-      }
-    }
-
-    /* Play mark (Video / GIF) */
     .u-play-badge {
       position: absolute;
       top: 50%;
@@ -626,10 +547,7 @@
       place-items: center;
       z-index: 2;
     }
-    .u-play-badge.is-sm {
-      width: 1.65rem;
-      height: 1.65rem;
-    }
+    .u-play-badge.is-sm { width: 1.65rem; height: 1.65rem; }
     .u-play-tri {
       width: 0;
       height: 0;
@@ -645,12 +563,6 @@
       margin-left: 0.1rem;
     }
 
-    /* ---------------------------------------------------------------------
-       NON-TWEET MEDIA SLOTS (Universal Alignment)
-       - Scripture Passage: same universal top-left Reference + Version, text below
-       - Server Still (Image / Video / GIF): clean depth-2 framed still
-       - Plain Link: compact quiet link slip
-       --------------------------------------------------------------------- */
     .u-passage {
       width: 100%;
       padding: 0.88rem 0.98rem;
@@ -669,16 +581,8 @@
       justify-content: space-between;
       gap: 0.5rem;
     }
-    .u-passage-ref {
-      font-family: var(--font-ui);
-      font-size: 0.9rem;
-      color: var(--page-ink);
-    }
-    .u-passage-ver {
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      color: color-mix(in srgb, var(--page-ink) 54%, transparent);
-    }
+    .u-passage-ref { font-family: var(--font-ui); font-size: 0.9rem; color: var(--page-ink); }
+    .u-passage-ver { font-family: var(--font-mono); font-size: 0.7rem; color: color-mix(in srgb, var(--page-ink) 54%, transparent); }
 
     .u-still-frame {
       position: relative;
@@ -713,12 +617,7 @@
       color: color-mix(in srgb, var(--page-ink) 75%, transparent);
       text-decoration: none;
     }
-    .u-link-slip:hover {
-      border-color: var(--border-focus);
-      color: var(--page-ink);
-    }
 
-    /* Excerpt & Quiet Single-Line Footer */
     .u-entry-excerpt {
       font-family: var(--font-entry);
       font-size: 0.95rem;
@@ -739,201 +638,299 @@
       font-size: 0.75rem;
       color: color-mix(in srgb, var(--page-ink) 54%, transparent);
     }
-    .u-foot-left {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 0.36rem;
-      min-width: 0;
-    }
+    .u-foot-left { display: flex; align-items: center; flex-wrap: wrap; gap: 0.36rem; min-width: 0; }
     .u-dot-sep::before { content: "·"; }
-    .u-foot-tag {
-      color: color-mix(in srgb, var(--page-ink) 68%, transparent);
-    }
-    .u-foot-right {
-      display: flex;
-      align-items: center;
-      gap: 0.42rem;
-      flex-shrink: 0;
-    }
-    .u-star {
-      color: var(--accent-warn);
-      font-size: 0.82rem;
-    }
-    .u-draft-label {
-      font-size: 0.71rem;
-      color: color-mix(in srgb, var(--page-ink) 56%, transparent);
-    }
-
-    .u-author-bar {
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.4rem;
-      padding-top: 0.55rem;
-      border-top: 1px solid var(--border-subtle);
-      font-size: 0.74rem;
-    }
-    body[data-role="author"] .u-author-bar {
-      display: flex;
-    }
-    .u-author-links {
-      display: flex;
-      gap: 0.65rem;
-      color: color-mix(in srgb, var(--page-ink) 64%, transparent);
-    }
+    .u-foot-tag { color: color-mix(in srgb, var(--page-ink) 68%, transparent); }
+    .u-foot-right { display: flex; align-items: center; gap: 0.42rem; flex-shrink: 0; }
+    .u-star { color: var(--accent-warn); font-size: 0.82rem; }
+    .u-draft-label { font-size: 0.71rem; color: color-mix(in srgb, var(--page-ink) 56%, transparent); }
 
     /* =====================================================================
-       CURRENT PRODUCTION CARD (for Side-by-Side Real Data Comparison)
+       CLICKED FULL JOURNAL ENTRY — NEWSPAPER VIEW (/journals/{id})
        ===================================================================== */
-    .legacy-card {
-      padding: var(--space-card-pad-sm);
+    .entry-reader-wrap {
+      width: min(56rem, 100%);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .entry-reader-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .back-btn {
+      border: 0;
+      background: none;
+      padding: 0;
+      font-family: var(--font-ui);
+      font-size: 0.92rem;
+      color: color-mix(in srgb, var(--page-ink) 65%, transparent);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: color var(--interact-duration) ease;
+    }
+    .back-btn:hover { color: var(--page-ink); text-decoration: underline; }
+
+    .stepper-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .step-btn {
+      padding: 0.25rem 0.62rem;
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-control);
+      background: var(--depth-1-surface);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: border-color var(--interact-duration) ease;
+    }
+    .step-btn:hover:not(:disabled) { border-color: var(--border-focus); }
+    .step-btn:disabled { opacity: 0.42; cursor: not-allowed; }
+
+    .layout-reason-pill {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 0.18rem 0.58rem;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-card);
+      background: var(--depth-1-surface);
+      color: color-mix(in srgb, var(--page-ink) 72%, transparent);
+    }
+
+    .entry-sheet {
+      padding: var(--space-card-pad);
       border: 1px solid var(--border-card);
       border-radius: var(--radius-card);
       background: var(--depth-1-surface);
       box-shadow: var(--depth-1-shadow);
       display: flex;
       flex-direction: column;
-      text-align: center;
+      gap: 1.35rem;
     }
-    .legacy-card.is-draft {
+    .entry-sheet.is-draft {
       border-style: dashed;
       border-color: var(--border-input);
     }
-    .legacy-meta {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 0.4rem;
-      padding-bottom: 0.5rem;
-      margin-bottom: 0.85rem;
-      border-bottom: 1px solid var(--border-subtle);
-      font-size: 0.86rem;
-      color: color-mix(in srgb, var(--page-ink) 65%, transparent);
-    }
-    .legacy-pill {
-      padding: 0.1rem 0.48rem;
-      border-radius: 999px;
-      border: 1px solid var(--border-card);
-      background: var(--depth-sunk-surface);
-      font-size: 0.7rem;
-    }
-    .legacy-tweet {
-      padding: 0.85rem 0.95rem 0.75rem;
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-card);
-      background: var(--depth-2-surface);
-      box-shadow: var(--depth-2-shadow);
-      text-align: left;
-      margin-bottom: 0.85rem;
-    }
-    .legacy-tweet-head {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.65rem;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      opacity: 0.6;
-      margin-bottom: 0.55rem;
-    }
-    .legacy-tweet-text {
-      font-family: var(--font-quote-active);
-      font-size: 0.9rem;
-      line-height: 1.5;
-      margin-bottom: 0.65rem;
-      white-space: pre-line;
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 7;
-      overflow: hidden;
-    }
-    .legacy-media {
-      border-radius: var(--radius-control);
-      overflow: hidden;
-      max-height: 13rem;
-      margin-top: 0.5rem;
-    }
-    .legacy-media img {
-      width: 100%;
-      max-height: 13rem;
-      object-fit: cover;
-      display: block;
-    }
-    .legacy-byline {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      margin-top: 0.7rem;
-      padding-top: 0.55rem;
-      border-top: 1px dashed var(--border-card);
-      font-size: 0.78rem;
-    }
-    .legacy-byline img {
-      width: 1.45rem;
-      height: 1.45rem;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-    .legacy-tags {
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 0.35rem;
-      margin-bottom: 0.65rem;
-    }
-    .legacy-tag {
-      font-size: 0.72rem;
-      padding: 0.1rem 0.5rem;
-      border-radius: 999px;
-      background: var(--depth-sunk-surface);
-      border: 1px solid var(--border-subtle);
-    }
-    .legacy-excerpt {
-      font-family: var(--font-entry);
-      font-size: 0.94rem;
-      opacity: 0.88;
-      white-space: pre-line;
+
+    .entry-newspaper-stage {
+      display: flow-root;
     }
 
-    .empty-msg {
-      padding: 2rem;
-      text-align: center;
-      color: color-mix(in srgb, var(--page-ink) 60%, transparent);
+    .entry-sheet .u-statement-body {
+      display: block;
+      -webkit-line-clamp: unset;
+      overflow: visible;
+      font-size: 0.96rem;
+      line-height: 1.56;
+    }
+
+    /* Mode 1: Standard Newspaper Top-Left Float (wrap-left) */
+    .entry-sheet.is-wrap-left .entry-source-box {
+      float: left;
+      width: clamp(15.5rem, 43%, 22.5rem);
+      margin: 0.15rem 1.75rem 1.15rem 0;
+    }
+    .entry-sheet.is-wrap-left .u-still-frame,
+    .entry-sheet.is-wrap-left .u-still-frame img {
+      max-height: 20rem;
+    }
+
+    /* Mode 2 (NEW RULE D — Coexisting Compressed Source + Early Code):
+       When the source is short (<= 140 chars, no media) and the author introduces
+       a code block early, compress the top-left source slip (~29% width, tighter
+       padding & type) and let <pre><code> coexist right alongside it (~71% width)
+       via `contain: inline-size` + `overflow-x: auto`, while prose below still
+       wraps out to the full 100% width once past the quote! */
+    .entry-sheet.is-wrap-compact .entry-source-box {
+      float: left;
+      width: clamp(12.5rem, 29%, 15.25rem);
+      margin: 0.1rem 1.35rem 0.95rem 0;
+    }
+    .entry-sheet.is-wrap-compact .u-tweet,
+    .entry-sheet.is-wrap-compact .u-passage {
+      padding: 0.72rem 0.82rem;
+      gap: 0.5rem;
+    }
+    .entry-sheet.is-wrap-compact .u-avatar,
+    .entry-sheet.is-wrap-compact .u-avatar-fallback {
+      width: 1.85rem;
+      height: 1.85rem;
+      flex-basis: 1.85rem;
+    }
+    .entry-sheet.is-wrap-compact .u-name { font-size: 0.84rem; }
+    .entry-sheet.is-wrap-compact .u-handle { font-size: 0.71rem; }
+    .entry-sheet.is-wrap-compact .u-statement-body {
+      font-size: 0.87rem;
+      line-height: 1.46;
+    }
+    .entry-sheet.is-wrap-compact .entry-prose pre {
+      clear: none;
+      contain: inline-size;
+    }
+
+    /* Mode 3: Stacked Source at Top, Commentary Starting at Bottom
+       (Used when source is media + rich >80c description, OR when an early code
+       block meets a long/media-heavy source that cannot compress cleanly) */
+    .entry-sheet.is-stack-bottom .entry-source-box {
+      float: none;
+      width: 100%;
+      margin: 0 0 1.45rem 0;
+    }
+    .entry-sheet.is-stack-bottom .u-snippet-row {
+      grid-template-columns: minmax(11rem, 38%) minmax(0, 1fr);
+      gap: 1.15rem;
+    }
+    .entry-sheet.is-stack-bottom .u-snippet-thumb-wrap {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 3;
+    }
+
+    /* Mobile / narrow screens gracefully release floats */
+    @media (max-width: 680px) {
+      .entry-sheet.is-wrap-left .entry-source-box,
+      .entry-sheet.is-wrap-compact .entry-source-box {
+        float: none;
+        width: 100%;
+        margin: 0 0 1.25rem 0;
+      }
+      .entry-sheet.is-stack-bottom .u-snippet-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    body[data-viewport="mobile"] .entry-sheet.is-wrap-left .entry-source-box,
+    body[data-viewport="mobile"] .entry-sheet.is-wrap-compact .entry-source-box {
+      float: none;
+      width: 100%;
+      margin: 0 0 1.25rem 0;
+    }
+    body[data-viewport="mobile"] .entry-sheet.is-stack-bottom .u-snippet-row {
+      grid-template-columns: 1fr;
+    }
+
+    /* Author's Full Commentary Prose */
+    .entry-prose {
+      font-family: var(--font-entry);
+      font-size: 1.08rem;
+      line-height: 1.72;
+      color: color-mix(in srgb, var(--page-ink) 94%, transparent);
+      overflow-wrap: anywhere;
+    }
+    .entry-prose p,
+    .entry-prose ul,
+    .entry-prose ol,
+    .entry-prose blockquote,
+    .entry-prose pre {
+      margin: 0 0 1rem;
+    }
+    .entry-prose > :last-child {
+      margin-bottom: 0;
+    }
+    .entry-prose h1,
+    .entry-prose h2,
+    .entry-prose h3 {
+      margin: 0 0 0.65rem;
+      line-height: 1.25;
+    }
+    .entry-prose h1 { font-size: 1.55rem; }
+    .entry-prose h2 { font-size: 1.32rem; }
+    .entry-prose h3 { font-size: 1.15rem; }
+    .entry-prose strong, .entry-prose b {
+      font-variant-caps: all-small-caps;
+      letter-spacing: 0.04em;
+    }
+    .entry-prose em, .entry-prose i {
+      font-style: italic;
+    }
+    .entry-prose blockquote {
+      font-family: var(--font-quote-active);
+      padding-left: 0.95rem;
+      border-left: 2px solid var(--border-input);
+      color: color-mix(in srgb, var(--page-ink) 80%, transparent);
+    }
+    .entry-prose pre {
+      clear: left;
+      overflow-x: auto;
+      padding: 0.88rem 1rem;
+      border-radius: var(--radius-control);
+      border: 1px solid var(--border-subtle);
+      background: var(--depth-sunk-surface);
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+    .entry-prose code {
+      font-family: var(--font-mono);
+      font-size: 0.88em;
+    }
+
+    .entry-sheet-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+      color: color-mix(in srgb, var(--page-ink) 58%, transparent);
+    }
+
+    .specimens-list {
+      width: min(56rem, 100%);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+    .specimen-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+      margin-bottom: 0.55rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .specimen-header h3 {
+      font-size: 1.02rem;
     }
   </style>
 </head>
-<body data-mode="catalog" data-filter="all" data-peek="hover" data-viewport="desktop" data-role="reader">
+<body data-screen="specimens" data-filter="all" data-viewport="desktop">
 
   <header class="lab-bar">
     <div class="lab-title-group">
-      <span class="lab-title">Res Imperii · Real Archive Preview</span>
-      <span class="lab-sub">1C Full-Bleed (Hover / Touch-Focus Ease) + Newspaper Snippet + Statement · Read-Only DB</span>
+      <span class="lab-title">Res Imperii · Catalog &amp; Newspaper Entry Lab</span>
+      <span class="lab-sub">Updated Rule D: Short Quote Compresses Beside Code</span>
     </div>
     <div class="lab-controls">
-      <div class="seg-group" aria-label="View mode">
-        <button class="seg-btn is-on" data-set-mode="catalog">Proposed Catalog</button>
-        <button class="seg-btn" data-set-mode="compare">Before vs. After</button>
+      <div class="seg-group" aria-label="Screen">
+        <button class="seg-btn" data-set-screen="catalog">Catalog (13 Real)</button>
+        <button class="seg-btn" data-set-screen="entry">Entry Reader</button>
+        <button class="seg-btn is-on" data-set-screen="specimens">Rule Specimens (See D1 &amp; D2)</button>
       </div>
-      <div class="seg-group" aria-label="Filter entries">
+      <div class="seg-group" id="filter-group" style="display:none;" aria-label="Filter entries">
         <button class="seg-btn is-on" data-set-filter="all">All</button>
         <button class="seg-btn" data-set-filter="published">Published</button>
         <button class="seg-btn" data-set-filter="tweets">Tweets Only</button>
-      </div>
-      <div class="seg-group" aria-label="1C Caption overlay state">
-        <button class="seg-btn is-on" data-set-peek="hover">1C: Hover / Focus</button>
-        <button class="seg-btn" data-set-peek="always">Peek All 1C</button>
       </div>
       <div class="seg-group" aria-label="Quote typeface">
         <button class="seg-btn is-on" data-set-font="quote">Quote Face</button>
         <button class="seg-btn" data-set-font="ui">Clean Sans</button>
       </div>
-      <div class="seg-group" aria-label="Role">
-        <button class="seg-btn is-on" data-set-role="reader">Reader</button>
-        <button class="seg-btn" data-set-role="author">Author</button>
-      </div>
-      <div class="seg-group" aria-label="Viewport and touch mode">
-        <button class="seg-btn is-on" data-set-vp="desktop">3-Col (Cursor)</button>
-        <button class="seg-btn" data-set-vp="mobile">Phone (Touch Focus)</button>
+      <div class="seg-group" aria-label="Viewport">
+        <button class="seg-btn is-on" data-set-vp="desktop">Desktop</button>
+        <button class="seg-btn" data-set-vp="mobile">Phone</button>
       </div>
       <div class="seg-group" aria-label="Theme">
         <button class="seg-btn is-on" data-set-theme="light">Light</button>
@@ -943,18 +940,19 @@
   </header>
 
   <main class="shell">
-    <section class="archive-summary" id="summary-bar">
+    <section class="archive-summary" id="summary-bar" style="display:none;">
       <div class="summary-counts" id="summary-counts">Loading real archive from Turso (read-only)…</div>
-      <div style="font-size:0.76rem; color:color-mix(in srgb, var(--page-ink) 58%, transparent);">
-        Hover any full-bleed photo (or tap / scroll into focus in Phone mode) to ease in author &amp; caption.
+      <div id="summary-hint" style="font-size:0.76rem; color:color-mix(in srgb, var(--page-ink) 60%, transparent);">
+        Click any card to inspect its full Newspaper Entry layout.
       </div>
     </section>
 
-    <div id="catalog-mount" class="catalog-grid"></div>
+    <div id="view-mount"></div>
   </main>
 
   <script>
     let allEntries = [];
+    let activeEntryIndex = 0;
     let touchObserver = null;
 
     function esc(s) {
@@ -987,7 +985,7 @@
             <span class="u-name">${esc(tw.name)}</span>
             <span class="u-handle">@${esc(tw.handle)}</span>
           </div>
-          <a class="u-ext" href="${esc(tw.postUrl)}" target="_blank" rel="noopener noreferrer" title="View on X">↗</a>
+          <a class="u-ext" href="${esc(tw.postUrl)}" target="_blank" rel="noopener noreferrer" title="View on X" onclick="event.stopPropagation()">↗</a>
         </div>
       `;
     }
@@ -1005,9 +1003,10 @@
       `;
     }
 
-    function renderUniversalTweet(tw) {
+    function renderUniversalTweet(tw, isFullEntry) {
       if (tw.archetype === "caption") {
         const m = tw.media[0];
+        const imgSrc = (isFullEntry && m.medUrl) ? m.medUrl : m.url;
         const ratio = clampRatio(m.w, m.h);
         const playMark = m.kind === "video"
           ? `<span class="u-play-badge"><span class="u-play-tri"></span></span>`
@@ -1019,10 +1018,10 @@
           ? `<figcaption class="u-caption-overlay">${esc(tw.text)}</figcaption>`
           : "";
         return `
-          <figure class="u-tweet is-caption" tabindex="0" data-archetype="caption">
+          <figure class="u-tweet is-caption" tabindex="0">
             ${renderAuthorRow(tw)}
             <div class="u-caption-stage" style="aspect-ratio: ${ratio}">
-              <img class="u-stage-photo" src="${esc(m.url)}" alt="" loading="lazy" decoding="async">
+              <img class="u-stage-photo" src="${esc(imgSrc)}" alt="" loading="lazy" decoding="async">
               ${playMark}
               ${multiCount}
               ${captionOverlay}
@@ -1033,6 +1032,7 @@
 
       if (tw.archetype === "snippet") {
         const m = tw.media[0];
+        const imgSrc = (isFullEntry && m.medUrl) ? m.medUrl : m.url;
         const playMark = m.kind === "video"
           ? `<span class="u-play-badge is-sm"><span class="u-play-tri"></span></span>`
           : "";
@@ -1040,11 +1040,11 @@
           ? `<span class="u-snippet-count">1/${tw.media.length}</span>`
           : "";
         return `
-          <figure class="u-tweet is-snippet" data-archetype="snippet">
+          <figure class="u-tweet is-snippet">
             ${renderAuthorRow(tw)}
             <div class="u-snippet-row">
               <div class="u-snippet-thumb-wrap">
-                <img src="${esc(m.url)}" alt="" loading="lazy" decoding="async">
+                <img src="${esc(imgSrc)}" alt="" loading="lazy" decoding="async">
                 ${playMark}
                 ${multiCount}
               </div>
@@ -1056,7 +1056,7 @@
       }
 
       return `
-        <figure class="u-tweet is-statement" data-archetype="statement">
+        <figure class="u-tweet is-statement">
           ${renderAuthorRow(tw)}
           ${tw.text ? `<blockquote class="u-statement-body">${esc(tw.text)}</blockquote>` : ""}
           ${renderQuoted(tw.quoted)}
@@ -1064,9 +1064,9 @@
       `;
     }
 
-    function renderUniversalMedia(entry) {
+    function renderSourceBlock(entry, isFullEntry) {
       if (entry.tweet) {
-        return renderUniversalTweet(entry.tweet);
+        return renderUniversalTweet(entry.tweet, isFullEntry);
       }
       if (entry.passage) {
         return `
@@ -1093,7 +1093,7 @@
       if (entry.mediaUrl) {
         const label = entry.mediaHost || entry.mediaUrl;
         return `
-          <a class="u-link-slip" href="${esc(entry.mediaUrl)}" target="_blank" rel="noopener noreferrer">
+          <a class="u-link-slip" href="${esc(entry.mediaUrl)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">
             <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(label)}</span>
             <span>↗</span>
           </a>
@@ -1102,7 +1102,7 @@
       return "";
     }
 
-    function renderProposedCard(entry) {
+    function renderCatalogCard(entry, idx) {
       const draftCls = entry.published ? "" : " is-draft";
       const tagsHTML = (entry.tags || []).map((t) => `<span class="u-dot-sep"></span><span class="u-foot-tag">${esc(t)}</span>`).join("");
       const rightBadges = [
@@ -1111,8 +1111,8 @@
       ].filter(Boolean).join("");
 
       return `
-        <article class="u-journal-card${draftCls}">
-          ${renderUniversalMedia(entry)}
+        <article class="u-journal-card${draftCls}" data-open-idx="${idx}" tabindex="0" role="link" aria-label="Open entry from ${esc(entry.date)}">
+          ${renderSourceBlock(entry, false)}
           ${entry.excerpt ? `<p class="u-entry-excerpt">${esc(entry.excerpt)}</p>` : ""}
           <footer class="u-card-foot">
             <div class="u-foot-left">
@@ -1121,85 +1121,226 @@
             </div>
             <div class="u-foot-right">${rightBadges}</div>
           </footer>
-          <div class="u-author-bar">
-            <label style="display:inline-flex;align-items:center;gap:0.35rem;cursor:pointer;">
-              <input type="checkbox"> Select
-            </label>
-            <div class="u-author-links">
-              <span>Edit</span>
-              <span>${entry.published ? "Unpublish" : "Publish"}</span>
-              <span>${entry.bookmarked ? "Unbookmark" : "Bookmark"}</span>
-              <span style="color:var(--accent-danger)">Delete</span>
-            </div>
-          </div>
         </article>
       `;
     }
 
-    function renderLegacyCard(entry) {
-      const draftCls = entry.published ? "" : " is-draft";
-      let mediaHTML = "";
-      if (entry.tweet) {
-        const tw = entry.tweet;
-        const m = tw.media && tw.media[0]
-          ? `<div class="legacy-media"><img src="${esc(tw.media[0].url)}" alt="" loading="lazy"></div>`
-          : "";
-        const av = tw.avatarUrl ? `<img src="${esc(tw.avatarUrl)}" alt="">` : "";
-        mediaHTML = `
-          <div class="legacy-tweet">
-            <div class="legacy-tweet-head">
-              <span>X</span>
-              <span>${esc(tw.createdDate)}</span>
-            </div>
-            ${tw.text ? `<div class="legacy-tweet-text">${esc(tw.text)}</div>` : ""}
-            ${m}
-            <div class="legacy-byline">
-              ${av}
-              <span>${esc(tw.name)}</span>
-              <span style="opacity:0.6">@${esc(tw.handle)}</span>
-              <span style="margin-left:auto; opacity:0.65">View on X ↗</span>
-            </div>
-          </div>
-        `;
-      } else if (entry.passage) {
-        mediaHTML = `
-          <div class="legacy-tweet">
-            <div class="legacy-tweet-head"><span>BIBLE</span><span>${esc(entry.passage.ver)}</span></div>
-            <div class="legacy-tweet-text">${esc(entry.passage.text)}</div>
-            <div class="legacy-byline" style="justify-content:center;"><span>${esc(entry.passage.ref)}</span></div>
-          </div>
-        `;
-      } else if (entry.thumb) {
-        mediaHTML = `<div class="legacy-media" style="margin-bottom:0.85rem;"><img src="${esc(entry.thumb.url)}" alt=""></div>`;
+    function layoutExplanation(mode) {
+      switch (mode) {
+        case "wrap-left":
+          return "Layout: Newspaper Float (source top-left · commentary right, wrapping full-width below)";
+        case "wrap-compact-code":
+          return "Layout: Compressed Side-by-Side (short quote ~29% left · code & prose ~71% right, wrapping below)";
+        case "stack-rich-source":
+          return "Layout: Stacked Below (source has media + rich >80c description)";
+        case "stack-early-code":
+          return "Layout: Stacked Below (long/media source + early code block)";
+        default:
+          return "Layout: Pure Prose (no source media)";
       }
+    }
 
-      const tags = (entry.tags || []).length
-        ? `<div class="legacy-tags">${entry.tags.map((t) => `<span class="legacy-tag">${esc(t)}</span>`).join("")}</div>`
-        : "";
+    function renderEntrySheet(entry) {
+      const mode = entry.entryLayout || "wrap-left";
+      let sheetModeCls = "";
+      if (mode === "stack-rich-source" || mode === "stack-early-code") {
+        sheetModeCls = " is-stack-bottom";
+      } else if (mode === "wrap-compact-code") {
+        sheetModeCls = " is-wrap-compact";
+      } else if (mode === "wrap-left") {
+        sheetModeCls = " is-wrap-left";
+      }
+      const draftCls = entry.published ? "" : " is-draft";
+      const sourceHTML = renderSourceBlock(entry, true);
+      const tagsHTML = (entry.tags || []).map((t) => `<span class="u-dot-sep"></span><span class="u-foot-tag">${esc(t)}</span>`).join("");
+      const rightBadges = [
+        !entry.published ? `<span class="u-draft-label">Draft</span>` : "",
+        entry.bookmarked ? `<span class="u-star" title="Bookmarked">★</span>` : ""
+      ].filter(Boolean).join("");
 
       return `
-        <article class="legacy-card${draftCls}">
-          <div class="legacy-meta">
-            <span>${esc(entry.date)}</span>
-            ${!entry.published ? `<span class="legacy-pill">Unpublished</span>` : ""}
-            ${entry.bookmarked ? `<span class="legacy-pill">★</span>` : ""}
+        <article class="entry-sheet${sheetModeCls}${draftCls}">
+          <div class="entry-newspaper-stage">
+            ${sourceHTML ? `<div class="entry-source-box">${sourceHTML}</div>` : ""}
+            ${entry.renderedHtml ? `<div class="entry-prose">${entry.renderedHtml}</div>` : ""}
           </div>
-          ${mediaHTML}
-          ${tags}
-          ${entry.excerpt ? `<p class="legacy-excerpt">${esc(entry.excerpt)}</p>` : ""}
+          <footer class="entry-sheet-foot">
+            <div class="u-foot-left">
+              <time>${esc(entry.date)}</time>
+              ${tagsHTML}
+            </div>
+            <div class="u-foot-right">${rightBadges}</div>
+          </footer>
         </article>
       `;
     }
 
-    function archetypeLabel(entry) {
-      if (entry.tweet) {
-        if (entry.tweet.archetype === "caption") return `1C Caption (${entry.tweet.charCount}c + media)`;
-        if (entry.tweet.archetype === "snippet") return `Newspaper Snippet (${entry.tweet.charCount}c + media)`;
-        return `Pure Statement (${entry.tweet.charCount}c · no media)`;
+    function makeSpecimenArt(kind) {
+      const c = document.createElement("canvas");
+      c.width = 560;
+      c.height = 380;
+      const g = c.getContext("2d");
+      if (kind === "oculus") {
+        const bg = g.createLinearGradient(0, 0, 560, 380);
+        bg.addColorStop(0, "#2c2721");
+        bg.addColorStop(1, "#171512");
+        g.fillStyle = bg;
+        g.fillRect(0, 0, 560, 380);
+        const beam = g.createLinearGradient(160, 0, 440, 380);
+        beam.addColorStop(0, "rgba(255, 244, 218, 0.72)");
+        beam.addColorStop(1, "rgba(245, 224, 182, 0.03)");
+        g.fillStyle = beam;
+        g.beginPath();
+        g.moveTo(140, 0); g.lineTo(240, 0); g.lineTo(510, 380); g.lineTo(310, 380);
+        g.closePath(); g.fill();
+      } else {
+        g.fillStyle = "#dfd5c0";
+        g.fillRect(0, 0, 560, 380);
+        g.fillStyle = "#8f4638";
+        g.fillRect(54, 48, 92, 92);
+        g.fillStyle = "#453e34";
+        for (let y = 52; y < 330; y += 20) {
+          const x = y < 156 ? 168 : 54;
+          g.fillRect(x, y, 452 - x - ((y * 13) % 45), 7);
+        }
       }
-      if (entry.passage) return `Scripture (${entry.passage.ver})`;
-      if (entry.thumb) return `Server Still (${entry.thumb.kind})`;
-      return "Link / Note";
+      return c.toDataURL("image/png");
+    }
+
+    function buildSpecimens() {
+      const imgOculus = makeSpecimenArt("oculus");
+      const imgFolio = makeSpecimenArt("folio");
+      return [
+        {
+          title: "Rule D1 (Updated) · Short Quote (≤140c) Compresses Top-Left Beside Early Code",
+          badge: "wrap-compact-code (~29% compressed quote left · ~71% code & prose right · wraps 100% below)",
+          entry: {
+            date: "Nov 27, 2026",
+            published: true,
+            bookmarked: true,
+            tags: ["Types", "Go"],
+            entryLayout: "wrap-compact-code",
+            tweet: {
+              name: "Alexis King",
+              handle: "lexi_lambda",
+              postUrl: "#0",
+              archetype: "statement",
+              charCount: 74,
+              text: "Parse, don't validate: make illegal states unrepresentable at the boundary."
+            },
+            renderedHtml: `
+              <p>An unexported capability struct makes forgetting the session check a compile error:</p>
+              <pre><code>type AdminCap struct {
+    minted bool // only internal/auth can mint
+}
+
+func (s *Store) Create(
+    ctx context.Context,
+    cap domain.AdminCap,
+    in ValidatedEntry,
+) (int64, error)</code></pre>
+              <p>Because the quoted tweet is concise (&le; 140 characters, no media), compressing its slip to ~29% lets the tweet and the code block <strong>coexist in one horizontal space</strong>—and once the prose clears both, it naturally takes the full reading measure below.</p>
+            `
+          }
+        },
+        {
+          title: "Rule D2 · Opening Immediately With Code (Zero Lead-In Prose) Beside Short Quote",
+          badge: "wrap-compact-code (Axiom on left · implementation directly aligned on right)",
+          entry: {
+            date: "Nov 26, 2026",
+            published: false,
+            bookmarked: false,
+            tags: ["Invariant", "SQL"],
+            entryLayout: "wrap-compact-code",
+            tweet: {
+              name: "Rob Pike",
+              handle: "rob_pike",
+              postUrl: "#0",
+              archetype: "statement",
+              charCount: 49,
+              text: "Data dominates. Choose the right representations."
+            },
+            renderedHtml: `
+              <pre><code>CHECK (
+  (tag1 IS NULL OR tag2 IS NULL OR tag1 != tag2) AND
+  (tag1 IS NULL OR tag3 IS NULL OR tag1 != tag3)
+)</code></pre>
+              <p>Even when the very first line of your entry is a fenced code block, the compressed quote card and the code block align cleanly on the same top horizon, with your prose commentary flowing across the full width underneath.</p>
+            `
+          }
+        },
+        {
+          title: "Rule D3 · Fallback: Long Quote (>140c) + Early Code → Commentary Starts Below",
+          badge: "stack-early-code (Quote too long to squeeze to 29% -> drops cleanly below)",
+          entry: {
+            date: "Nov 25, 2026",
+            published: true,
+            bookmarked: false,
+            tags: ["Architecture"],
+            entryLayout: "stack-early-code",
+            tweet: {
+              name: "Martin Kleppmann",
+              handle: "martinkl",
+              postUrl: "#0",
+              archetype: "statement",
+              charCount: 238,
+              text: "When state lives in two places without a deterministic single writer or monotonic watermark, every network retry or process restart eventually invents a split-brain bug that unit tests never saw coming."
+            },
+            renderedHtml: `
+              <p>Monotonic TOTP replay watermark persisted inside a single transaction:</p>
+              <pre><code>UPDATE auth_state SET value_int = MAX(value_int, ?), updated_at = ? WHERE key = 'totp_last_step';</code></pre>
+              <p>Here the tweet is 238 characters—squeezing it into a narrow 29% strip would create a tall, cramped column, so only long/media quotes drop the early code block to the bottom.</p>
+            `
+          }
+        },
+        {
+          title: "Rule A & B · Standard Newspaper Wrap (Quote or 1C Media Top-Left, Essay Wraps Below)",
+          badge: "wrap-left (43% source top-left · prose right, expanding to 100% below)",
+          entry: {
+            date: "Nov 24, 2026",
+            published: true,
+            bookmarked: false,
+            tags: ["Architecture", "Rome"],
+            entryLayout: "wrap-left",
+            tweet: {
+              name: "Classical Forms",
+              handle: "forma_perennis",
+              postUrl: "#0",
+              archetype: "caption",
+              charCount: 48,
+              text: "Geometry made audible in stone. Rome, 6:40 a.m.",
+              media: [{ kind: "photo", url: imgOculus, medUrl: imgOculus, w: 560, h: 380 }]
+            },
+            renderedHtml: `
+              <p>Without early code blocks, the source takes a comfortable 43% top-left frame. Hovering the photograph eases in the author pill and caption.</p>
+              <p>Your commentary begins at top-right beside the frame and wraps cleanly across the full width below once the photograph ends, keeping image and prose in quiet proportion.</p>
+            `
+          }
+        },
+        {
+          title: "Rule C · Media + Rich Description (>80c) → Commentary Starts at Bottom",
+          badge: "stack-rich-source (Media + >80c statement takes top; commentary starts below)",
+          entry: {
+            date: "Nov 23, 2026",
+            published: true,
+            bookmarked: true,
+            tags: ["History", "Print"],
+            entryLayout: "stack-rich-source",
+            tweet: {
+              name: "Bodleian Manuscripts",
+              handle: "bodleian_mss",
+              postUrl: "#0",
+              archetype: "snippet",
+              charCount: 192,
+              text: "Thirteenth-century glossators laid commentary around the central text in deliberate, quiet proportions: the source already pairs illumination on the left with extensive exposition on the right.",
+              media: [{ kind: "photo", url: imgFolio, medUrl: imgFolio, w: 560, h: 380 }]
+            },
+            renderedHtml: `
+              <p>Because the quoted source itself already combines <strong>media and a rich description</strong> (&gt; 80 characters), the source takes the full top of the sheet and your commentary starts cleanly here at the bottom.</p>
+            `
+          }
+        }
+      ];
     }
 
     function wireTouchFocusObserver() {
@@ -1214,8 +1355,6 @@
                          window.matchMedia("(hover: none), (pointer: coarse)").matches;
       if (!isTouchSim) return;
 
-      // On touch displays, whichever 1C caption card sits in the active focal band
-      // of the viewport smoothly eases in its author pill and caption.
       touchObserver = new IntersectionObserver((entries) => {
         entries.forEach((io) => {
           io.target.classList.toggle("is-touch-focused", io.isIntersecting);
@@ -1228,53 +1367,114 @@
       cards.forEach((el) => touchObserver.observe(el));
     }
 
-    function render() {
-      const filter = document.body.dataset.filter;
-      const mode = document.body.dataset.mode;
+    function setScreenButton(screen) {
+      document.body.dataset.screen = screen;
+      document.querySelectorAll("[data-set-screen]").forEach((b) => {
+        b.classList.toggle("is-on", b.getAttribute("data-set-screen") === screen);
+      });
+      document.getElementById("filter-group").style.display = screen === "catalog" ? "inline-flex" : "none";
+      document.getElementById("summary-bar").style.display = screen === "catalog" ? "flex" : "none";
+    }
 
-      const filtered = allEntries.filter((e) => {
+    function getFilteredEntries() {
+      const filter = document.body.dataset.filter;
+      return allEntries.filter((e) => {
         if (filter === "published" && !e.published) return false;
         if (filter === "tweets" && !e.tweet) return false;
         return true;
       });
+    }
 
-      let nCap = 0, nSnip = 0, nStmt = 0, nOther = 0;
-      filtered.forEach((e) => {
-        if (!e.tweet) { nOther++; return; }
-        if (e.tweet.archetype === "caption") nCap++;
-        else if (e.tweet.archetype === "snippet") nSnip++;
-        else nStmt++;
-      });
+    function render() {
+      const screen = document.body.dataset.screen;
+      const mount = document.getElementById("view-mount");
+      const filtered = getFilteredEntries();
 
-      document.getElementById("summary-counts").innerHTML = `
-        <span>Showing <strong>${filtered.length}</strong> real entries</span>
-        <span class="count-chip">1C Caption (&le;80c): ${nCap}</span>
-        <span class="count-chip">Snippet (&gt;80c + media): ${nSnip}</span>
-        <span class="count-chip">Statement (no media): ${nStmt}</span>
-        <span class="count-chip">Other media: ${nOther}</span>
-      `;
+      if (screen === "catalog") {
+        let nWrap = 0, nRich = 0, nCompactCode = 0, nStackCode = 0;
+        filtered.forEach((e) => {
+          if (e.entryLayout === "stack-rich-source") nRich++;
+          else if (e.entryLayout === "wrap-compact-code") nCompactCode++;
+          else if (e.entryLayout === "stack-early-code") nStackCode++;
+          else nWrap++;
+        });
+        document.getElementById("summary-counts").innerHTML = `
+          <span><strong>${filtered.length}</strong> real entries</span>
+          <span class="count-chip">Newspaper Wrap: ${nWrap}</span>
+          <span class="count-chip">Compact Quote+Code: ${nCompactCode}</span>
+          <span class="count-chip">Stack (Rich Media): ${nRich}</span>
+          <span class="count-chip">Stack (Long+Code): ${nStackCode}</span>
+        `;
 
-      const mount = document.getElementById("catalog-mount");
-      if (filtered.length === 0) {
-        mount.innerHTML = `<div class="empty-msg">No matching entries in archive.</div>`;
-        return;
-      }
+        mount.className = "catalog-grid";
+        mount.innerHTML = filtered.map((e, idx) => renderCatalogCard(e, idx)).join("");
 
-      if (mode === "compare") {
-        mount.innerHTML = filtered.map((e) => `
-          <div class="compare-pair">
-            <div>
-              <div class="compare-col-label"><span>Current Prod</span><span>#${e.id}</span></div>
-              ${renderLegacyCard(e)}
+        mount.querySelectorAll("[data-open-idx]").forEach((card) => {
+          const openIt = () => {
+            activeEntryIndex = parseInt(card.getAttribute("data-open-idx"), 10) || 0;
+            setScreenButton("entry");
+            render();
+            window.scrollTo({ top: 0, behavior: "instant" });
+          };
+          card.addEventListener("click", openIt);
+          card.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter" || ev.key === " ") {
+              ev.preventDefault();
+              openIt();
+            }
+          });
+        });
+      } else if (screen === "entry") {
+        mount.className = "";
+        const list = filtered.length ? filtered : allEntries;
+        if (!list.length) {
+          mount.innerHTML = `<p style="text-align:center;padding:2rem;">No entries loaded.</p>`;
+          return;
+        }
+        if (activeEntryIndex >= list.length) activeEntryIndex = 0;
+        const entry = list[activeEntryIndex];
+
+        mount.innerHTML = `
+          <div class="entry-reader-wrap">
+            <div class="entry-reader-nav">
+              <button type="button" class="back-btn" id="back-to-catalog">‹ Journals</button>
+              <span class="layout-reason-pill">${esc(layoutExplanation(entry.entryLayout))}</span>
+              <div class="stepper-group">
+                <button type="button" class="step-btn" id="prev-entry" ${activeEntryIndex === 0 ? "disabled" : ""}>← Newer</button>
+                <span style="font-family:var(--font-mono);font-size:0.75rem;opacity:0.65;">${activeEntryIndex + 1} / ${list.length}</span>
+                <button type="button" class="step-btn" id="next-entry" ${activeEntryIndex >= list.length - 1 ? "disabled" : ""}>Older →</button>
+              </div>
             </div>
-            <div>
-              <div class="compare-col-label"><span>Proposed Universal</span><span>${esc(archetypeLabel(e))}</span></div>
-              ${renderProposedCard(e)}
-            </div>
+            ${renderEntrySheet(entry)}
           </div>
-        `).join("");
-      } else {
-        mount.innerHTML = filtered.map((e) => renderProposedCard(e)).join("");
+        `;
+
+        document.getElementById("back-to-catalog").addEventListener("click", () => {
+          setScreenButton("catalog");
+          render();
+        });
+        document.getElementById("prev-entry").addEventListener("click", () => {
+          if (activeEntryIndex > 0) { activeEntryIndex--; render(); }
+        });
+        document.getElementById("next-entry").addEventListener("click", () => {
+          if (activeEntryIndex < list.length - 1) { activeEntryIndex++; render(); }
+        });
+      } else if (screen === "specimens") {
+        mount.className = "";
+        const specs = buildSpecimens();
+        mount.innerHTML = `
+          <div class="specimens-list">
+            ${specs.map((sp) => `
+              <section>
+                <div class="specimen-header">
+                  <h3>${esc(sp.title)}</h3>
+                  <span class="layout-reason-pill">${esc(sp.badge)}</span>
+                </div>
+                ${renderEntrySheet(sp.entry)}
+              </section>
+            `).join("")}
+          </div>
+        `;
       }
 
       wireTouchFocusObserver();
@@ -1291,14 +1491,12 @@
       });
     }
 
-    bindGroup("data-set-mode", (v) => { document.body.dataset.mode = v; render(); });
-    bindGroup("data-set-filter", (v) => { document.body.dataset.filter = v; render(); });
-    bindGroup("data-set-peek", (v) => { document.body.dataset.peek = v; });
+    bindGroup("data-set-screen", (v) => { setScreenButton(v); render(); });
+    bindGroup("data-set-filter", (v) => { document.body.dataset.filter = v; activeEntryIndex = 0; render(); });
     bindGroup("data-set-font", (v) => {
       if (v === "quote") document.documentElement.removeAttribute("data-quote-font");
       else document.documentElement.dataset.quoteFont = v;
     });
-    bindGroup("data-set-role", (v) => { document.body.dataset.role = v; });
     bindGroup("data-set-vp", (v) => {
       document.body.dataset.viewport = v;
       wireTouchFocusObserver();
@@ -1306,7 +1504,7 @@
     bindGroup("data-set-theme", (v) => { document.documentElement.dataset.theme = v; });
 
     document.addEventListener("dblclick", (e) => {
-      if (e.target.closest("button, a, input, figure, article")) return;
+      if (e.target.closest("button, a, input, figure, article, pre")) return;
       const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
       document.documentElement.dataset.theme = next;
       document.querySelectorAll("[data-set-theme]").forEach((b) => {
@@ -1314,6 +1512,8 @@
       });
     });
 
+    // Render specimens immediately, then enrich catalog once API responds
+    render();
     fetch("/api/entries")
       .then((r) => r.json())
       .then((data) => {

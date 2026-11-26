@@ -3,9 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -23,6 +21,8 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
+
+	"github.com/yuin/goldmark"
 )
 
 // Strictly read-only prototype server: reads TURSO_DATABASE_URL & TURSO_AUTH_TOKEN
@@ -223,10 +223,10 @@ func (c *tursoClient) queryBatch(stmts ...hranaStmt) ([][][]hranaVal, error) {
 	return out, nil
 }
 
-// Stored JSON shapes matching internal/tweet and internal/domain
 type tweetMedia struct {
 	Kind   string `json:"kind"`
 	URL    string `json:"url"`
+	MedURL string `json:"medUrl,omitempty"`
 	Width  int    `json:"w"`
 	Height int    `json:"h"`
 }
@@ -254,7 +254,6 @@ type storedPassage struct {
 	Text      string `json:"text"`
 }
 
-// API DTOs for the throwaway browser
 type apiTweet struct {
 	ID          string       `json:"id"`
 	Name        string       `json:"name"`
@@ -277,26 +276,101 @@ type apiThumb struct {
 }
 
 type apiEntry struct {
-	ID         int64          `json:"id"`
-	Date       string         `json:"date"`
-	Published  bool           `json:"published"`
-	Bookmarked bool           `json:"bookmarked"`
-	Tags       []string       `json:"tags"`
-	Excerpt    string         `json:"excerpt"`
-	MediaURL   string         `json:"mediaUrl"`
-	MediaHost  string         `json:"mediaHost"`
-	Tweet      *apiTweet      `json:"tweet,omitempty"`
-	Passage    *storedPassage `json:"passage,omitempty"`
-	Thumb      *apiThumb      `json:"thumb,omitempty"`
+	ID           int64          `json:"id"`
+	Date         string         `json:"date"`
+	Published    bool           `json:"published"`
+	Bookmarked   bool           `json:"bookmarked"`
+	Tags         []string       `json:"tags"`
+	Excerpt      string         `json:"excerpt"`
+	RenderedHTML string         `json:"renderedHtml"`
+	EarlyCode    bool           `json:"earlyCode"`
+	EntryLayout  string         `json:"entryLayout"` // "wrap-left" | "wrap-compact-code" | "stack-rich-source" | "stack-early-code" | "prose-only"
+	MediaURL     string         `json:"mediaUrl"`
+	MediaHost    string         `json:"mediaHost"`
+	Tweet        *apiTweet      `json:"tweet,omitempty"`
+	Passage      *storedPassage `json:"passage,omitempty"`
+	Thumb        *apiThumb      `json:"thumb,omitempty"`
 }
 
 var (
 	statusPathRe = regexp.MustCompile(`^/([A-Za-z0-9_]{1,15}|i(?:/web)?)/status(?:es)?/([0-9]{1,20})(?:/|$)`)
-	mdLinkRe     = regexp.MustCompile(`\[([^\]]+)\]\([^)]+\)`)
-	mdDecorRe    = regexp.MustCompile("(\\*\\*|\\*|__|_|`|~|^#+\\s+|^>\\s+)")
-	blankLinesRe = regexp.MustCompile(`\n{2,}`)
+	blockEndRe   = regexp.MustCompile(`(?i)</(?:p|h[1-6]|li|blockquote|pre|div)>`)
+	lineBreakRe  = regexp.MustCompile(`(?i)<br\s*/?>`)
+	blankRunRe   = regexp.MustCompile(`\n{2,}`)
+	htmlTagRe    = regexp.MustCompile(`<[^>]+>`)
+	attrSchemeRe = regexp.MustCompile(`(?i)\b(href|src)\s*=\s*"([^"]*)"`)
 	thumbKeyRe   = regexp.MustCompile(`^[0-9a-f]{24}$`)
 )
+
+const (
+	earlyCodeProseThreshold  = 420
+	compactQuoteMaxRunes     = 140
+	compactScriptureMaxRunes = 140
+)
+
+func renderMarkdownSafe(src string) string {
+	var buf bytes.Buffer
+	if err := goldmark.Convert([]byte(src), &buf); err != nil {
+		return ""
+	}
+	return attrSchemeRe.ReplaceAllStringFunc(buf.String(), func(match string) string {
+		sub := attrSchemeRe.FindStringSubmatch(match)
+		if len(sub) < 3 {
+			return match
+		}
+		attrName := sub[1]
+		val := strings.TrimSpace(html.UnescapeString(sub[2]))
+		lower := strings.ToLower(val)
+		if strings.HasPrefix(lower, "https://") ||
+			strings.HasPrefix(lower, "http://") ||
+			(strings.HasPrefix(lower, "/") && !strings.HasPrefix(lower, "//")) ||
+			strings.HasPrefix(lower, "#") {
+			return match
+		}
+		return fmt.Sprintf(`%s="#"`, attrName)
+	})
+}
+
+func makeExcerpt280(renderedHTML string) string {
+	spaced := blockEndRe.ReplaceAllString(renderedHTML, "\n\n")
+	spaced = lineBreakRe.ReplaceAllString(spaced, "\n")
+	stripped := htmlTagRe.ReplaceAllString(spaced, "")
+	unescaped := html.UnescapeString(strings.ReplaceAll(stripped, "\r", ""))
+	lines := strings.Split(unescaped, "\n")
+	for i, line := range lines {
+		lines[i] = strings.Join(strings.Fields(line), " ")
+	}
+	collapsed := strings.TrimSpace(blankRunRe.ReplaceAllString(strings.Join(lines, "\n"), "\n"))
+	if utf8.RuneCountInString(collapsed) <= 280 {
+		return collapsed
+	}
+	runes := []rune(collapsed)
+	return strings.TrimRight(string(runes[:279]), " ") + "…"
+}
+
+func hasEarlyCodeBlock(renderedHTML string) bool {
+	idx := strings.Index(strings.ToLower(renderedHTML), "<pre>")
+	if idx < 0 {
+		idx = strings.Index(strings.ToLower(renderedHTML), "<pre ")
+	}
+	if idx < 0 {
+		return false
+	}
+	prefix := renderedHTML[:idx]
+	plain := strings.TrimSpace(html.UnescapeString(htmlTagRe.ReplaceAllString(prefix, " ")))
+	plain = strings.Join(strings.Fields(plain), " ")
+	return utf8.RuneCountInString(plain) < earlyCodeProseThreshold
+}
+
+func isCompressibleBesideCode(item apiEntry) bool {
+	if item.Tweet != nil {
+		return len(item.Tweet.Media) == 0 && item.Tweet.Quoted == nil && item.Tweet.CharCount <= compactQuoteMaxRunes
+	}
+	if item.Passage != nil {
+		return utf8.RuneCountInString(item.Passage.Text) <= compactScriptureMaxRunes
+	}
+	return item.Thumb == nil && item.MediaURL != ""
+}
 
 func parseTweetID(raw string) string {
 	u, err := url.Parse(strings.TrimSpace(raw))
@@ -330,44 +404,18 @@ func classifyThumbKind(raw string) string {
 		return "gif"
 	case strings.HasSuffix(p, ".mp4"), strings.HasSuffix(p, ".webm"), strings.HasSuffix(p, ".mov"):
 		return "video"
-	case strings.HasSuffix(p, ".jpg"), strings.HasSuffix(p, ".jpeg"), strings.HasSuffix(p, ".png"), strings.HasSuffix(p, ".webp"), strings.HasSuffix(p, ".avif"):
-		return "image"
 	}
 	return "image"
 }
 
-func makeExcerpt(md string) string {
-	s := strings.ReplaceAll(md, "\r\n", "\n")
-	s = mdLinkRe.ReplaceAllString(s, "$1")
-	lines := strings.Split(s, "\n")
-	for i, l := range lines {
-		l = strings.TrimSpace(l)
-		l = strings.TrimPrefix(l, "> ")
-		l = strings.TrimLeft(l, "#")
-		l = strings.TrimSpace(l)
-		l = strings.ReplaceAll(l, "**", "")
-		l = strings.ReplaceAll(l, "__", "")
-		l = strings.Trim(l, "*_`")
-		lines[i] = l
-	}
-	s = strings.TrimSpace(strings.Join(lines, "\n"))
-	s = blankLinesRe.ReplaceAllString(s, "\n")
-	s = html.UnescapeString(s)
-	if utf8.RuneCountInString(s) > 280 {
-		r := []rune(s)
-		s = strings.TrimSpace(string(r[:280])) + "…"
-	}
-	return s
-}
-
-func proxyXImageURL(raw string, small bool) string {
+func proxyXImageURL(raw, size string) string {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || u.Scheme != "https" || u.Hostname() != "pbs.twimg.com" {
 		return ""
 	}
-	if small {
+	if size != "" {
 		q := u.Query()
-		q.Set("name", "small")
+		q.Set("name", size)
 		u.RawQuery = q.Encode()
 	}
 	return "/ximg?u=" + url.QueryEscape(u.String())
@@ -459,7 +507,7 @@ func main() {
 				if createdMs <= 0 {
 					createdMs = id
 				}
-				mediaURL := row[2].str()
+				mediaURL := strings.TrimSpace(row[2].str())
 				var tags []string
 				for _, idx := range []int{3, 4, 5} {
 					if t := strings.TrimSpace(row[idx].str()); t != "" {
@@ -476,15 +524,20 @@ func main() {
 					host = strings.TrimPrefix(strings.ToLower(u.Hostname()), "www.")
 				}
 
+				rendered := renderMarkdownSafe(body)
+				earlyCode := hasEarlyCodeBlock(rendered)
+
 				item := apiEntry{
-					ID:         id,
-					Date:       time.UnixMilli(createdMs).Local().Format("Jan 2, 2006"),
-					Published:  published,
-					Bookmarked: bookmarked,
-					Tags:       tags,
-					Excerpt:    makeExcerpt(body),
-					MediaURL:   mediaURL,
-					MediaHost:  host,
+					ID:           id,
+					Date:         time.UnixMilli(createdMs).Local().Format("Jan 2, 2006"),
+					Published:    published,
+					Bookmarked:   bookmarked,
+					Tags:         tags,
+					Excerpt:      makeExcerpt280(rendered),
+					RenderedHTML: rendered,
+					EarlyCode:    earlyCode,
+					MediaURL:     mediaURL,
+					MediaHost:    host,
 				}
 
 				if passageRaw != "" {
@@ -509,10 +562,11 @@ func main() {
 
 							mediaOut := make([]tweetMedia, 0, len(snap.Media))
 							for _, m := range snap.Media {
-								if prox := proxyXImageURL(m.URL, true); prox != "" {
+								if prox := proxyXImageURL(m.URL, "small"); prox != "" {
 									mediaOut = append(mediaOut, tweetMedia{
 										Kind:   m.Kind,
 										URL:    prox,
+										MedURL: proxyXImageURL(m.URL, "medium"),
 										Width:  m.Width,
 										Height: m.Height,
 									})
@@ -526,7 +580,7 @@ func main() {
 								ID:          snap.ID,
 								Name:        snap.Name,
 								Handle:      snap.Handle,
-								AvatarURL:   proxyXImageURL(snap.AvatarURL, false),
+								AvatarURL:   proxyXImageURL(snap.AvatarURL, ""),
 								PostURL:     "https://x.com/" + url.PathEscape(snap.Handle) + "/status/" + snap.ID,
 								CreatedDate: cDate,
 								Text:        trimmed,
@@ -548,6 +602,21 @@ func main() {
 							Height: tm.h,
 						}
 					}
+				}
+
+				hasSource := item.Tweet != nil || item.Passage != nil || item.Thumb != nil || item.MediaURL != ""
+				if !hasSource {
+					item.EntryLayout = "prose-only"
+				} else if item.Tweet != nil && len(item.Tweet.Media) > 0 && (item.Tweet.CharCount > 80 || item.Tweet.Quoted != nil) {
+					item.EntryLayout = "stack-rich-source"
+				} else if item.EarlyCode {
+					if isCompressibleBesideCode(item) {
+						item.EntryLayout = "wrap-compact-code"
+					} else {
+						item.EntryLayout = "stack-early-code"
+					}
+				} else {
+					item.EntryLayout = "wrap-left"
 				}
 
 				entries = append(entries, item)
@@ -588,8 +657,6 @@ func main() {
 		cached, ok := thumbCache[key]
 		thumbMu.Unlock()
 		if !ok {
-			sum := sha256.Sum256([]byte(key))
-			_ = hex.EncodeToString(sum[:])
 			res, err := tc.queryBatch(hranaStmt{
 				SQL:  `SELECT body FROM media_thumbs WHERE key = ? AND status = 'ok' LIMIT 1`,
 				Args: []hranaArg{{Type: "text", Value: key}},
@@ -664,7 +731,7 @@ func main() {
 	if warmErr != nil {
 		log.Printf("Warning: initial Turso read failed: %v", warmErr)
 	} else {
-		log.Printf("Loaded %d real journal entries (read-only) for throwaway catalog on http://%s", len(entries), *addr)
+		log.Printf("Loaded %d real journal entries (read-only) with compressed-code support on http://%s", len(entries), *addr)
 	}
 	log.Fatal(http.ListenAndServe(*addr, mux))
 }
