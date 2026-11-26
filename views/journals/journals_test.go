@@ -210,4 +210,19 @@ func TestClassifyEntryLayoutAndDiptych(t *testing.T) {
 			t.Errorf("compact code entry missing %q: %s", want, out)
 		}
 	}
+
+	// Verify full-entry linked images with a server still carry has-known-ratio
+	// and exact aspect-ratio so they sit flush at the top-left without 26rem padding.
+	b.Reset()
+	_ = EntryCard(false, RenderedEntry{
+		Entry:        db.Journal{ID: 10, MediaURL: "https://example.org/law.jpg", Published: true},
+		Thumb:        &Thumb{URL: "/thumb/0123456789abcdef01234567.jpg?v=1", Kind: "image", Width: 680, Height: 455},
+		RenderedHTML: RenderMarkdown("A law is that which is ought."),
+	}, false).Render(&b)
+	imgOut := b.String()
+	for _, want := range []string{`class="journal-card is-full is-wrap-left"`, `has-known-ratio`, `aspect-ratio: 680 / 455`} {
+		if !strings.Contains(imgOut, want) {
+			t.Errorf("full-entry image slot missing %q: %s", want, imgOut)
+		}
+	}
 }

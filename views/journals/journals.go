@@ -536,12 +536,21 @@ func mediaSlot(item RenderedEntry, isCollage bool) g.Node {
 		// A linked image in a card is the server's still, drawn here (a
 		// third of the bytes, and no request to its host). A GIF or video
 		// keeps its tap tile, showing the still (data-media-still).
-		if t.Kind == "image" && isCollage {
-			return h.Div(h.Class("journal-media-slot journal-preview-media is-"+string(kind)),
-				g.Attr("data-media-url", item.Entry.MediaURL), g.Attr("data-media-mounted", item.Entry.MediaURL),
-				h.Img(h.Src(t.URL), h.Alt(""), h.Width(strconv.Itoa(t.Width)), h.Height(strconv.Itoa(t.Height)),
-					h.Class("journal-still"), h.Style(fmt.Sprintf("--still-ratio: %d / %d", t.Width, t.Height)),
-					g.Attr("loading", "lazy"), g.Attr("decoding", "async")),
+		if t.Kind == "image" {
+			if isCollage {
+				return h.Div(h.Class("journal-media-slot journal-preview-media is-"+string(kind)),
+					g.Attr("data-media-url", item.Entry.MediaURL), g.Attr("data-media-mounted", item.Entry.MediaURL),
+					h.Img(h.Src(t.URL), h.Alt(""), h.Width(strconv.Itoa(t.Width)), h.Height(strconv.Itoa(t.Height)),
+						h.Class("journal-still"), h.Style(fmt.Sprintf("--still-ratio: %d / %d", t.Width, t.Height)),
+						g.Attr("loading", "lazy"), g.Attr("decoding", "async")),
+				)
+			}
+			// On a full entry page, give the slot the image's known aspect ratio up
+			// front so the image sits flush at the top-left with no oversized 26rem
+			// box above or below it, and no layout shift when the full image loads.
+			return h.Div(h.Class("journal-media-slot journal-preview-media is-"+string(kind)+" has-known-ratio"),
+				h.Style(fmt.Sprintf("--still-ratio: %d / %d; aspect-ratio: %d / %d", t.Width, t.Height, t.Width, t.Height)),
+				g.Attr("data-media-url", item.Entry.MediaURL),
 			)
 		}
 		if t.Kind == "gif" || t.Kind == "video" {
