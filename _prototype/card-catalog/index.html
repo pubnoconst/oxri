@@ -745,35 +745,55 @@
 
     /* Mode 2 (NEW RULE D — Coexisting Compressed Source + Early Code):
        When the source is short (<= 140 chars, no media) and the author introduces
-       a code block early, compress the top-left source slip (~29% width, tighter
-       padding & type) and let <pre><code> coexist right alongside it (~71% width)
-       via `contain: inline-size` + `overflow-x: auto`, while prose below still
-       wraps out to the full 100% width once past the quote! */
-    .entry-sheet.is-wrap-compact .entry-source-box {
-      float: left;
-      width: clamp(12.5rem, 29%, 15.25rem);
-      margin: 0.1rem 1.35rem 0.95rem 0;
+       a code block early, pair the compressed top-left source slip (~29% width)
+       beside the opening prose + <pre><code> column (~71% width) in a stretched
+       two-column band so the source card's height matches the bottom of the code
+       block and its contents sit centred vertically inside the card, while any
+       subsequent prose wraps across the full 100% width below! */
+    .entry-compact-diptych {
+      display: grid;
+      grid-template-columns: clamp(12.5rem, 29%, 15.25rem) minmax(0, 1fr);
+      gap: 1.35rem;
+      align-items: stretch;
     }
-    .entry-sheet.is-wrap-compact .u-tweet,
-    .entry-sheet.is-wrap-compact .u-passage {
-      padding: 0.72rem 0.82rem;
-      gap: 0.5rem;
+    .entry-compact-diptych > .entry-source-box {
+      display: flex;
+      min-width: 0;
     }
-    .entry-sheet.is-wrap-compact .u-avatar,
-    .entry-sheet.is-wrap-compact .u-avatar-fallback {
+    .entry-compact-diptych .u-tweet,
+    .entry-compact-diptych .u-passage {
+      flex: 1;
+      height: 100%;
+      justify-content: center;
+      padding: 0.85rem 0.92rem;
+      gap: 0.55rem;
+    }
+    .entry-compact-diptych .u-avatar,
+    .entry-compact-diptych .u-avatar-fallback {
       width: 1.85rem;
       height: 1.85rem;
       flex-basis: 1.85rem;
     }
-    .entry-sheet.is-wrap-compact .u-name { font-size: 0.84rem; }
-    .entry-sheet.is-wrap-compact .u-handle { font-size: 0.71rem; }
-    .entry-sheet.is-wrap-compact .u-statement-body {
+    .entry-compact-diptych .u-name { font-size: 0.84rem; }
+    .entry-compact-diptych .u-handle { font-size: 0.71rem; }
+    .entry-compact-diptych .u-statement-body {
       font-size: 0.87rem;
       line-height: 1.46;
     }
-    .entry-sheet.is-wrap-compact .entry-prose pre {
+    .entry-compact-diptych .entry-diptych-right {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .entry-compact-diptych .entry-diptych-right > pre {
       clear: none;
-      contain: inline-size;
+    }
+    .entry-compact-diptych .entry-diptych-right > :last-child {
+      margin-bottom: 0;
+    }
+    .entry-diptych-tail {
+      margin-top: 1.1rem;
     }
 
     /* Mode 3: Stacked Source at Top, Commentary Starting at Bottom
@@ -794,23 +814,27 @@
       aspect-ratio: 4 / 3;
     }
 
-    /* Mobile / narrow screens gracefully release floats */
+    /* Mobile / narrow screens gracefully release floats and diptych */
     @media (max-width: 680px) {
-      .entry-sheet.is-wrap-left .entry-source-box,
-      .entry-sheet.is-wrap-compact .entry-source-box {
+      .entry-sheet.is-wrap-left .entry-source-box {
         float: none;
         width: 100%;
         margin: 0 0 1.25rem 0;
+      }
+      .entry-compact-diptych {
+        grid-template-columns: 1fr;
       }
       .entry-sheet.is-stack-bottom .u-snippet-row {
         grid-template-columns: 1fr;
       }
     }
-    body[data-viewport="mobile"] .entry-sheet.is-wrap-left .entry-source-box,
-    body[data-viewport="mobile"] .entry-sheet.is-wrap-compact .entry-source-box {
+    body[data-viewport="mobile"] .entry-sheet.is-wrap-left .entry-source-box {
       float: none;
       width: 100%;
       margin: 0 0 1.25rem 0;
+    }
+    body[data-viewport="mobile"] .entry-compact-diptych {
+      grid-template-columns: 1fr;
     }
     body[data-viewport="mobile"] .entry-sheet.is-stack-bottom .u-snippet-row {
       grid-template-columns: 1fr;
@@ -1140,6 +1164,18 @@
       }
     }
 
+    function splitAtFirstPre(htmlStr) {
+      if (!htmlStr) return { head: "", tail: "" };
+      const lower = htmlStr.toLowerCase();
+      const closeIdx = lower.indexOf("</pre>");
+      if (closeIdx < 0) return { head: htmlStr, tail: "" };
+      const cut = closeIdx + "</pre>".length;
+      return {
+        head: htmlStr.slice(0, cut),
+        tail: htmlStr.slice(cut).trim()
+      };
+    }
+
     function renderEntrySheet(entry) {
       const mode = entry.entryLayout || "wrap-left";
       let sheetModeCls = "";
@@ -1158,11 +1194,27 @@
         entry.bookmarked ? `<span class="u-star" title="Bookmarked">★</span>` : ""
       ].filter(Boolean).join("");
 
+      let stageInner = "";
+      if (mode === "wrap-compact-code" && sourceHTML) {
+        const parts = splitAtFirstPre(entry.renderedHtml || "");
+        stageInner = `
+          <div class="entry-compact-diptych">
+            <div class="entry-source-box">${sourceHTML}</div>
+            <div class="entry-prose entry-diptych-right">${parts.head}</div>
+          </div>
+          ${parts.tail ? `<div class="entry-prose entry-diptych-tail">${parts.tail}</div>` : ""}
+        `;
+      } else {
+        stageInner = `
+          ${sourceHTML ? `<div class="entry-source-box">${sourceHTML}</div>` : ""}
+          ${entry.renderedHtml ? `<div class="entry-prose">${entry.renderedHtml}</div>` : ""}
+        `;
+      }
+
       return `
         <article class="entry-sheet${sheetModeCls}${draftCls}">
           <div class="entry-newspaper-stage">
-            ${sourceHTML ? `<div class="entry-source-box">${sourceHTML}</div>` : ""}
-            ${entry.renderedHtml ? `<div class="entry-prose">${entry.renderedHtml}</div>` : ""}
+            ${stageInner}
           </div>
           <footer class="entry-sheet-foot">
             <div class="u-foot-left">
