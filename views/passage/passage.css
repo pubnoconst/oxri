@@ -1,18 +1,41 @@
-/* Bible passage clipping (views/passage): the tweet box's slip of paper
-   (views/tweet, .tweet-box and friends), with a few rules of its own. */
+/* Bible passage clipping (views/passage): shares the universal top-left
+   anchor of .tweet-box, with the reference at top-left, translation version at
+   top-right, and verses directly below. */
+
+.passage-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.passage-reference {
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  color: var(--page-ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.passage-version {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--page-ink) 56%, transparent);
+}
 
 .passage-text p {
   margin: 0;
 }
 
-/* Signed at the bottom with the reference, like the author of a post. */
-.passage-reference {
-  color: var(--page-ink);
-}
-
-/* The reference sits centred under the verses (owner, 2026-11-26). */
-.passage-byline {
-  justify-content: center;
+.journal-card.is-collage .passage-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
 }
 
 /* The editor's preview while the verses load, or when there is none
