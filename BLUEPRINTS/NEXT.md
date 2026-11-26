@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `616206a` (PR #85: universal preview cards and newspaper entry layout recorded in HIG)
-- **Active Branch**: `docs/compact-code-card-height` (PR #86): stretch compact quote card to match early code height and centre its contents (RATIONALE 087, `57f920c`).
+- **Base Commit on `main`**: `08b4bb5` (PR #86: stretch compact quote card to match early code height)
+- **Active Branch**: `feat/universal-cards-and-newspaper-entries` (PR #87): universal preview cards and newspaper entry layout shipped in `views/tweet`, `views/passage`, and `views/journals` (RATIONALE 088, `230d26f`).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's Pixel 10 (owner, 2026-11-25: the S9+ holds other bootstrapping and is not to be disturbed).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment`, `water-ripple`, `card-preview-ideas` (archived/prototype lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`; `card-preview-ideas` holds the standalone universal card and newspaper entry prototypes tagged at `preview-cards-v1` / `d5e8e63` and `newspaper-entry-v1` / `a6bd1c5`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
@@ -25,9 +25,7 @@ The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG
 
 ## Next on Mind
 
-- **Universal preview cards and newspaper entry layout (HIG §4, RATIONALE 086–087; prototyped on `card-preview-ideas`)**:
-  1. **Catalog preview cards (`preview-cards-v1`, `d5e8e63`)**: wire the three universal post clipping archetypes into `views/tweet` and `views/journals`—`1C` full-bleed caption (`media` + `≤ 80` chars, author pill and caption hidden at rest, `240 ms` ease-in/out on hover, `:focus-within`, or touch viewport focal band), newspaper snippet (`media` + `> 80` chars, top-left author + left square thumb + right snippet), and pure statement (no media, top-left author + full-width text)—inside the decluttered three-layer left-aligned outer card (`clipping/media` → `excerpt` → single quiet `Date · Tags` + `Draft`/`★` footer, keeping the frozen signed-in action bar).
-  2. **Full journal entry newspaper view (`newspaper-entry-v1`, `a6bd1c5`)**: wire `/journals/{id}` (`views/journals`) with `display: flow-root` top-left source float (`wrap-left`, commentary right and wrapping `100%` below), bottom-stacking when the source combines media with a `> 80`-char description (`stack-rich-source`), and a stretched two-column diptych (`wrap-compact-code`, `~29%` source card stretched flush to the bottom of `<pre><code>` with vertically centred card contents + `~71%` opening prose and code on the right, remaining prose spanning `100%` below) when an early code block meets a concise (`≤ 140`-char, media-free) source (falling back to `stack-early-code` only for longer/media sources).
+- ~~**Universal preview cards and newspaper entry layout (HIG §4, RATIONALE 086–088)**~~: shipped in PR #87 (`230d26f`)—universal `1C` caption, newspaper snippet, and statement clippings (`views/tweet`), aligned passage spine (`views/passage`), decluttered three-layer catalog cards, and newspaper `/journals/{id}` reading layout (`wrap-left`, `stack-rich-source`, stretched/centred `wrap-compact-code`, and `stack-early-code`) verified at `CLS = 0.000` in `cmd/lab`.
 - **Hosting** (owner, 2026-11-25): leave Render for a $2/month domain, served from the laptop if need be. Before the laptop goes live, harden `DEV_AUTO_LOGIN` (a per-request loopback Host check) and set `APP_ENV=prod`. With the domain on Cloudflare, cache `/assets/*` at the edge (immutable hashed URLs).
 - **Stable beats peak (HIG §1.6, owner 2026-11-25)**: performance work in this order, each judged by the variance it removes:
   1. Cold starts on Render's free plan (owner's billing decision).

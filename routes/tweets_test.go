@@ -39,10 +39,15 @@ func TestTweetsDrawnFromSnapshots(t *testing.T) {
 		}
 	}
 	const withSnap = "https://x.com/a_writer/status/111"
+	const withSnip = "https://x.com/b_writer/status/333"
+	const withStmt = "https://x.com/c_writer/status/444"
 	const without = "https://x.com/other/status/222"
 	post(withSnap)
+	post(withSnip)
+	post(withStmt)
 	post(without)
 
+	// 1C Caption (media + <= 80 chars)
 	snap := tweet.Snapshot{
 		ID: "111", Name: "A <Writer>", Handle: "a_writer",
 		AvatarURL: "https://pbs.twimg.com/profile_images/1/a_normal.jpg",
@@ -55,13 +60,40 @@ func TestTweetsDrawnFromSnapshots(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Newspaper Snippet (media + > 80 chars)
+	snip := tweet.Snapshot{
+		ID: "333", Name: "Broadsheet", Handle: "b_writer",
+		Created: time.Date(2026, 9, 13, 0, 0, 0, 0, time.UTC),
+		Text:    "Every information revolution begins by dissolving the monopoly of an old priesthood long before anyone knows what institutions take its place.",
+		Media:   []tweet.Media{{Kind: tweet.Photo, URL: "https://pbs.twimg.com/media/q.jpg", Width: 800, Height: 600}},
+	}
+	snipBody, _ := snip.Encode()
+	if err := store.PutTweetSnapshot(ctx, "333", db.TweetOK, snipBody); err != nil {
+		t.Fatal(err)
+	}
+
+	// Pure Statement (no media)
+	stmt := tweet.Snapshot{
+		ID: "444", Name: "Aphorist", Handle: "c_writer",
+		Created: time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC),
+		Text:    "Time is the only non-negotiable peer reviewer.",
+	}
+	stmtBody, _ := stmt.Encode()
+	if err := store.PutTweetSnapshot(ctx, "444", db.TweetOK, stmtBody); err != nil {
+		t.Fatal(err)
+	}
+
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/journals", nil))
 	page := rec.Body.String()
 
 	for _, want := range []string{
 		`data-media-mounted="` + withSnap + `"`,
-		`class="tweet-box" data-tweet-id="111" data-tweet-user="a_writer"`,
+		`class="tweet-box is-caption" data-tweet-id="111" data-tweet-user="a_writer"`,
+		`class="tweet-box is-snippet" data-tweet-id="333" data-tweet-user="b_writer"`,
+		`class="tweet-box is-statement" data-tweet-id="444" data-tweet-user="c_writer"`,
+		`class="tweet-snippet-thumb"`,
+		`class="tweet-caption-overlay"`,
 		`A &lt;Writer&gt;`,
 		`First &lt;script&gt;alert(1)&lt;/script&gt;`,
 		`<p>Second</p>`,

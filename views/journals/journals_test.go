@@ -10,6 +10,7 @@ import (
 
 	"github.com/oxri/oxri-go/internal/db"
 	"github.com/oxri/oxri-go/internal/paging"
+	"github.com/oxri/oxri-go/internal/tweet"
 )
 
 func TestExcerpt280(t *testing.T) {
@@ -152,10 +153,61 @@ func TestCardLinkCoversTheWholeCard(t *testing.T) {
 	if !strings.Contains(b.String(), `class="entry-date entry-card-link"`) {
 		t.Errorf("the card's date link changed: %s", b.String())
 	}
-	rule := regexp.MustCompile(`(?s)\.entry-date\s*\{[^}]*\}|\.entry-card-link\s*\{[^}]*\}`)
+	rule := regexp.MustCompile(`(?s)\.entry-date\s*\{[^}]*\}|\.entry-card-link\s*\{[^}]*\}|\.journal-card-foot\s*\{[^}]*\}|\.journal-foot-left\s*\{[^}]*\}`)
 	for _, r := range rule.FindAllString(StyleCSS, -1) {
-		if strings.Contains(r, "opacity") {
-			t.Errorf("the card link is dimmed by opacity, which traps its overlay: %s", r)
+		if strings.Contains(r, "opacity") || strings.Contains(r, "position: relative") {
+			t.Errorf("the card link or its footer ancestor traps its overlay: %s", r)
+		}
+	}
+}
+
+func TestClassifyEntryLayoutAndDiptych(t *testing.T) {
+	shortQuote := &tweet.Snapshot{ID: "1", Name: "Alexis King", Handle: "lexi_lambda", Text: "Parse, don't validate."}
+	longQuote := &tweet.Snapshot{ID: "2", Name: "Writer", Handle: "writer", Text: strings.Repeat("Long philosophical statement ", 8)}
+	richMediaQuote := &tweet.Snapshot{
+		ID: "3", Name: "Archive", Handle: "archive",
+		Text:  strings.Repeat("Rich historical description accompanying an image ", 3),
+		Media: []tweet.Media{{Kind: tweet.Photo, URL: "https://pbs.twimg.com/media/a.jpg", Width: 800, Height: 600}},
+	}
+	captionQuote := &tweet.Snapshot{
+		ID: "4", Name: "Plates", Handle: "plates",
+		Text:  "Rome, 6:40 a.m.",
+		Media: []tweet.Media{{Kind: tweet.Photo, URL: "https://pbs.twimg.com/media/b.jpg", Width: 800, Height: 600}},
+	}
+
+	earlyCodeMD := "Lead-in sentence:\n\n```go\ntype AdminCap struct{ minted bool }\n```\n\nClosing commentary paragraph."
+	lateCodeMD := strings.Repeat("Opening commentary clearing the floated source box comfortably. ", 10) + "\n\n```go\nx := 1\n```"
+
+	if got := ClassifyEntryLayout(RenderedEntry{Tweet: shortQuote, RenderedHTML: RenderMarkdown("Plain essay.")}); got != LayoutWrapLeft {
+		t.Errorf("short quote + essay: got %s, want %s", got, LayoutWrapLeft)
+	}
+	if got := ClassifyEntryLayout(RenderedEntry{Tweet: captionQuote, RenderedHTML: RenderMarkdown("Essay beside caption photo.")}); got != LayoutWrapLeft {
+		t.Errorf("caption quote + essay: got %s, want %s", got, LayoutWrapLeft)
+	}
+	if got := ClassifyEntryLayout(RenderedEntry{Tweet: richMediaQuote, RenderedHTML: RenderMarkdown("Commentary.")}); got != LayoutStackRichSource {
+		t.Errorf("rich media quote: got %s, want %s", got, LayoutStackRichSource)
+	}
+	if got := ClassifyEntryLayout(RenderedEntry{Tweet: shortQuote, RenderedHTML: RenderMarkdown(earlyCodeMD)}); got != LayoutWrapCompactCode {
+		t.Errorf("short quote + early code: got %s, want %s", got, LayoutWrapCompactCode)
+	}
+	if got := ClassifyEntryLayout(RenderedEntry{Tweet: longQuote, RenderedHTML: RenderMarkdown(earlyCodeMD)}); got != LayoutStackEarlyCode {
+		t.Errorf("long quote + early code: got %s, want %s", got, LayoutStackEarlyCode)
+	}
+	if got := ClassifyEntryLayout(RenderedEntry{Tweet: shortQuote, RenderedHTML: RenderMarkdown(lateCodeMD)}); got != LayoutWrapLeft {
+		t.Errorf("short quote + late code: got %s, want %s", got, LayoutWrapLeft)
+	}
+
+	// Verify full-entry rendering splits head (up through </pre>) and tail in wrap-compact-code.
+	var b strings.Builder
+	_ = EntryCard(false, RenderedEntry{
+		Entry:        db.Journal{ID: 9, MediaURL: "https://x.com/lexi_lambda/status/1", Published: true},
+		Tweet:        shortQuote,
+		RenderedHTML: RenderMarkdown(earlyCodeMD),
+	}, false).Render(&b)
+	out := b.String()
+	for _, want := range []string{`class="journal-card is-full is-wrap-compact"`, `class="entry-compact-diptych"`, `entry-diptych-right`, `entry-diptych-tail`, `Closing commentary paragraph.`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("compact code entry missing %q: %s", want, out)
 		}
 	}
 }
