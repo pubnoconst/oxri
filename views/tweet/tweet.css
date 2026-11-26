@@ -1,184 +1,303 @@
-/* Post clipping (views/tweet): a slip of paper laid on the card (depth 2).
-   The source and date run along the top in small capitals, like the head of a
-   newspaper cutting; the author signs at the bottom under a dashed rule. Only
-   posts from other sites are clippings: a direct link to an image, video or
-   audio file stays plain framed media (site.css .journal-preview-media). */
+/* Universal post clipping (views/tweet): a slip of paper laid on the card
+   (depth 2) with the author anchored at the top-left and three shapes that
+   grow strictly with what the post holds (HIG §4):
+     - .is-caption (media + <= 80 chars, 1C): full-bleed media; author pill
+       and caption stay hidden at rest and ease in on hover or focus.
+     - .is-snippet (media + > 80 chars): top-left author, compact square
+       thumbnail on the left, description on the right.
+     - .is-statement (no media): top-left author, full-width statement below. */
 .tweet-box {
   width: 100%;
   box-sizing: border-box;
   margin: 0;
-  padding: 0.9rem 1rem 0.8rem;
+  padding: 0.88rem 0.98rem;
   border: 1px solid var(--border-subtle);
-  /* Laid on a card, like a raw image or video: the same radius (HIG §4). */
   border-radius: var(--radius-card);
   background: var(--depth-2-surface);
   box-shadow: var(--depth-2-shadow);
   font-family: var(--font-quote);
-  /* A quotation from elsewhere: smaller than the author's own words (0.93rem
-     against 1rem and up) and in a slightly softer ink, so the clipping reads
-     as quoted matter. EB Garamond has no weight below 400; softness comes
-     from size and ink, never from a thinner face or opacity. */
-  color: color-mix(in srgb, var(--page-ink) 84%, var(--depth-2-surface));
-}
-
-.tweet-head {
+  color: color-mix(in srgb, var(--page-ink) 90%, var(--depth-2-surface));
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
-  margin-bottom: 0.6rem;
-  font-size: 0.66rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  opacity: 0.6;
+  flex-direction: column;
+  gap: 0.65rem;
+  text-align: left;
 }
 
-.tweet-text {
-  margin: 0;
-  font-size: 0.93rem;
-  line-height: 1.55;
-  overflow-wrap: anywhere;
-}
-
-.tweet-text p,
-.tweet-quoted-text p {
-  margin: 0 0 0.55rem;
-}
-
-.tweet-text p:last-child,
-.tweet-quoted-text p:last-child {
-  margin-bottom: 0;
-}
-
-/* The quoted post: smaller, set back once more. */
-.tweet-quoted {
-  margin-top: 0.75rem;
-  padding: 0.55rem 0.8rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-control);
-  font-size: 0.86rem;
-  line-height: 1.5;
-}
-
-.tweet-quoted-by {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin: 0 0 0.3rem;
-  font-size: 0.78rem;
-}
-
-/* Signed at the bottom: avatar, author, and the way to the original. */
-.tweet-byline {
+/* Universal top-left author row: avatar + stacked Name / @handle + quiet ↗ */
+.tweet-author-row {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  margin-top: 0.75rem;
-  padding-top: 0.6rem;
-  border-top: 1px dashed var(--border-card);
-  font-size: 0.8rem;
-  line-height: 1.3;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.tweet-avatar,
+.tweet-avatar-fallback {
+  width: 2.2rem;
+  height: 2.2rem;
+  flex: 0 0 2.2rem;
+  border-radius: 50%;
+  background: var(--depth-sunk-surface);
+  border: 1px solid var(--border-subtle);
 }
 
 .tweet-avatar {
-  width: 1.5rem;
-  height: 1.5rem;
-  flex: 0 0 1.5rem;
-  border-radius: 50%;
-  background: var(--border-subtle);
   object-fit: cover;
 }
 
-/* One line, whatever the font (HIG §1.7). It used to wrap: in the size-matched
-   fallback a name and handle could take two lines and fit on one once Short
-   Stack arrived, moving the card below up 10 px (CLS 0.015 on /journals). The
-   handle gives way first, then the name, each cut with an ellipsis. */
-.tweet-author {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0 0.35rem;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
+.tweet-avatar-fallback {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: color-mix(in srgb, var(--page-ink) 65%, transparent);
 }
 
-.tweet-author > .tweet-name,
-.tweet-author > .tweet-handle {
+/* Single-line name and handle so swapping in a web font never wraps or shifts
+   cards below (HIG §1.7). */
+.tweet-identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.22;
+}
+
+.tweet-name,
+.tweet-handle {
+  font-family: var(--font-ui);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.tweet-author > .tweet-name {
-  flex: 0 1 auto;
-}
-
-.tweet-author > .tweet-handle {
-  flex: 0 100 auto;
-}
-
-/* No bold (HIG §2): the name is set apart by full ink beside the dimmed
-   handle, not by weight. */
+/* No bold (HIG §2): hierarchy comes from size and full ink beside dimmed handle. */
 .tweet-name {
+  font-size: 0.9rem;
   color: var(--page-ink);
 }
 
 .tweet-handle {
-  opacity: 0.6;
+  font-size: 0.76rem;
+  color: color-mix(in srgb, var(--page-ink) 56%, transparent);
 }
 
-/* A quiet link (site.css .link-quiet). */
-.tweet-source {
+.tweet-ext {
   margin-left: auto;
+  align-self: flex-start;
   flex: 0 0 auto;
-  font-size: 0.78rem;
+  padding: 0.05rem 0.2rem;
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  text-decoration: none;
 }
 
-.tweet-source::after {
-  content: " ↗";
+/* Statement and snippet body text */
+.tweet-text {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.52;
+  overflow-wrap: anywhere;
 }
 
-/* Attachments: one keeps its shape (inline aspect-ratio, height capped);
-   two to four share a grid of even cells. When the height cap bites (a wide
-   card, such as a lone search result), the aspect ratio narrows the block:
-   it is centred, not left at the box's edge. */
-.tweet-media {
+.tweet-text p,
+.tweet-quoted-text p,
+.tweet-caption-overlay p {
+  margin: 0 0 0.5rem;
+}
+
+.tweet-text p:last-child,
+.tweet-quoted-text p:last-child,
+.tweet-caption-overlay p:last-child {
+  margin-bottom: 0;
+}
+
+/* Newspaper snippet (media + > 80 chars): compact square thumb on left,
+   description on right, sharing the same top-left author row as statements. */
+.tweet-snippet-row {
   display: grid;
-  gap: 2px;
-  margin: 0.7rem auto 0;
-  overflow: hidden;
-  /* Nested inside the clipping: one step smaller. */
+  grid-template-columns: 4.85rem minmax(0, 1fr);
+  gap: 0.78rem;
+  align-items: start;
+}
+
+.tweet-snippet-thumb {
+  position: relative;
+  width: 4.85rem;
+  height: 4.85rem;
   border-radius: var(--radius-control);
-  max-height: 26rem;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: var(--depth-sunk-surface);
 }
 
-.tweet-media-2,
-.tweet-media-4 {
-  grid-template-columns: 1fr 1fr;
-  aspect-ratio: 16 / 9;
-}
-
-.tweet-media-3 {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  aspect-ratio: 16 / 9;
-}
-
-.tweet-media-3 > :first-child {
-  grid-row: span 2;
-}
-
-.tweet-media img {
+.tweet-snippet-thumb img {
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 0;
   object-fit: cover;
-  background: var(--border-subtle);
 }
 
-/* Video or GIF: the poster with a quiet round play mark; a tap loads X's
-   player in its place (journal-media.js). */
+.tweet-snippet-row .tweet-text {
+  font-size: 0.89rem;
+  line-height: 1.46;
+}
+
+.tweet-media-count {
+  position: absolute;
+  right: 0.3rem;
+  bottom: 0.3rem;
+  z-index: 2;
+  padding: 0.06rem 0.34rem;
+  border-radius: var(--radius-control);
+  background: rgba(15, 17, 19, 0.74);
+  color: #f5f4f0;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+}
+
+/* Quoted post nested inside a snippet or statement */
+.tweet-quoted {
+  padding: 0.52rem 0.72rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--depth-sunk-surface);
+  font-size: 0.84rem;
+  line-height: 1.46;
+}
+
+.tweet-quoted-by {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  margin: 0 0 0.24rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tweet-quoted-by .tweet-name {
+  font-size: 0.78rem;
+}
+
+.tweet-quoted-by .tweet-handle {
+  font-size: 0.74rem;
+}
+
+/* Caption clipping (1C: media + <= 80 chars):
+   Full-bleed media; author pill and caption stay hidden (opacity: 0) at rest
+   and ease in on cursor hover, keyboard/tap focus, or touch viewport focus
+   (HIG §4, §7). Opacity-only on hover/focus (HIG §5: nothing moves on hover). */
+.tweet-box.is-caption {
+  position: relative;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.tweet-box.is-caption:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.tweet-caption-stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--depth-sunk-surface);
+}
+
+.tweet-caption-stage img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tweet-box.is-caption .tweet-author-row {
+  position: absolute;
+  top: 0.58rem;
+  left: 0.58rem;
+  z-index: 3;
+  width: fit-content;
+  max-width: calc(100% - 1.16rem);
+  padding: 0.3rem 0.58rem 0.3rem 0.34rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(245, 240, 230, 0.18);
+  background: rgba(15, 17, 19, 0.78);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .tweet-box.is-caption .tweet-author-row {
+    background: rgba(15, 17, 19, 0.58);
+    backdrop-filter: var(--depth-overlay-blur);
+  }
+}
+
+.tweet-box.is-caption .tweet-avatar,
+.tweet-box.is-caption .tweet-avatar-fallback {
+  width: 1.72rem;
+  height: 1.72rem;
+  flex-basis: 1.72rem;
+}
+
+.tweet-box.is-caption .tweet-name {
+  color: #f5f4f0;
+  font-size: 0.82rem;
+}
+
+.tweet-box.is-caption .tweet-handle {
+  color: rgba(245, 244, 240, 0.74);
+  font-size: 0.7rem;
+}
+
+.tweet-box.is-caption .tweet-ext {
+  color: rgba(245, 244, 240, 0.76);
+  margin-left: 0.25rem;
+  align-self: center;
+}
+
+.tweet-box.is-caption .tweet-ext:hover,
+.tweet-box.is-caption .tweet-ext:focus-visible {
+  color: #ffffff;
+}
+
+.tweet-caption-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 1.85rem 0.85rem 0.7rem;
+  background: linear-gradient(
+    to top,
+    rgba(12, 13, 15, 0.86) 0%,
+    rgba(12, 13, 15, 0.54) 58%,
+    rgba(12, 13, 15, 0) 100%
+  );
+  color: #f5f4f0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tweet-box.is-caption:hover .tweet-author-row,
+.tweet-box.is-caption:focus .tweet-author-row,
+.tweet-box.is-caption:focus-within .tweet-author-row,
+.tweet-box.is-caption.is-touch-focused .tweet-author-row,
+.tweet-box.is-caption:hover .tweet-caption-overlay,
+.tweet-box.is-caption:focus .tweet-caption-overlay,
+.tweet-box.is-caption:focus-within .tweet-caption-overlay,
+.tweet-box.is-caption.is-touch-focused .tweet-caption-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Video or GIF: poster with a quiet round play mark; tapping swaps in X's player */
 .tweet-play {
   position: relative;
   display: block;
@@ -194,23 +313,34 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 3rem;
-  height: 3rem;
+  width: 2.85rem;
+  height: 2.85rem;
   border-radius: 50%;
   background: rgba(15, 17, 19, 0.62);
   transform: translate(-50%, -50%);
   transition: background-color var(--interact-duration) ease;
 }
 
+.tweet-play-mark.is-sm {
+  width: 1.65rem;
+  height: 1.65rem;
+}
+
 .tweet-play-mark::after {
   position: absolute;
   top: 50%;
   left: 54%;
-  border-top: 0.55rem solid transparent;
-  border-bottom: 0.55rem solid transparent;
-  border-left: 0.9rem solid #f5f4f0;
+  border-top: 0.52rem solid transparent;
+  border-bottom: 0.52rem solid transparent;
+  border-left: 0.86rem solid #f5f4f0;
   content: "";
   transform: translate(-50%, -50%);
+}
+
+.tweet-play-mark.is-sm::after {
+  border-top-width: 0.32rem;
+  border-bottom-width: 0.32rem;
+  border-left-width: 0.52rem;
 }
 
 .tweet-play:hover .tweet-play-mark,
@@ -220,20 +350,25 @@
   background: rgba(15, 17, 19, 0.8);
 }
 
-/* In the catalog's compact cards, a long post is cut to a few lines; the
-   entry page shows it whole. */
-.journal-card.is-collage .tweet-text {
+/* In catalog preview cards, clamp long statements and snippets cleanly;
+   full entry pages show them whole. */
+.journal-card.is-collage .tweet-box.is-statement .tweet-text {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 7;
+  -webkit-line-clamp: 6;
   overflow: hidden;
 }
 
-.journal-card.is-collage .tweet-media {
-  max-height: 13.5rem;
+.journal-card.is-collage .tweet-box.is-snippet .tweet-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .tweet-box.is-caption .tweet-author-row,
+  .tweet-caption-overlay,
   .tweet-play-mark {
     transition: none;
   }

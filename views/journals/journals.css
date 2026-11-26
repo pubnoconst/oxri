@@ -8,7 +8,7 @@
 }
 
 .journals-single-page {
-  width: min(52rem, 100%);
+  width: min(56rem, 100%);
 }
 
 .journals-header {
@@ -336,27 +336,22 @@
   min-width: min(100%, 18.5rem);
   display: flex;
   flex-direction: column;
+  gap: 0.8rem;
   padding: var(--space-card-pad-sm);
   cursor: pointer;
-  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-}
-
-/* A catalog card's contents are centred left to right (owner, 2026-11-26):
-   the date and its badges, the tags, the preview text and the actions. A
-   clipping or a quoted passage keeps its own left-aligned text inside its
-   box, as a quotation reads; the box itself is centred by the media slot. */
-.journal-card.is-collage {
-  text-align: center;
-}
-
-.journal-card.is-collage .journal-entry-tags,
-.journal-card.is-collage .journal-card-actions {
-  justify-content: center;
-}
-
-.journal-card.is-collage .tweet-box,
-.journal-card.is-collage .passage-box {
   text-align: left;
+  transition: border-color var(--interact-duration) ease, box-shadow var(--interact-duration) ease;
+}
+
+/* Hovering or focusing anywhere on a catalog card also eases in a 1C caption
+   clipping's author pill and caption, since .entry-card-link::after covers the
+   card for navigation. */
+.journal-card.is-collage:hover .tweet-box.is-caption .tweet-author-row,
+.journal-card.is-collage:focus-within .tweet-box.is-caption .tweet-author-row,
+.journal-card.is-collage:hover .tweet-box.is-caption .tweet-caption-overlay,
+.journal-card.is-collage:focus-within .tweet-box.is-caption .tweet-caption-overlay {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* A whole card is a link: its edge darkens on hover. It does not lift. */
@@ -392,43 +387,80 @@
 .journal-card.is-collage .journal-card-actions,
 .journal-card.is-collage .confirm-slot {
   position: relative;
-  z-index: 2;
+  z-index: 4;
 }
 
-.journal-card-meta {
+/* Quiet single-line baseline footer (HIG §4): Date · Tags on the left, subtle
+   Draft / ★ on the right. No position: relative and no opacity < 1 on the
+   footer or .entry-date so .entry-card-link::after covers the whole card. */
+.journal-card-foot {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.1rem;
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  color: color-mix(in srgb, var(--page-ink) 56%, transparent);
+}
+
+.journal-card-foot.is-entry-foot {
+  margin-top: 1.35rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+}
+
+.journal-foot-left {
+  display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.65rem;
-  margin-bottom: 1rem;
-  padding-bottom: 0.65rem;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 0.38rem;
+  min-width: 0;
 }
 
-.journal-card.is-collage .journal-card-meta {
-  margin-bottom: 0.85rem;
-  padding-bottom: 0.5rem;
-}
-
-.journal-meta-left {
+.journal-foot-right {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.journal-foot-dot {
+  color: color-mix(in srgb, var(--page-ink) 44%, transparent);
+}
+
+.journal-foot-tag {
+  color: color-mix(in srgb, var(--page-ink) 68%, transparent);
+}
+
+.journal-draft-mark {
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--page-ink) 58%, transparent);
+}
+
+.journal-star-mark {
+  color: var(--accent-warn);
+  font-size: 0.82rem;
 }
 
 /* The date is quiet by its colour, never by opacity: it carries the card's
    stretched link (.entry-card-link::after), and opacity below 1 would seal
-   that overlay inside the date, under the excerpt and anything else dimmed,
-   so the card's blank space below the text would not open the entry. */
+   that overlay inside the date, leaving blank space dead. */
 .entry-date {
-  font-size: 0.9rem;
-  color: color-mix(in srgb, var(--page-ink) 65%, transparent);
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--page-ink) 58%, transparent);
   text-decoration: none;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   transition: color var(--interact-duration) ease;
+}
+
+.journal-card-foot.is-entry-foot .entry-date {
+  font-size: 0.82rem;
 }
 
 .entry-date:hover,
@@ -437,19 +469,7 @@
   text-decoration-line: underline;
 }
 
-.journal-meta-right {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-
-.journal-meta-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
+/* Make Room (/journals/vacate-space/) row badges */
 .entry-badge {
   display: inline-flex;
   align-items: center;
@@ -471,13 +491,13 @@
   background: var(--depth-sunk-surface);
 }
 
-/* Tactile media slot (shared rules in site.css; catalog spacing & compact overrides below) */
+/* Tactile media slot */
 .journal-media-slot {
-  margin: 0 0 1.4rem;
+  margin: 0;
 }
 
 .journal-card.is-collage .journal-media-slot {
-  margin: 0 0 0.85rem;
+  margin: 0;
 }
 
 /* A tweet still loading reserves no space at all, not even the slot's gap. */
@@ -567,32 +587,126 @@
   aspect-ratio: auto;
 }
 
-/* Tags */
-.journal-entry-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 0.75rem;
-}
-
 /* Compact 280-char Excerpt in Collage: the entry's own words, so its face
-   (HIG §2), not the UI's. */
+   (HIG §2), left-aligned to match the universal reading spine. */
 .journal-entry-excerpt {
   font-family: var(--font-entry);
-  flex: 1;
   margin: 0;
-  font-size: 0.98rem;
-  line-height: 1.55;
-  opacity: 0.88;
+  font-size: 0.96rem;
+  line-height: 1.54;
+  color: color-mix(in srgb, var(--page-ink) 90%, transparent);
+  text-align: left;
   overflow-wrap: anywhere;
   white-space: pre-line;
+}
+
+/* Full journal entry — newspaper reading layout (HIG §4, RATIONALE 086–087) */
+.entry-newspaper-stage {
+  display: flow-root;
+}
+
+/* Default (wrap-left): unclamped source floats top-left; commentary starts at
+   top-right and wraps across 100% width once it clears the source. */
+.journal-card.is-full.is-wrap-left .entry-source-box {
+  float: left;
+  width: clamp(15.5rem, 43%, 22.5rem);
+  margin: 0.15rem 1.75rem 1.15rem 0;
+}
+
+/* Media + rich description (stack-rich-source) or long source + early code
+   (stack-early-code): source spans the top, commentary starts at the bottom. */
+.journal-card.is-full.is-stack-bottom .entry-source-box {
+  float: none;
+  width: 100%;
+  margin: 0 0 1.45rem 0;
+}
+
+.journal-card.is-full.is-stack-bottom .tweet-snippet-row {
+  grid-template-columns: minmax(11rem, 38%) minmax(0, 1fr);
+  gap: 1.15rem;
+}
+
+.journal-card.is-full.is-stack-bottom .tweet-snippet-thumb {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+}
+
+/* Concise source + early code (wrap-compact-code): stretched two-column band
+   matching the source card's bottom flush with <pre><code> and centring the
+   card's contents vertically, with remaining prose spanning 100% below. */
+.entry-compact-diptych {
+  display: grid;
+  grid-template-columns: clamp(12.5rem, 29%, 15.25rem) minmax(0, 1fr);
+  gap: 1.35rem;
+  align-items: stretch;
+}
+
+.entry-compact-diptych > .entry-source-box {
+  display: flex;
+  min-width: 0;
+}
+
+.entry-compact-diptych > .entry-source-box > .journal-media-slot {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  margin: 0;
+}
+
+.entry-compact-diptych .tweet-box,
+.entry-compact-diptych .passage-box {
+  flex: 1;
+  height: 100%;
+  justify-content: center;
+  padding: 0.85rem 0.92rem;
+  gap: 0.55rem;
+}
+
+.entry-compact-diptych .tweet-avatar,
+.entry-compact-diptych .tweet-avatar-fallback {
+  width: 1.85rem;
+  height: 1.85rem;
+  flex-basis: 1.85rem;
+}
+
+.entry-compact-diptych .tweet-name {
+  font-size: 0.84rem;
+}
+
+.entry-compact-diptych .tweet-handle {
+  font-size: 0.71rem;
+}
+
+.entry-compact-diptych .tweet-text {
+  font-size: 0.87rem;
+  line-height: 1.46;
+}
+
+.entry-compact-diptych .entry-diptych-right {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.entry-compact-diptych .entry-diptych-right > pre {
+  clear: none;
+}
+
+.entry-compact-diptych .entry-diptych-right > :last-child {
+  margin-bottom: 0;
+}
+
+.entry-diptych-tail {
+  margin-top: 1.1rem;
 }
 
 /* Full Reading Prose content */
 .journal-entry-body {
   font-family: var(--font-entry);
-  font-size: 1.15rem;
-  line-height: 1.7;
+  font-size: 1.12rem;
+  line-height: 1.72;
   overflow-wrap: anywhere;
 }
 
@@ -604,9 +718,15 @@
 .journal-entry-body h1,
 .journal-entry-body h2,
 .journal-entry-body h3 {
-  margin: 1.2rem 0 0.6rem;
+  margin: 0 0 0.65rem;
   font-weight: 400;
-  line-height: 1.2;
+  line-height: 1.22;
+}
+
+.journal-entry-body * + h1,
+.journal-entry-body * + h2,
+.journal-entry-body * + h3 {
+  margin-top: 1.2rem;
 }
 
 .journal-entry-body h1 { font-size: 1.85rem; }
@@ -619,11 +739,24 @@
 .journal-entry-body pre { margin: 0 0 1rem; }
 .journal-entry-body > :last-child { margin-bottom: 0; }
 .journal-entry-body pre {
+  clear: left;
   overflow-x: auto;
   padding: 0.85rem;
   border-radius: var(--radius-control);
   background: var(--depth-sunk-surface);
   font-family: var(--font-mono);
+}
+
+@media (max-width: 680px) {
+  .journal-card.is-full.is-wrap-left .entry-source-box {
+    float: none;
+    width: 100%;
+    margin: 0 0 1.25rem 0;
+  }
+  .journal-card.is-full.is-stack-bottom .tweet-snippet-row,
+  .entry-compact-diptych {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Card Admin Footer */
@@ -632,14 +765,14 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.45rem;
-  margin-top: 1.25rem;
-  padding-top: 0.85rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--border-subtle);
 }
 
 .journal-card.is-collage .journal-card-actions {
-  margin-top: 1rem;
-  padding-top: 0.7rem;
+  margin-top: 0.15rem;
+  padding-top: 0.65rem;
 }
 
 .journal-card.is-collage .journal-card-actions .btn-sm {

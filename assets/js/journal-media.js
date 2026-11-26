@@ -552,11 +552,34 @@
     const username = box && box.getAttribute("data-tweet-user");
     if (!tweetId || !/^\d+$/.test(tweetId)) return;
     event.preventDefault();
+    event.stopPropagation();
     const container = document.createElement("div");
     container.className = "tweet-embed-container";
     box.replaceWith(container);
     renderTweet(container, username || "post", tweetId);
   });
+
+  // Touch displays have no cursor hover: when a 1C full-bleed caption card
+  // scrolls into the central reading band of the viewport, ease its author
+  // pill and caption in, and ease them out when scrolled past (HIG §4).
+  /** @type {IntersectionObserver | null} */
+  let captionFocusObserver = null;
+  function wireCaptionTouchFocus() {
+    if (captionFocusObserver) {
+      captionFocusObserver.disconnect();
+      captionFocusObserver = null;
+    }
+    const isCoarse = window.matchMedia && window.matchMedia("(hover: none), (pointer: coarse)").matches;
+    if (!isCoarse || typeof IntersectionObserver === "undefined") return;
+    const boxes = document.querySelectorAll(".tweet-box.is-caption");
+    if (boxes.length === 0) return;
+    captionFocusObserver = new IntersectionObserver((entries) => {
+      entries.forEach((io) => {
+        io.target.classList.toggle("is-touch-focused", io.isIntersecting);
+      });
+    }, { rootMargin: "-22% 0px -22% 0px", threshold: 0.55 });
+    boxes.forEach((box) => captionFocusObserver?.observe(box));
+  }
 
   /**
    * A quiet card for a link with no inline media, or media that failed to
@@ -641,13 +664,18 @@
   // by the server, and the script loads only for an embed that is needed
   // (a post without a snapshot yet, or a tapped video).
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", mountCatalogSlots);
-  } else {
+  function mountAll() {
     mountCatalogSlots();
+    wireCaptionTouchFocus();
   }
-  document.addEventListener("htmx:afterSwap", mountCatalogSlots);
-  document.addEventListener("htmx:afterSettle", mountCatalogSlots);
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountAll);
+  } else {
+    mountAll();
+  }
+  document.addEventListener("htmx:afterSwap", mountAll);
+  document.addEventListener("htmx:afterSettle", mountAll);
 
   const themeObserver = new MutationObserver(() => {
     const slots = document.querySelectorAll("[data-media-url]");

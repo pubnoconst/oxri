@@ -573,13 +573,107 @@ func mediaSlot(item RenderedEntry, isCollage bool) g.Node {
 	}
 }
 
-// EntryCard renders either a compact collage card or a full permalink card.
+// EntryLayout is how a full journal entry (/journals/{id}) arranges its source
+// material and the author's commentary (HIG §4, RATIONALE 086–087).
+type EntryLayout string
+
+const (
+	// LayoutWrapLeft floats the source at top-left so commentary begins at
+	// top-right and wraps across the full width once it clears the source.
+	LayoutWrapLeft EntryLayout = "wrap-left"
+	// LayoutWrapCompactCode pairs a concise source (<= 140 chars, no media) and
+	// the opening prose + first <pre><code> block inside a stretched two-column
+	// band, with the source card's contents vertically centred and remaining
+	// prose spanning 100% width below.
+	LayoutWrapCompactCode EntryLayout = "wrap-compact-code"
+	// LayoutStackRichSource places a media + rich (> 80 chars) description
+	// source across the top and starts commentary cleanly at the bottom.
+	LayoutStackRichSource EntryLayout = "stack-rich-source"
+	// LayoutStackEarlyCode places a long or media-bearing source across the top
+	// when a <pre><code> block appears before enough prose clears a float.
+	LayoutStackEarlyCode EntryLayout = "stack-early-code"
+	// LayoutProseOnly renders an entry with no source media.
+	LayoutProseOnly EntryLayout = "prose-only"
+
+	earlyCodeProseThreshold = 420
+	compactSourceMaxRunes   = 140
+)
+
+func hasSource(item RenderedEntry) bool {
+	return item.Tweet != nil || item.Passage != nil || item.Thumb != nil || strings.TrimSpace(item.Entry.MediaURL) != ""
+}
+
+func hasEarlyCodeBlock(renderedHTML string) bool {
+	lower := strings.ToLower(renderedHTML)
+	idx := strings.Index(lower, "<pre>")
+	if idx < 0 {
+		idx = strings.Index(lower, "<pre ")
+	}
+	if idx < 0 {
+		return false
+	}
+	prefix := renderedHTML[:idx]
+	plain := strings.TrimSpace(html.UnescapeString(htmlTagRe.ReplaceAllString(prefix, " ")))
+	plain = strings.Join(strings.Fields(plain), " ")
+	return utf8.RuneCountInString(plain) < earlyCodeProseThreshold
+}
+
+func isCompressibleBesideCode(item RenderedEntry) bool {
+	if item.Tweet != nil {
+		chars := utf8.RuneCountInString(strings.TrimSpace(item.Tweet.Text))
+		return len(item.Tweet.Media) == 0 && item.Tweet.Quoted == nil && chars <= compactSourceMaxRunes
+	}
+	if item.Passage != nil {
+		return utf8.RuneCountInString(strings.TrimSpace(item.Passage.Text)) <= compactSourceMaxRunes
+	}
+	return item.Thumb == nil && classifyMedia(item.Entry.MediaURL) == mediaLink
+}
+
+// ClassifyEntryLayout decides how item's full entry page lays out source and commentary.
+func ClassifyEntryLayout(item RenderedEntry) EntryLayout {
+	if !hasSource(item) {
+		return LayoutProseOnly
+	}
+	if item.Tweet != nil && len(item.Tweet.Media) > 0 &&
+		(utf8.RuneCountInString(strings.TrimSpace(item.Tweet.Text)) > tweetview.MaxCaptionRunes || item.Tweet.Quoted != nil) {
+		return LayoutStackRichSource
+	}
+	if hasEarlyCodeBlock(item.RenderedHTML) {
+		if isCompressibleBesideCode(item) {
+			return LayoutWrapCompactCode
+		}
+		return LayoutStackEarlyCode
+	}
+	return LayoutWrapLeft
+}
+
+func splitAtFirstPre(renderedHTML string) (head, tail string) {
+	lower := strings.ToLower(renderedHTML)
+	idx := strings.Index(lower, "</pre>")
+	if idx < 0 {
+		return renderedHTML, ""
+	}
+	cut := idx + len("</pre>")
+	return renderedHTML[:cut], strings.TrimSpace(renderedHTML[cut:])
+}
+
+// EntryCard renders either a compact collage card or a full newspaper permalink card.
 func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 	cls := "journal-card"
+	var layoutMode EntryLayout
 	if isCollage {
 		cls += " is-collage"
 	} else {
 		cls += " is-full"
+		layoutMode = ClassifyEntryLayout(item)
+		switch layoutMode {
+		case LayoutStackRichSource, LayoutStackEarlyCode:
+			cls += " is-stack-bottom"
+		case LayoutWrapCompactCode:
+			cls += " is-wrap-compact"
+		case LayoutWrapLeft:
+			cls += " is-wrap-left"
+		}
 	}
 	if !item.Entry.Published {
 		cls += " is-unpublished"
@@ -604,30 +698,34 @@ func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 		dateNode = h.Span(h.Class("entry-date"), g.Text(item.FormattedDate))
 	}
 
-	var draftBadge g.Node
+	footLeft := make([]g.Node, 0, 2+len(item.Tags)*2)
+	if selectCb != nil {
+		footLeft = append(footLeft, selectCb)
+	}
+	footLeft = append(footLeft, dateNode)
+	for _, tag := range item.Tags {
+		footLeft = append(footLeft,
+			h.Span(h.Class("journal-foot-dot"), g.Attr("aria-hidden", "true"), g.Text("·")),
+			h.Span(h.Class("journal-foot-tag"), g.Text(tag)),
+		)
+	}
+
+	var draftMark, starMark g.Node
 	if !item.Entry.Published {
-		draftBadge = h.Span(h.Class("entry-badge is-draft"), g.Text("Unpublished"))
+		draftMark = h.Span(h.Class("journal-draft-mark"), g.Text("Draft"))
 	}
-	var bookmarkBadge g.Node
 	if item.Entry.Bookmarked {
-		bookmarkBadge = h.Span(h.Class("entry-badge is-bookmarked"), g.Text("★"))
+		starMark = h.Span(h.Class("journal-star-mark"), g.Attr("aria-label", "Bookmarked"), g.Text("★"))
 	}
 
-	var tagsBlock g.Node
-	if len(item.Tags) > 0 {
-		chips := make([]g.Node, 0, len(item.Tags))
-		for _, tag := range item.Tags {
-			chips = append(chips, h.Span(h.Class("journal-tag-chip"), g.Text(tag)))
-		}
-		tagsBlock = h.Div(h.Class("journal-entry-tags"), g.Group(chips))
+	footCls := "journal-card-foot"
+	if !isCollage {
+		footCls += " is-entry-foot"
 	}
-
-	var contentBlock g.Node
-	if isCollage {
-		contentBlock = h.P(h.Class("journal-entry-excerpt"), g.Text(item.Excerpt))
-	} else {
-		contentBlock = h.Div(h.Class("journal-entry-body journal-rendered-content"), g.Raw(item.RenderedHTML))
-	}
+	cardFoot := h.Footer(h.Class(footCls),
+		h.Div(h.Class("journal-foot-left"), g.Group(footLeft)),
+		h.Div(h.Class("journal-foot-right"), draftMark, starMark),
+	)
 
 	var adminFooter g.Node
 	if isAuth {
@@ -656,23 +754,47 @@ func EntryCard(isAuth bool, item RenderedEntry, isCollage bool) g.Node {
 		)
 	}
 
+	if isCollage {
+		var slot g.Node
+		if hasSource(item) {
+			slot = mediaSlot(item, true)
+		}
+		var excerpt g.Node
+		if item.Excerpt != "" {
+			excerpt = h.P(h.Class("journal-entry-excerpt"), g.Text(item.Excerpt))
+		}
+		return h.Article(h.Class(cls),
+			slot,
+			excerpt,
+			cardFoot,
+			adminFooter,
+			g.If(isAuth, h.Div(h.ID(confirmSlotID(item.Entry.ID)), h.Class("confirm-slot"))),
+		)
+	}
+
+	var stageBody g.Node
+	switch layoutMode {
+	case LayoutProseOnly:
+		stageBody = h.Div(h.Class("journal-entry-body journal-rendered-content"), g.Raw(item.RenderedHTML))
+	case LayoutWrapCompactCode:
+		headHTML, tailHTML := splitAtFirstPre(item.RenderedHTML)
+		stageBody = g.Group([]g.Node{
+			h.Div(h.Class("entry-compact-diptych"),
+				h.Div(h.Class("entry-source-box"), mediaSlot(item, false)),
+				h.Div(h.Class("journal-entry-body journal-rendered-content entry-diptych-right"), g.Raw(headHTML)),
+			),
+			g.If(tailHTML != "", h.Div(h.Class("journal-entry-body journal-rendered-content entry-diptych-tail"), g.Raw(tailHTML))),
+		})
+	default:
+		stageBody = g.Group([]g.Node{
+			h.Div(h.Class("entry-source-box"), mediaSlot(item, false)),
+			h.Div(h.Class("journal-entry-body journal-rendered-content"), g.Raw(item.RenderedHTML)),
+		})
+	}
+
 	return h.Article(h.Class(cls),
-		// The select box on the left; the date and its badges on the right.
-		h.Header(h.Class("journal-card-meta"),
-			h.Div(h.Class("journal-meta-left"),
-				selectCb,
-			),
-			h.Div(h.Class("journal-meta-right"),
-				dateNode,
-				h.Div(h.Class("journal-meta-badges"),
-					draftBadge,
-					bookmarkBadge,
-				),
-			),
-		),
-		mediaSlot(item, isCollage),
-		tagsBlock,
-		contentBlock,
+		h.Div(h.Class("entry-newspaper-stage"), stageBody),
+		cardFoot,
 		adminFooter,
 		g.If(isAuth, h.Div(h.ID(confirmSlotID(item.Entry.ID)), h.Class("confirm-slot"))),
 	)

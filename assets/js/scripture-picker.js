@@ -386,13 +386,11 @@
     if (!container.querySelector(".passage-box") || container.dataset.passageKey !== key) {
       const p = state.passage;
       const box = el("figure", "tweet-box passage-box");
-      const head = el("div", "tweet-head");
-      head.append(el("span", "tweet-site", "Bible"), el("span", "passage-version", p.version));
+      const head = el("div", "passage-head");
+      head.append(el("span", "passage-reference", p.reference), el("span", "passage-version", p.version));
       const quote = el("blockquote", "tweet-text passage-text");
       quote.append(el("p", "", p.text));
-      const byline = el("figcaption", "tweet-byline passage-byline");
-      byline.append(el("span", "passage-reference", p.reference));
-      box.append(head, quote, byline);
+      box.append(head, quote);
       container.classList.remove("is-empty");
       container.dataset.passageKey = key;
       container.replaceChildren(box);
