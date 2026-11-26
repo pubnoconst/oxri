@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `08b4bb5` (PR #86: stretch compact quote card to match early code height)
-- **Active Branch**: `feat/universal-cards-and-newspaper-entries` (PR #87): universal preview cards and newspaper entry layout shipped in `views/tweet`, `views/passage`, and `views/journals` (RATIONALE 088, `230d26f`).
+- **Base Commit on `main`**: `3d5e6bb` (PR #87: universal preview cards and newspaper entry layout)
+- **Active Branch**: `fix/entry-image-top-left` (PR #89): anchor full-entry linked images flush top-left at their known aspect ratio (RATIONALE 089, `005a1a1`).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's Pixel 10 (owner, 2026-11-25: the S9+ holds other bootstrapping and is not to be disturbed).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment`, `water-ripple`, `card-preview-ideas` (archived/prototype lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`; `card-preview-ideas` holds the standalone universal card and newspaper entry prototypes tagged at `preview-cards-v1` / `d5e8e63` and `newspaper-entry-v1` / `a6bd1c5`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.

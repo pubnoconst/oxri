@@ -564,6 +564,27 @@
   max-height: 100%;
 }
 
+/* On a full entry page, source media anchors flush at the top-left of its box
+   (never floated vertically inside a tall 26rem slot). When a server still
+   gives the image's shape (.has-known-ratio), the slot takes that exact aspect
+   ratio up front so there is neither blank space above/below nor a shift when
+   the full image arrives. */
+.journal-card.is-full .journal-preview-media {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.journal-card.is-full .journal-media-slot.is-image.has-known-ratio {
+  width: min(100%, calc(min(26rem, 80vw) * var(--still-ratio)));
+  height: auto;
+}
+
+.journal-card.is-full .journal-media-slot.is-image.has-known-ratio > img {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+}
+
 /* A server still (routes/thumbs.go) knows its shape before it loads: it is
    given the largest size of that shape the slot holds, at once, so a still
    loading as the reader scrolls never grows in place. (Its width and height
