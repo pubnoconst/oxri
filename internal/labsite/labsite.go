@@ -4,9 +4,9 @@
 // tweets are stored snapshots without images, passages are stored text.
 // Readers are signed out (the admin session only seeds).
 //
-// The Go lab (cmd/lab) serves it in its own process; cmd/labserver serves it
-// for a lab that runs elsewhere: the Node script on a Windows host, and CI
-// (Principia #9, RATIONALE 091).
+// cmd/labserver serves it to the lab script (cmd/lab/lab.mjs -local), which
+// runs where a Chrome is: on a Windows host, and in CI (Principia #9,
+// RATIONALE 091).
 package labsite
 
 import (
@@ -89,8 +89,8 @@ func New(ctx context.Context, entries, pageSize int) (*Site, error) {
 // Handler serves the site, and at ImagePath the photos on seeded clippings.
 func (s *Site) Handler() http.Handler { return s.handler }
 
-// OnStop sets the function called when StopPath is asked. The Go lab, which
-// serves the site in its own process, sets none: the site ends with it.
+// OnStop sets the function called when StopPath is asked: cmd/labserver sets
+// the one that ends its server.
 func (s *Site) OnStop(f func()) { s.stop = sync.OnceFunc(f) }
 
 // Images reports how many photos were served in place of X, and their bytes in
@@ -209,9 +209,9 @@ const ImagePath = "/__lab/image"
 // their bytes in all: {"count": n, "bytes": n}.
 const StatsPath = "/__lab/stats"
 
-// StopPath, asked with POST, ends the server that serves the site (when one
-// set OnStop). It is how a lab that runs elsewhere, on another machine, ends
-// the server it started: a request arrives where a closed pipe may not.
+// StopPath, asked with POST, ends the server that serves the site. It is how
+// the lab script, which may run on another machine, ends the server it
+// started: a request arrives where a closed pipe may not.
 const StopPath = "/__lab/stop"
 
 var images = map[string][]byte{}

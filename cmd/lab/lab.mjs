@@ -151,9 +151,11 @@ const resourcesJS = `(() => {
   return out;
 })()`;
 
-// The flags chromedp launched Chrome with for the Go lab (its
-// DefaultExecAllocatorOptions), in its order, so both labs run the same
-// browser. The profile and the DevTools pipe follow, then about:blank.
+// The flags Chrome is launched with. They are chromedp's own
+// (DefaultExecAllocatorOptions), the library the lab's Go predecessor used:
+// kept in its order so the browser is the same one PROFILING.md's figures
+// were taken in (RATIONALE 074–091). The profile and the DevTools pipe
+// follow, then about:blank.
 const chromeFlags = [
   "no-first-run", "no-default-browser-check", "headless",
   "disable-background-networking", "enable-features=NetworkService,NetworkServiceInProcess",
@@ -165,7 +167,7 @@ const chromeFlags = [
   "password-store=basic", "use-mock-keychain",
 ];
 
-/** The domains chromedp enabled on every page, so the page is instrumented as before. */
+/** The domains the Go predecessor enabled on every page (chromedp's doing), so the page is instrumented as it was. */
 const pageDomains = ["Runtime.enable", "Log.enable", "Network.enable", "Inspector.enable", "Page.enable", "DOM.enable"];
 
 // Thresholds are Google's Core Web Vitals boundaries: at or under the first
@@ -275,9 +277,9 @@ function parts(x) {
 }
 
 /**
- * Formats v as Go's "%.<prec>f" did (the reports of both labs are read side
- * by side): fixed decimals, rounded to the even digit when the value lies
- * exactly between two.
+ * Formats v as the Go predecessor's "%.<prec>f" did, so a report reads on
+ * from the ones before it: fixed decimals, rounded to the even digit when
+ * the value lies exactly between two.
  * @param {number} v
  * @param {number} prec
  */

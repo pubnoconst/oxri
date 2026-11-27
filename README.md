@@ -36,6 +36,8 @@ oxri/
 │   └── RATIONALE/                   # One entry per merged PR, dated from git (Y2026/M11/D24/...)
 ├── cmd/
 │   ├── server/main.go               # HTTP server entrypoint (0.0.0.0:$PORT in prod, 127.0.0.1:$PORT local)
+│   ├── lab/lab.mjs                  # The lab: a Node script that drives Chrome and reports the Core Web Vitals (`mage lab`)
+│   ├── labserver/main.go            # Serves the seeded site to the lab from an in-memory database (`mage labseeded`, CI)
 │   ├── totpgen/main.go              # TOTP seed & QR generator (`mage totp`)
 │   ├── passgen/main.go              # Loopback Argon2id passphrase setup tool (`mage password`)
 │   └── backup/main.go               # Offline Turso JSON snapshot export & restore CLI (`mage backup`)
@@ -43,6 +45,7 @@ oxri/
 │   ├── config/                      # Secret env files: LoadSecrets("db.env", …) from ../oxri-parent/ then ../
 │   ├── auth/                        # Passkeys, Argon2id password + RFC 6238 TOTP sign-in policy (login.go), sessions, AdminCap minting
 │   ├── db/                          # Remote Turso/libSQL store (schema v6): journals, books, passkeys, auth_state, backup, quota; capability-gated writes
+│   ├── labsite/                     # The site as the lab measures it: served from an in-memory database seeded with entries like real ones
 │   └── domain/                      # "Parse, Don't Validate" opaque domain types & the AdminCap capability token
 ├── serverfns/
 │   ├── doc.go                       # Encapsulated server functions boundary
@@ -126,13 +129,15 @@ Other environment variables (all optional):
 
 ## 5. Build, Test, Setup & Backup Commands
 
+Development runs in WSL (Principia #9): the site is built, tested and served there, and nothing is compiled on the Windows host. The lab is the one thing that runs on the host, by design: `cmd/lab/lab.mjs` is a script that drives the host's Chrome. Inside WSL, `mage` calls it through the host's `node.exe`; the seeded site it measures (`cmd/labserver`) runs in WSL.
+
 All commands enforce `CGO_ENABLED=0`:
 
 ```powershell
 # Run all unit and integration tests
 mage test
 
-# Type-check the site's JavaScript (strict, from JSDoc; nothing is compiled).
+# Type-check the site's JavaScript and the lab script (strict, from JSDoc; nothing is compiled).
 # Needs Node once: `npm ci` installs the pinned TypeScript.
 mage typecheck
 
@@ -144,6 +149,15 @@ mage build
 
 # Start the local server (127.0.0.1:8080)
 mage run
+
+# Measure a running server (signed out) as a budget phone sees it; writes bin/lab.md
+mage lab
+
+# The same against the seeded site, which the lab starts itself; the CI budget
+mage labseeded
+
+# The site with its real data, 10 cold runs per page; writes bin/benchmark.md
+mage benchmark
 
 # Initialize or view TOTP secret + QR code in ../oxri-parent/
 mage totp

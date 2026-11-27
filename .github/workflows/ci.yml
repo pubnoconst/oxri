@@ -57,13 +57,14 @@ jobs:
           GOARCH: amd64
         run: go build -trimpath -o bin/server ./cmd/server
 
-  # Performance (BLUEPRINTS/PROFILING.md, HIG §1.6): the lab profile against
-  # the site served in-process from an in-memory database with seeded content
-  # (cmd/lab -local: no credentials, no real data, no calls to X). Fails only
-  # on what is deterministic: a page's field report is incomplete, or a page
-  # shifts (any run's CLS > 0.1). LCP and INP against Google's good lines are
-  # reported in the job summary, not failed: on a shared runner they swing by
-  # hundreds of milliseconds between runs. The table is kept as an artifact.
+  # Performance (BLUEPRINTS/PROFILING.md, HIG §1.6): the lab script
+  # (cmd/lab/lab.mjs) against the site served by cmd/labserver from an
+  # in-memory database with seeded content (no credentials, no real data, no
+  # calls to X). Fails only on what is deterministic: a page's field report is
+  # incomplete, or a page shifts (any run's CLS > 0.1). LCP and INP against
+  # Google's good lines are reported in the job summary, not failed: on a
+  # shared runner they swing by hundreds of milliseconds between runs, and by
+  # about a tenth between jobs. The table is kept as an artifact.
   performance:
     # Pull requests only: after a merge, main holds the tree the PR already
     # measured.
@@ -74,7 +75,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Go
+      - name: Setup Go (the seeded server)
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -83,52 +84,32 @@ jobs:
       - name: Chrome version
         run: google-chrome --version
 
-      # The lab script (cmd/lab/lab.mjs) is to replace the Go lab (RATIONALE
-      # 091). Until the two have been compared on one build, both run here,
-      # one after the other on the same runner, and both tables go to the
-      # summary.
       - name: Setup Node (the lab script)
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      - name: Go lab, field report is complete on leaving each page (vitals.js)
-        env:
-          CGO_ENABLED: "0"
-        run: go run ./cmd/lab -local -beacon -parallel 4
-
-      - name: Lab script, field report is complete on leaving each page (vitals.js)
+      - name: Field report is complete on leaving each page (vitals.js)
         env:
           CGO_ENABLED: "0"
         run: node cmd/lab/lab.mjs -local -beacon -parallel 4
 
-      - name: Go lab on a budget phone (for comparison)
+      - name: Lab profile on a budget phone (CLS gated; LCP and INP reported)
         env:
           CGO_ENABLED: "0"
         run: |
           mkdir -p bin
-          go run ./cmd/lab -local -runs 3 -parallel 4 -budget -out bin/lab-go.md
+          node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget -out bin/lab.md
 
-      - name: Lab script on a budget phone (CLS gated; LCP and INP reported)
-        env:
-          CGO_ENABLED: "0"
-        run: node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget -out bin/lab.md
-
-      - name: Lab tables in the job summary
+      - name: Lab table in the job summary
         if: always()
         run: |
           if [ -f bin/lab.md ]; then cat bin/lab.md >> "$GITHUB_STEP_SUMMARY"; fi
-          if [ -f bin/lab-go.md ]; then
-            echo "## The Go lab, for comparison" >> "$GITHUB_STEP_SUMMARY"
-            tail -n +2 bin/lab-go.md >> "$GITHUB_STEP_SUMMARY"
-          fi
 
-      - name: Keep the lab reports
+      - name: Keep the lab report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lab-report
-          path: |
-            bin/lab.md
-            bin/lab-go.md
+          path: bin/lab.md
           if-no-files-found: ignore

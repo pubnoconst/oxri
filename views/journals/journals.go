@@ -81,7 +81,7 @@ type Thumb struct {
 // iframe (045); since tweets are server-drawn clippings, the lab measured
 // 12 to 150 cards at LCP 1.10 to 1.26 s with no shift and no long frames
 // while scrolling (RATIONALE 084). A variable only so the lab can compare
-// sizes (cmd/lab -page-size); nothing else sets it.
+// sizes (cmd/labserver -page-size); nothing else sets it.
 var CatalogPageSize = 24
 
 // CatalogView holds one page of rendered entries alongside search query and
