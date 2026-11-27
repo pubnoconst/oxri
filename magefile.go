@@ -4,10 +4,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -70,14 +72,58 @@ func Typecheck() error {
 
 // Lab runs the repeatable mobile lab profile (cmd/lab, PROFILING.md) against
 // the server at $LAB_BASE (default http://127.0.0.1:8080, which must be
-// running signed out) and writes the report to bin/lab.md. Needs Chrome.
+// running signed out) and writes the report to bin/lab.md. Needs Chrome on
+// the machine the script runs on: inside WSL that is the Windows host.
 func Lab() error {
 	base := os.Getenv("LAB_BASE")
 	if base == "" {
 		base = "http://127.0.0.1:8080"
 	}
 	fmt.Println("==> Lab: budget-phone profile, 5 cold runs per page against " + base)
-	return sh.RunV("go", "run", "./cmd/lab", "-base", base, "-runs", "5", "-out", "bin/lab.md")
+	return lab("bin/lab.md", "-base", base, "-runs", "5")
+}
+
+// LabSeeded runs the lab against the seeded site (internal/labsite) with the
+// CI budget, and writes bin/lab.md. The script starts the site itself
+// (cmd/labserver) and measures it; no server needs to be running and no
+// credentials are read. Exits 1 if a page shifts (any run's CLS over 0.1) or
+// a run fails. Needs Chrome on the machine the script runs on.
+func LabSeeded() error {
+	fmt.Println("==> Lab: the seeded site, 3 cold runs per page, the CI budget")
+	return lab("bin/lab.md", "-local", "-runs", "3", "-parallel", "4", "-budget")
+}
+
+// labNode is the Node that runs the lab script (cmd/lab/lab.mjs). The script
+// drives a Chrome, so it runs where a Chrome is. Where the site is built in
+// WSL (Principia #9) that is the Windows host: its Node, reached from WSL as
+// node.exe through the interop, with its Chrome. Anywhere else it is the
+// node on PATH (CI).
+func labNode() (string, error) {
+	if runtime.GOOS == "linux" {
+		if release, err := os.ReadFile("/proc/sys/kernel/osrelease"); err == nil && strings.Contains(strings.ToLower(string(release)), "microsoft") {
+			if _, err := exec.LookPath("node.exe"); err == nil {
+				return "node.exe", nil
+			}
+			return "", errors.New("inside WSL the lab runs on the Windows host: its Node was not found on PATH (node.exe)")
+		}
+	}
+	if _, err := exec.LookPath("node"); err == nil {
+		return "node", nil
+	}
+	return "", errors.New("the lab is a Node script (cmd/lab/lab.mjs): Node 18 or later is needed")
+}
+
+// lab runs the lab script with args and writes its report to report (the
+// folder is made if it is missing).
+func lab(report string, args ...string) error {
+	node, err := labNode()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(report), 0o755); err != nil {
+		return err
+	}
+	return sh.RunV(node, append([]string{"cmd/lab/lab.mjs", "-out", report}, args...)...)
 }
 
 // Benchmark measures the site with its real data against Google's Core Web
@@ -85,7 +131,8 @@ func Lab() error {
 // 127.0.0.1:8089 against the database in db.env (reads only: a signed-out
 // reader writes nothing, and local views are not recorded as field data),
 // runs 10 cold budget-phone runs per page with each page's LCP broken into
-// its parts, writes bin/benchmark.md, and stops the server. Needs Chrome.
+// its parts, writes bin/benchmark.md, and stops the server. Needs Chrome on
+// the machine the lab script runs on (labNode).
 func Benchmark() error {
 	if err := os.MkdirAll("bin", 0755); err != nil {
 		return err
@@ -123,7 +170,7 @@ func Benchmark() error {
 		time.Sleep(300 * time.Millisecond)
 	}
 	fmt.Println("==> Benchmark: 10 cold budget-phone runs per page against real data at " + base)
-	return sh.RunV("go", "run", "./cmd/lab", "-base", base, "-runs", "10", "-breakdown", "-budget", "-out", "bin/benchmark.md")
+	return lab("bin/benchmark.md", "-base", base, "-runs", "10", "-breakdown", "-budget")
 }
 
 // withoutEnv drops the named variables from env.

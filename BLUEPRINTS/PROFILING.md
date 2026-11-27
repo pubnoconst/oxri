@@ -44,15 +44,17 @@ There are two kinds of evidence, and only the first is the real thing:
 ## 2. Lab runs (repeatable budget-phone profile)
 
 ```sh
-# with the server running, signed OUT (no DEV_AUTO_LOGIN), against real data:
-mage lab                                        # writes bin/lab.md
-go run ./cmd/lab -runs 10 -pages /journals      # one page, more runs
-go run ./cmd/lab -pages /login -debug           # plus each run's paint, resource and font timeline
+# from WSL, where the site is built (Principia #9). The lab is a script that
+# runs on the Windows host and drives the host's Chrome; mage calls it there.
+mage lab                                        # server running signed out; writes bin/lab.md
+mage labseeded                                  # the seeded site, started by the lab; the CI budget
+node cmd/lab/lab.mjs -runs 10 -pages /journals  # one page, more runs (from the host)
+node cmd/lab/lab.mjs -pages /login -debug       # plus each run's paint, resource and font timeline
 LAB_BASE=https://example.org mage lab           # any deployment
-go run ./cmd/lab -beacon                        # leaving each page builds a complete field report
+node cmd/lab/lab.mjs -beacon                    # leaving each page builds a complete field report
 ```
 
-(In Git Bash, prefix with `MSYS_NO_PATHCONV=1` so `/journals` is not rewritten into a Windows path.)
+(In Git Bash on the host, prefix a direct call with `MSYS_NO_PATHCONV=1` so `/journals` is not rewritten into a Windows path.)
 
 **`mage benchmark`: the site with its real data, against Google's lines.**
 - It builds the server and starts it signed out on `127.0.0.1:8089` against the database in `db.env`. It only reads, and local views are never recorded as field data.
@@ -60,7 +62,7 @@ go run ./cmd/lab -beacon                        # leaving each page builds a com
 - `-breakdown` splits each page's LCP the way `web-vitals` attributes it: server (TTFB), the wait before the LCP element's resource is requested, its download, and the render delay. It also shows the LCP element, when the catalog's request ran, when the last font arrived, and the page's kB and requests.
 - For a text LCP element there is no resource, so the whole wait to draw it is render delay.
 
-- **Device.** `cmd/lab` drives headless Chrome emulating a budget phone, using Lighthouse's mobile defaults:
+- **Device.** The lab script (`cmd/lab/lab.mjs`) drives Chrome emulating a budget phone, using Lighthouse's mobile defaults:
   - 412×823 CSS px at 1.75 DPR, touch input, an Android Chrome user agent;
   - CPU 4× slower;
   - 150 ms latency, 1.6 Mb/s down, 750 kb/s up.
@@ -70,39 +72,32 @@ go run ./cmd/lab -beacon                        # leaving each page builds a com
 - **Report.** Each cell is *median ± spread (worst run)* with the median's rating.
 - **Profile signed out.** With `DEV_AUTO_LOGIN` on, every request is the admin's, and the lab would measure the admin view (`/login` redirects away).
 
+**Where the lab runs.** The site is generated in WSL and tested on the host (Principia #9). The lab is a script, `cmd/lab/lab.mjs`: no package and no build step, so nothing is built on the host for the antimalware to judge. It drives Chrome over the DevTools protocol through a pipe, and needs Node 18 or later and a Chrome (`-chrome` to say which). Inside WSL, `mage` runs it through the host's `node.exe`; on any other system, with `node`. `mage typecheck` type-checks it. Until PR #94 it was a Go program (`cmd/lab`, on chromedp); RATIONALE 091 holds how it was ported and how the two compared.
+
 ### In CI, on every pull request
 
 The `performance` job in `.github/workflows/ci.yml` runs the lab on GitHub's Ubuntu runner, which has Chrome:
 
-- `go run ./cmd/lab -local -beacon`: leaving each page must build a field report holding LCP, INP, CLS and TTFB.
-- `go run ./cmd/lab -local -runs 3 -parallel 4 -budget`: no page may shift (CLS ≤ 0.1 on every run; layout is deterministic, so a shift on any run is real), and every run must produce its vitals. Median LCP and INP against Google's lines are reported in the summary but do not fail the build: on GitHub's shared runners they swing by hundreds of milliseconds between runs (one run saw 1.1 s TTFB spikes), so a timing gate would fail pull requests at random. `-timing-gate` adds them on a quiet machine.
+- `node cmd/lab/lab.mjs -local -beacon -parallel 4`: leaving each page must build a field report holding LCP, INP, CLS and TTFB.
+- `node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget`: no page may shift (CLS ≤ 0.1 on every run; layout is deterministic, so a shift on any run is real), and every run must produce its vitals. Median LCP and INP against Google's lines are reported in the summary but do not fail the build: on GitHub's shared runners they swing by hundreds of milliseconds between runs, and by about a tenth between jobs, so a timing gate would fail pull requests at random. `-timing-gate` adds them on a quiet machine.
 - The table goes into the job summary and is kept as the `lab-report` artifact.
 
 **Cost** (owner, 2026-11-25: "these CIs are getting time-expensive"):
-- **Parallel pages:** the four pages are measured at once (`-parallel 4`), 3 runs each. Layout shift, the only gate, is the same on every run, and timings are only reported. Measured locally, the job's lab steps dropped from 264 s to 74 s, with the same result.
+- **Parallel pages:** the four pages are measured at once (`-parallel 4`), 3 runs each. Layout shift, the only gate, is the same on every run, and timings are only reported. Measured locally, the job's lab steps dropped from 264 s to 74 s, with the same result. Parallel timings share the CPU, so compare them only between runs with the same setting.
 - **Pull requests only:** the job runs on pull requests, not again on `main` after the merge.
 - **Superseded runs are cancelled:** a newer push to the same PR cancels the older run (`concurrency`).
 
-`-local` serves the site inside the lab process from an in-memory database seeded with content like the real thing (`cmd/lab/local.go`):
+`-local` starts `cmd/labserver`, which serves the site from an in-memory database seeded with content like the real thing (`internal/labsite`), and measures that:
 - 14 entries quoting stored tweet snapshots and Bible passages, with tags, Markdown and Greek;
 - a long Book I.
 
-It needs no credentials, never touches the real database, and calls neither X nor the Bible provider. Readers are signed out.
+It needs no credentials, never touches the real database, and calls neither X nor the Bible provider. Readers are signed out. The server prints its address as its first line; the script waits until it answers and ends it with a request when it is done. On Windows the script runs the server in WSL, where the Go toolchain is.
 
-**On a Windows host, the lab is a script** (`cmd/lab/lab.mjs`; Principia #9, RATIONALE 091). It measures as `go run ./cmd/lab` does (the same flags, Chrome launch, emulation, pauses and report) and builds nothing on the host:
+Run the same locally with `mage labseeded`.
 
-```sh
-node cmd/lab/lab.mjs -base http://localhost:8080 -runs 5      # the site served from WSL
-node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget      # the seeded site, started by the lab
-```
+**Watch `/journals`.** It is the slowest page on the seeded site (median LCP about 1.2 s, on GitHub's runners with the script and on the owner's machine), with room before the 2.5 s line. Its LCP element is the first entry's excerpt, so its wait is render delay (RATIONALE 076).
 
-`-local` starts `cmd/labserver`, which serves the seeded site (`internal/labsite`) from another process or machine; on Windows it runs it in WSL. The script needs Node 18 or later, a Chrome to drive (`-chrome` to say which), and nothing else: no package, no build step. `mage typecheck` type-checks it. It can also be started from inside WSL (`node.exe cmd/lab/lab.mjs …`), which is how `mage` will call it.
-
-**Two labs, for now (RATIONALE 091).** On every pull request CI runs the Go lab and the script, one after the other, and puts both tables in the summary. They agree exactly on what CI gates: in 168 runs of the seeded site, every run gave the same CLS in both (`/` 0.000, `/book-i` 0.001, `/journals` 0.008, `/login` 0.000). They do not agree in timing on the four-core runner: within one job the Go lab's median LCP is 20–30% higher than the script's (for example 1486 against 1084 ms), whichever runs first. Part of that is the Go lab's own CPU use: it spends about twice the CPU of the script on the same page loads, and a process burning one CPU-second at each page load makes the script's pages 9% slower. The rest is not accounted for. Numbers from different jobs differ by about 10% on their own, so compare the two tables from one job. On a machine with cores to spare they agree within run-to-run spread. The Go lab is not replaced until the owner decides.
-
-Run the same locally with `go run ./cmd/lab -local -budget`.
-
-**Watch `/journals`.** On the seeded site its median LCP is about 2.36 s, the closest page to the 2.5 s line, because the catalog arrives in a second request after the page shell. Rendering the first page of entries into `/journals` itself (NEXT.md) is the fix that gives it room.
+**The baseline moved with the script (RATIONALE 091).** On CI's four-core runner the Go lab measured 20–30% higher than the script (within one job, for example 1486 against 1084 ms), in part because its own processing competed with the browsers for the runner's cores. Figures in the results below that were taken on GitHub's runners before PR #94 are on that old baseline; figures from the owner's machine are within run-to-run spread of the script's. CLS did not move: it was the same in every one of 168 runs.
 
 ### Lab is not the phone
 
@@ -117,6 +112,22 @@ Emulation slows the CPU and network, but not the GPU, and a desktop window that 
 4. To see the A02s on the S9+: Display → Screen resolution → HD+, and Developer options → *Profile GPU rendering* → bars on screen.
 
 ## Results
+
+### 2026-11-28: the lab is a script (PR #92 and PR #94, RATIONALE 091)
+
+The Go lab (`cmd/lab`, on chromedp) became a Node script (`cmd/lab/lab.mjs`) that drives Chrome over the DevTools pipe, and the seeded site became `cmd/labserver`. Both ran on one CI runner, the seeded site, 3 cold runs × 4 pages at once per pass.
+
+| On the runner, in this order | CLS | Median LCP, all pages | CPU of the lab process |
+|---|---|---|---|
+| Go lab, then the script (PR #92) | identical | 1290 ms, then 1012 ms | not measured |
+| Go, script, script, Go | identical | Go 1486 ms both times; script 1084 ms both times | not measured |
+| Go over a port, script, Go over the pipe, script | identical | Go 1540 and 1490 ms; script 1246 and 1076 ms | Go 25.4 and 18.7 s; script 11.7 and 10.8 s |
+| Script, script with a CPU-second burned at each page load, the same again, script | identical | script 1214 ms; with the burner 1322 ms | not comparable |
+
+- **CLS was the same in every run of every pass:** 168 runs, `/` 0.000, `/book-i` 0.001, `/journals` 0.008, `/login` 0.000.
+- **Run order and the transport were ruled out.** The lab's own CPU use was shown to be part of the cause (a CPU-second taken at each page load costs the page 9%); the rest was not accounted for.
+- **On the owner's machine**, 3 runs × 4 pages at once: `/` 1180 ms, `/book-i` 1052 ms, `/journals` 1324 ms, `/login` 956 ms; budget met. The Go lab's figures there (RATIONALE 088) were `/journals` 1464 ms (1100–1512).
+- **Against production**, signed out, 2 runs: `/` 1138 ms, `/book-i` 1282 ms, `/journals` 1590 ms (CLS 0.005), `/login` 1284 ms. On a site with passkeys `/login` folds its code field away; the script opens it first.
 
 ### 2026-11-25: self-hosted fonts (PR #74) against Google Fonts (`main`, `c4397e8`)
 

@@ -12,9 +12,9 @@ import (
 	"github.com/oxri/oxri-go/views/journals"
 )
 
-// TestSiteServesSeededContentAndLabImages covers what both labs rely on: a
-// catalog rendered from seeded entries, the photos served in place of X, and
-// the count of them for the report.
+// TestSiteServesSeededContentAndLabImages covers what the lab relies on: a
+// catalog rendered from seeded entries, the photos served in place of X, the
+// count of them for the report, and how the lab ends the server.
 func TestSiteServesSeededContentAndLabImages(t *testing.T) {
 	site, err := New(context.Background(), 14, 24)
 	if err != nil {
