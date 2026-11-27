@@ -83,52 +83,40 @@ jobs:
       - name: Chrome version
         run: google-chrome --version
 
-      # The lab script (cmd/lab/lab.mjs) is to replace the Go lab (RATIONALE
-      # 091). Until the two have been compared on one build, both run here,
-      # one after the other on the same runner, and both tables go to the
-      # summary.
-      - name: Setup Node (the lab script)
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      # Throwaway comparison (never merged): how much CPU each lab process
-      # itself uses during a run, and whether the Go lab measures like the
-      # Node lab when it speaks to Chrome over the pipe as the Node lab does.
-      - name: Build the Go lab and the seeded server once, so compiling is not counted
+      # Throwaway experiment (never merged): the Node lab as it is, and the
+      # Node lab with a process that burns one CPU-second at every page load,
+      # alternating, to see whether CPU taken from the runner's four cores is
+      # what made the Go lab measure slower pages.
+      - name: Build the seeded server once
         env:
           CGO_ENABLED: "0"
-        run: |
-          go build -o /tmp/lab-go ./cmd/lab
-          go build -o /tmp/labserver ./cmd/labserver
-          ls -l /usr/bin/time
-      - name: Go lab over a port (pass 1 of 4)
+        run: go build -o /tmp/labserver ./cmd/labserver
+      - name: Node lab, plain (pass 1 of 4)
         env:
           CGO_ENABLED: "0"
         run: |
           mkdir -p bin
-          /usr/bin/time -v /tmp/lab-go -local -runs 3 -parallel 4 -budget -out bin/go-port.md
-      - name: Node lab over the pipe (pass 2 of 4)
+          /usr/bin/time -v node cmd/lab/lab.mjs -server "/tmp/labserver -seed 14 -page-size 0" -local -runs 3 -parallel 4 -budget -out bin/plain-1.md
+      - name: Node lab, one CPU-second burned per page load (pass 2 of 4)
         env:
           CGO_ENABLED: "0"
         run: |
-          /usr/bin/time -v node cmd/lab/lab.mjs -server "/tmp/labserver -seed 14 -page-size 0" -local -runs 3 -parallel 4 -budget -out bin/node-pipe-1.md
-      - name: Go lab over the pipe (pass 3 of 4)
-        env:
-          CGO_ENABLED: "0"
-          LAB_PIPE: "1"
-        run: |
-          /usr/bin/time -v /tmp/lab-go -local -runs 3 -parallel 4 -budget -out bin/go-pipe.md
-      - name: Node lab over the pipe (pass 4 of 4)
+          /usr/bin/time -v node cmd/lab/lab.mjs -server "/tmp/labserver -seed 14 -page-size 0" -local -runs 3 -parallel 4 -budget -burn 1 -out bin/burn-1.md
+      - name: Node lab, one CPU-second burned per page load (pass 3 of 4)
         env:
           CGO_ENABLED: "0"
         run: |
-          /usr/bin/time -v node cmd/lab/lab.mjs -server "/tmp/labserver -seed 14 -page-size 0" -local -runs 3 -parallel 4 -budget -out bin/node-pipe-2.md
+          /usr/bin/time -v node cmd/lab/lab.mjs -server "/tmp/labserver -seed 14 -page-size 0" -local -runs 3 -parallel 4 -budget -burn 1 -out bin/burn-2.md
+      - name: Node lab, plain (pass 4 of 4)
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          /usr/bin/time -v node cmd/lab/lab.mjs -server "/tmp/labserver -seed 14 -page-size 0" -local -runs 3 -parallel 4 -budget -out bin/plain-2.md
 
       - name: Lab tables in the job summary
         if: always()
         run: |
-          for f in bin/go-port.md bin/node-pipe-1.md bin/go-pipe.md bin/node-pipe-2.md; do
+          for f in bin/plain-1.md bin/burn-1.md bin/burn-2.md bin/plain-2.md; do
             if [ -f "$f" ]; then echo "## $f" >> "$GITHUB_STEP_SUMMARY"; tail -n +2 "$f" >> "$GITHUB_STEP_SUMMARY"; fi
           done
 
@@ -138,6 +126,6 @@ jobs:
         with:
           name: lab-report
           path: |
-            bin/go-*.md
-            bin/node-*.md
+            bin/plain-*.md
+            bin/burn-*.md
           if-no-files-found: ignore

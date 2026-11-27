@@ -16,6 +16,7 @@ declare const process: {
   argv: string[];
   env: Record<string, string | undefined>;
   platform: string;
+  execPath: string;
   exitCode?: number;
   exit(code: number): never;
   stdout: { write(chunk: string): boolean };

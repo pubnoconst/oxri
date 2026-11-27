@@ -229,6 +229,8 @@ const warm = flags.warm === undefined || yes("warm");
 const seed = Math.trunc(number("seed", 14));
 const pageSize = Math.trunc(number("page-size", 0));
 const local = yes("local");
+// Throwaway experiment: seconds of CPU a separate process burns at each page load.
+const burn = number("burn", 0);
 const allPages = sortedKeys(pages);
 const paths = text("pages", "") ? text("pages", "").split(",") : allPages;
 
@@ -682,6 +684,7 @@ async function act(page, step) {
 async function visit(page, path) {
   const steps = pages[path] || [{ tap: "h1" }];
   await emulate(page);
+  if (burn) spawn(process.execPath, ["-e", `const end = Date.now() + ${burn * 1000}; while (Date.now() < end) {}`], { stdio: "ignore" });
   const loaded = nextEvent(page, "Page.loadEventFired");
   const nav = await page.send("Page.navigate", { url: cfg.base + path });
   if (nav.errorText) throw new Error("navigate " + path + ": " + nav.errorText);
