@@ -92,36 +92,38 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Go lab, field report is complete on leaving each page (vitals.js)
-        env:
-          CGO_ENABLED: "0"
-        run: go run ./cmd/lab -local -beacon -parallel 4
-
-      - name: Lab script, field report is complete on leaving each page (vitals.js)
-        env:
-          CGO_ENABLED: "0"
-        run: node cmd/lab/lab.mjs -local -beacon -parallel 4
-
-      - name: Go lab on a budget phone (for comparison)
+      # Throwaway comparison (never merged): both labs on one runner, in a
+      # balanced order, so run order and lab can be told apart.
+      - name: Go lab, pass 1 of 2
         env:
           CGO_ENABLED: "0"
         run: |
           mkdir -p bin
-          go run ./cmd/lab -local -runs 3 -parallel 4 -budget -out bin/lab-go.md
-
-      - name: Lab script on a budget phone (CLS gated; LCP and INP reported)
+          go run ./cmd/lab -local -runs 3 -parallel 4 -budget -out bin/go-1.md
+      - name: Node lab, pass 1 of 2
         env:
           CGO_ENABLED: "0"
-        run: node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget -out bin/lab.md
-
+        run: |
+          mkdir -p bin
+          node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget -out bin/node-1.md
+      - name: Node lab, pass 2 of 2
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p bin
+          node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget -out bin/node-2.md
+      - name: Go lab, pass 2 of 2
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p bin
+          go run ./cmd/lab -local -runs 3 -parallel 4 -budget -out bin/go-2.md
       - name: Lab tables in the job summary
         if: always()
         run: |
-          if [ -f bin/lab.md ]; then cat bin/lab.md >> "$GITHUB_STEP_SUMMARY"; fi
-          if [ -f bin/lab-go.md ]; then
-            echo "## The Go lab, for comparison" >> "$GITHUB_STEP_SUMMARY"
-            tail -n +2 bin/lab-go.md >> "$GITHUB_STEP_SUMMARY"
-          fi
+          for f in bin/go-1.md bin/node-1.md bin/node-2.md bin/go-2.md; do
+            if [ -f "$f" ]; then echo "## $f" >> "$GITHUB_STEP_SUMMARY"; tail -n +2 "$f" >> "$GITHUB_STEP_SUMMARY"; fi
+          done
 
       - name: Keep the lab reports
         if: always()
@@ -129,6 +131,6 @@ jobs:
         with:
           name: lab-report
           path: |
-            bin/lab.md
-            bin/lab-go.md
+            bin/go-*.md
+            bin/node-*.md
           if-no-files-found: ignore
