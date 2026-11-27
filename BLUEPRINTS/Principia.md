@@ -28,5 +28,10 @@ The foundational principles governing **Res Imperii**:
    - **Context windows are strictly limited**: Large files, sprawling packages, and mental-discipline conventions inevitably fail when context is constrained. Every module must be small, cohesive, and have a single clear responsibility.
    - **The type system is our primary defense**: Do not rely on runtime checks or human memory to catch invalid data or unauthorized actions. Use opaque unexported-field types, boundary parsers ("Parse, Don't Validate"), compile-time capability tokens (`AdminCap`), and sealed outcome types so erroneous states fail at compile time.
    - **Thorough codebase documentation with commit hashes**: Document every module, type invariant, and architectural boundary thoroughly in code comments and rationale entries, referencing commit hashes so humans and agents can easily trace the lineage of every mechanism.
+9. **Develop outside Windows Antimalware: in WSL, still `CGO_ENABLED=0`.**
+   - **Windows Antimalware is counterproductive**: it quarantines freshly built, unsigned binaries, and the procedure for defeating it is not standardized and has poor discoverability, while Windows can renew its antimalware provision despite user-level overrides (RATIONALE 090).
+   - **Development lives in WSL**: compiling, testing and serving the site happen there, where nothing scans the build output. Nothing else about the stack changes.
+   - **The site is generated in WSL and tested on the host**: the Windows side runs only what is signed (Chrome, Node) or is a script; no unsigned executable is built for it.
+   - **Not yet bare-metal Linux**: the owner's machine (Snapdragon X1E-80-100) has no Ubuntu certification.
 
 
