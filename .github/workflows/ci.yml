@@ -92,36 +92,43 @@ jobs:
         with:
           node-version: "22"
 
-      # Throwaway comparison (never merged): both labs on one runner, in a
-      # balanced order, so run order and lab can be told apart.
-      - name: Go lab, pass 1 of 2
+      # Throwaway comparison (never merged): how much CPU each lab process
+      # itself uses during a run, and whether the Go lab measures like the
+      # Node lab when it speaks to Chrome over the pipe as the Node lab does.
+      - name: Build the Go lab and the seeded server once, so compiling is not counted
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          go build -o /tmp/lab-go ./cmd/lab
+          go build -o /tmp/labserver ./cmd/labserver
+          ls -l /usr/bin/time
+      - name: Go lab over a port (pass 1 of 4)
         env:
           CGO_ENABLED: "0"
         run: |
           mkdir -p bin
-          go run ./cmd/lab -local -runs 3 -parallel 4 -budget -out bin/go-1.md
-      - name: Node lab, pass 1 of 2
+          /usr/bin/time -v /tmp/lab-go -local -runs 3 -parallel 4 -budget -out bin/go-port.md
+      - name: Node lab over the pipe (pass 2 of 4)
         env:
           CGO_ENABLED: "0"
         run: |
-          mkdir -p bin
-          node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget -out bin/node-1.md
-      - name: Node lab, pass 2 of 2
+          /usr/bin/time -v node cmd/lab/lab.mjs -server "/tmp/labserver -seed 14 -page-size 0" -local -runs 3 -parallel 4 -budget -out bin/node-pipe-1.md
+      - name: Go lab over the pipe (pass 3 of 4)
+        env:
+          CGO_ENABLED: "0"
+          LAB_PIPE: "1"
+        run: |
+          /usr/bin/time -v /tmp/lab-go -local -runs 3 -parallel 4 -budget -out bin/go-pipe.md
+      - name: Node lab over the pipe (pass 4 of 4)
         env:
           CGO_ENABLED: "0"
         run: |
-          mkdir -p bin
-          node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget -out bin/node-2.md
-      - name: Go lab, pass 2 of 2
-        env:
-          CGO_ENABLED: "0"
-        run: |
-          mkdir -p bin
-          go run ./cmd/lab -local -runs 3 -parallel 4 -budget -out bin/go-2.md
+          /usr/bin/time -v node cmd/lab/lab.mjs -server "/tmp/labserver -seed 14 -page-size 0" -local -runs 3 -parallel 4 -budget -out bin/node-pipe-2.md
+
       - name: Lab tables in the job summary
         if: always()
         run: |
-          for f in bin/go-1.md bin/node-1.md bin/node-2.md bin/go-2.md; do
+          for f in bin/go-port.md bin/node-pipe-1.md bin/go-pipe.md bin/node-pipe-2.md; do
             if [ -f "$f" ]; then echo "## $f" >> "$GITHUB_STEP_SUMMARY"; tail -n +2 "$f" >> "$GITHUB_STEP_SUMMARY"; fi
           done
 

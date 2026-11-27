@@ -309,6 +309,10 @@ func checkBudget(page string, results []sample, runs int) (strict, timing []stri
 // also stops a preloaded resource being reused, which is not a first visit.
 func browser() (context.Context, func()) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("disable-extensions", true))
+	if os.Getenv("LAB_PIPE") != "" {
+		// Throwaway comparison with the Node lab: the DevTools pipe, not a port.
+		opts = append(opts, chromedp.Flag("remote-debugging-pipe", true))
+	}
 	if os.Getenv("CI") != "" {
 		// GitHub's Ubuntu runners restrict the user namespaces Chrome's
 		// sandbox needs; the pages measured are our own.
