@@ -1,9 +1,9 @@
 {
   "name": "oxri-js-typecheck",
   "private": true,
-  "description": "Development only: type-checks assets/js with TypeScript (no build step, nothing shipped).",
+  "description": "Development only: type-checks assets/js (the site's scripts) and cmd/lab (the lab script) with TypeScript. No build step; the lab is run as it is written, and nothing here is shipped.",
   "scripts": {
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p . && tsc -p cmd/lab"
   },
   "devDependencies": {
     "typescript": "5.6.3"

@@ -43,7 +43,7 @@ import (
 	"github.com/chromedp/chromedp"
 
 	"github.com/oxri/oxri-go/internal/db"
-	"github.com/oxri/oxri-go/views/journals"
+	"github.com/oxri/oxri-go/internal/labsite"
 )
 
 const userAgent = "Mozilla/5.0 (Linux; Android 11; SM-A025F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36"
@@ -149,10 +149,7 @@ func main() {
 		fail("read web-vitals (run from the repository root): %v", err)
 	}
 	if *local {
-		if *pageSize > 0 {
-			journals.CatalogPageSize = *pageSize
-		}
-		url, stop, err := startLocal(context.Background(), *seedN)
+		url, stop, err := startLocal(context.Background(), *seedN, *pageSize)
 		if err != nil {
 			fail("local server: %v", err)
 		}
@@ -255,9 +252,11 @@ func main() {
 		}
 	}
 
-	if *local && labImageCount.Load() > 0 {
-		fmt.Fprintf(&report, "\nImages served by the lab (as from X): %d, %.0f kB in all, %.0f kB each on average (over all runs).\n",
-			labImageCount.Load(), float64(labImageBytes.Load())/1024, float64(labImageBytes.Load())/1024/float64(labImageCount.Load()))
+	if *local {
+		if count, bytes := localSite.Images(); count > 0 {
+			fmt.Fprintf(&report, "\nImages served by the lab (as from X): %d, %.0f kB in all, %.0f kB each on average (over all runs).\n",
+				count, float64(bytes)/1024, float64(bytes)/1024/float64(count))
+		}
 	}
 
 	fmt.Print(report.String())
@@ -369,7 +368,7 @@ func emulate(cfg config) chromedp.Action[chromedp.Void] {
 					if strings.Contains(e.Request.URL, "name=small") {
 						name = "small"
 					}
-					dest := cfg.base + labImagePath + "?name=" + name + "&src=" + url.QueryEscape(e.Request.URL)
+					dest := cfg.base + labsite.ImagePath + "?name=" + name + "&src=" + url.QueryEscape(e.Request.URL)
 					go func() {
 						_, _ = chromedp.Call(ctx, fetch.ContinueRequest, fetch.ContinueRequestParams{RequestID: e.RequestID, URL: dest})
 					}()

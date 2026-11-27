@@ -57,11 +57,15 @@ func Test() error {
 }
 
 // Typecheck type-checks the site's JavaScript (JSDoc types, strict) with
-// TypeScript. Nothing is compiled; see tsconfig.json. Needs Node: run
+// TypeScript, and the lab script's (cmd/lab, which runs on Node). Nothing is
+// compiled; see tsconfig.json and cmd/lab/tsconfig.json. Needs Node: run
 // `npm ci` once to install the pinned TypeScript.
 func Typecheck() error {
-	fmt.Println("==> Type-checking assets/js (tsc --noEmit)...")
-	return sh.RunV("npx", "--no-install", "tsc", "-p", ".")
+	fmt.Println("==> Type-checking assets/js and cmd/lab (tsc --noEmit)...")
+	if err := sh.RunV("npx", "--no-install", "tsc", "-p", "."); err != nil {
+		return err
+	}
+	return sh.RunV("npx", "--no-install", "tsc", "-p", "cmd/lab")
 }
 
 // Lab runs the repeatable mobile lab profile (cmd/lab, PROFILING.md) against
