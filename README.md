@@ -9,7 +9,7 @@
 This repository is structured so that any engineer or AI agent can pick up full context within seconds without reading monolithic logs:
 
 1. **[`BLUEPRINTS/Principia.md`](BLUEPRINTS/Principia.md) — Start Here**
-   The 8 foundational axioms governing architecture, UX minimalism, input distrust (*"All Inputs are evil"*), build simplicity, under-the-hood concealment, type-system enforcement, and the Pull Request workflow.
+   The 9 foundational axioms governing architecture, UX minimalism, input distrust (*"All Inputs are evil"*), build simplicity, under-the-hood concealment, type-system enforcement, the Pull Request workflow, and developing in WSL.
 2. **[`BLUEPRINTS/NEXT.md`](BLUEPRINTS/NEXT.md) — Current Session Pointer**
    The latest base commit, the active (and any parked) branch, undo instructions for any in-flight experiment, the standing design and code principles, the modularity / type-safety roadmap, and what is next on mind.
 3. **[`BLUEPRINTS/RATIONALE/`](BLUEPRINTS/RATIONALE/) — Date-Partitioned Rationales**
@@ -31,7 +31,7 @@ oxri/
 ├── render.yaml                      # Render Web Service deployment manifest
 ├── magefile.go                      # Pure-Go build, test, setup & backup targets (CGO_ENABLED=0)
 ├── BLUEPRINTS/
-│   ├── Principia.md                 # Core engineering, UX, and security axioms (#1–#8)
+│   ├── Principia.md                 # Core engineering, UX, and security axioms (#1–#9)
 │   ├── NEXT.md                      # Active branch pointer, principles, roadmap
 │   └── RATIONALE/                   # One entry per merged PR, dated from git (Y2026/M11/D24/...)
 ├── cmd/
