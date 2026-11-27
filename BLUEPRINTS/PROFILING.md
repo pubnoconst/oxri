@@ -96,7 +96,9 @@ node cmd/lab/lab.mjs -base http://localhost:8080 -runs 5      # the site served 
 node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget      # the seeded site, started by the lab
 ```
 
-`-local` starts `cmd/labserver`, which serves the seeded site (`internal/labsite`) from another process or machine; on Windows it runs it in WSL. The script needs Node 18 or later, a Chrome to drive (`-chrome` to say which), and nothing else: no package, no build step. `mage typecheck` type-checks it. The Go lab stays until the two have been compared in CI on one build.
+`-local` starts `cmd/labserver`, which serves the seeded site (`internal/labsite`) from another process or machine; on Windows it runs it in WSL. The script needs Node 18 or later, a Chrome to drive (`-chrome` to say which), and nothing else: no package, no build step. `mage typecheck` type-checks it. It can also be started from inside WSL (`node.exe cmd/lab/lab.mjs …`), which is how `mage` will call it.
+
+**Two labs, for now (RATIONALE 091).** On every pull request CI runs the Go lab and the script, one after the other, and puts both tables in the summary. They agree exactly on what CI gates: in 168 runs of the seeded site, every run gave the same CLS in both (`/` 0.000, `/book-i` 0.001, `/journals` 0.008, `/login` 0.000). They do not agree in timing on the four-core runner: within one job the Go lab's median LCP is 20–30% higher than the script's (for example 1486 against 1084 ms), whichever runs first. Part of that is the Go lab's own CPU use: it spends about twice the CPU of the script on the same page loads, and a process burning one CPU-second at each page load makes the script's pages 9% slower. The rest is not accounted for. Numbers from different jobs differ by about 10% on their own, so compare the two tables from one job. On a machine with cores to spare they agree within run-to-run spread. The Go lab is not replaced until the owner decides.
 
 Run the same locally with `go run ./cmd/lab -local -budget`.
 
