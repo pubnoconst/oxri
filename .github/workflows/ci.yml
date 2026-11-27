@@ -45,10 +45,10 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Type-check JavaScript (tsc --noEmit, strict JSDoc)
+      - name: Type-check JavaScript (tsc --noEmit, strict JSDoc: the site's scripts and the lab script)
         run: |
           npm ci --no-audit --no-fund
-          npx --no-install tsc -p .
+          npm run typecheck
 
       - name: Verify static Linux binary build (CGO_ENABLED=0)
         env:
@@ -83,27 +83,52 @@ jobs:
       - name: Chrome version
         run: google-chrome --version
 
-      - name: Field report is complete on leaving each page (vitals.js)
+      # The lab script (cmd/lab/lab.mjs) is to replace the Go lab (RATIONALE
+      # 091). Until the two have been compared on one build, both run here,
+      # one after the other on the same runner, and both tables go to the
+      # summary.
+      - name: Setup Node (the lab script)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Go lab: field report is complete on leaving each page (vitals.js)
         env:
           CGO_ENABLED: "0"
         run: go run ./cmd/lab -local -beacon -parallel 4
 
-      - name: Lab profile on a budget phone (CLS gated; LCP and INP reported)
+      - name: Lab script: field report is complete on leaving each page (vitals.js)
+        env:
+          CGO_ENABLED: "0"
+        run: node cmd/lab/lab.mjs -local -beacon -parallel 4
+
+      - name: Go lab on a budget phone (for comparison)
         env:
           CGO_ENABLED: "0"
         run: |
           mkdir -p bin
-          go run ./cmd/lab -local -runs 3 -parallel 4 -budget -out bin/lab.md
+          go run ./cmd/lab -local -runs 3 -parallel 4 -budget -out bin/lab-go.md
 
-      - name: Lab table in the job summary
+      - name: Lab script on a budget phone (CLS gated; LCP and INP reported)
+        env:
+          CGO_ENABLED: "0"
+        run: node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget -out bin/lab.md
+
+      - name: Lab tables in the job summary
         if: always()
         run: |
           if [ -f bin/lab.md ]; then cat bin/lab.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f bin/lab-go.md ]; then
+            echo "## The Go lab, for comparison" >> "$GITHUB_STEP_SUMMARY"
+            tail -n +2 bin/lab-go.md >> "$GITHUB_STEP_SUMMARY"
+          fi
 
-      - name: Keep the lab report
+      - name: Keep the lab reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lab-report
-          path: bin/lab.md
+          path: |
+            bin/lab.md
+            bin/lab-go.md
           if-no-files-found: ignore

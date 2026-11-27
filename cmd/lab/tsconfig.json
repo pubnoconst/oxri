@@ -1,0 +1,12 @@
+{
+  // Type-checks the lab script (cmd/lab/lab.mjs, JSDoc types) with the site's
+  // strict rules. It is its own project because the lab runs on Node: it needs
+  // the few Node types declared in node.d.ts, where the site's own scripts
+  // (tsconfig.json) must not see them. Run `tsc -p cmd/lab`; CI does.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // The lab is an ES module (import.meta tells it where the repository is).
+    "module": "es2022"
+  },
+  "include": ["lab.mjs", "node.d.ts"]
+}

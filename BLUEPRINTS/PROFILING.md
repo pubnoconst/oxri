@@ -89,6 +89,15 @@ The `performance` job in `.github/workflows/ci.yml` runs the lab on GitHub's Ubu
 
 It needs no credentials, never touches the real database, and calls neither X nor the Bible provider. Readers are signed out.
 
+**On a Windows host, the lab is a script** (`cmd/lab/lab.mjs`; Principia #9, RATIONALE 091). It measures as `go run ./cmd/lab` does (the same flags, Chrome launch, emulation, pauses and report) and builds nothing on the host:
+
+```sh
+node cmd/lab/lab.mjs -base http://localhost:8080 -runs 5      # the site served from WSL
+node cmd/lab/lab.mjs -local -runs 3 -parallel 4 -budget      # the seeded site, started by the lab
+```
+
+`-local` starts `cmd/labserver`, which serves the seeded site (`internal/labsite`) from another process or machine; on Windows it runs it in WSL. The script needs Node 18 or later, a Chrome to drive (`-chrome` to say which), and nothing else: no package, no build step. `mage typecheck` type-checks it. The Go lab stays until the two have been compared in CI on one build.
+
 Run the same locally with `go run ./cmd/lab -local -budget`.
 
 **Watch `/journals`.** On the seeded site its median LCP is about 2.36 s, the closest page to the 2.5 s line, because the catalog arrives in a second request after the page shell. Rendering the first page of entries into `/journals` itself (NEXT.md) is the fix that gives it room.
