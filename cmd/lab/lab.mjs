@@ -1089,7 +1089,13 @@ async function main() {
     }
 
     process.stdout.write(report);
-    if (out) writeFileSync(out, report);
+    if (out) {
+      try {
+        writeFileSync(out, report);
+      } catch (e) {
+        fail(`write ${out}: ${/** @type {Error} */ (e).message}`);
+      }
+    }
     if (budget && misses.length > 0) process.exitCode = 1;
   } finally {
     if (site) await site.stop();
