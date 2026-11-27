@@ -1,7 +1,7 @@
 # Next
 
-- **Base Commit on `main`**: `3d5e6bb` (PR #87: universal preview cards and newspaper entry layout)
-- **Active Branch**: `fix/entry-image-top-left` (PR #89): anchor full-entry linked images flush top-left at their known aspect ratio (RATIONALE 089, `005a1a1`).
+- **Base Commit on `main`**: `c95b103` (PR #89: anchor full-entry linked images flush top-left at their known aspect ratio)
+- **Active Branch**: `windows-exodus` (PR #91): develop outside Windows Antimalware, in WSL, still `CGO_ENABLED=0` (RATIONALE 090, `8e0945d`).
 - **Focus (owner, 2026-11-24)**: real-world robustness on budget phones. Reference reader phone: Samsung Galaxy A02s. Test phone: the owner's Pixel 10 (owner, 2026-11-25: the S9+ holds other bootstrapping and is not to be disturbed).
 - **Branches**: `main` (development) and `prod` (deployed by Render, fast-forwarded to `main` on release); `v1`, `fsharp-legacy`, `rust-experiment`, `water-ripple`, `card-preview-ideas` (archived/prototype lineage, kept on purpose; `water-ripple` is the SVG water effect as it last shipped, `ac1ec45`; `card-preview-ideas` holds the standalone universal card and newspaper entry prototypes tagged at `preview-cards-v1` / `d5e8e63` and `newspaper-entry-v1` / `a6bd1c5`).
 - **Active Experiment / Undo Instructions**: None. Devices that ran the water may still hold `res-imperii.water-quality` / `res-imperii.water-off-at` in localStorage; nothing reads them any more and they are harmless.
@@ -25,6 +25,12 @@ The full UI language (type, colour, controls, loaders, motion, copy) is in [`HIG
 
 ## Next on Mind
 
+- **Windows exodus (owner, 2026-11-28; Principia #9, RATIONALE 090)**: Windows Antimalware quarantined freshly built Go binaries thirteen times in five days, and defeating it is neither standardized nor durable. Development moves to WSL, where the same build ran with no detection. Still `CGO_ENABLED=0`. In order, one PR each:
+  1. The lab as a Node script on the host, driving the host's Chrome (Node is signed; no packages, no build step). It replaces `cmd/lab` only after its numbers match on the same build. Compare the two labs in CI, where both run on Linux.
+  2. The seeded site of `cmd/lab -local` as a small Go server binary, for WSL and CI.
+  3. `mage` targets, `README` and `PROFILING.md` for WSL. CI stays on Linux.
+  - **On the owner's machine:** Ubuntu 26.04.1 LTS under WSL 3.0.5 (NAT networking). Go 1.26.8 from apt (`go` fetches 1.27.4 on demand), a GitHub SSH key that already works, no Node, no `gh`. The secrets are still on the Windows side at `C:\Users\relay\proj\oxri-parent\`. There is no `.wslconfig`: the VM may take half the RAM, and a cold build inside it left Windows 47 MB free.
+  - **Open:** the admin steps in Ubuntu (`nodejs`, `gh`, a memory cap in `.wslconfig`, copying the secrets); a host Chrome reaching a server in WSL costs 1.8 ms at the median and about 25 ms at p99 per request.
 - ~~**Universal preview cards and newspaper entry layout (HIG §4, RATIONALE 086–088)**~~: shipped in PR #87 (`230d26f`)—universal `1C` caption, newspaper snippet, and statement clippings (`views/tweet`), aligned passage spine (`views/passage`), decluttered three-layer catalog cards, and newspaper `/journals/{id}` reading layout (`wrap-left`, `stack-rich-source`, stretched/centred `wrap-compact-code`, and `stack-early-code`) verified at `CLS = 0.000` in `cmd/lab`.
 - **Hosting** (owner, 2026-11-25): leave Render for a $2/month domain, served from the laptop if need be. Before the laptop goes live, harden `DEV_AUTO_LOGIN` (a per-request loopback Host check) and set `APP_ENV=prod`. With the domain on Cloudflare, cache `/assets/*` at the edge (immutable hashed URLs).
 - **Stable beats peak (HIG §1.6, owner 2026-11-25)**: performance work in this order, each judged by the variance it removes:
